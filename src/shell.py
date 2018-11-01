@@ -45,45 +45,65 @@ class Shell(cmd.Cmd):
             return
 
         def _replace(self, **kwargs):
-            """Return new instance of Task.
-
-            :returns: new instance of Task
-            :rtype: Task
-            """
+            """Replace Task instance variable."""
             self.task = self.task._replace(**kwargs)
-
-        def do_name(self, arg):
-            """Name task.
-
-            :param str arg: argument
-            """
-            self._replace(name=arg)
             return
 
-        def do_start(self, arg):
-            """Set start time.
+        @staticmethod
+        def _parse(args):
+            """Parse argument(s).
 
-            :param str arg: argument
+            :param str args: argument(s)
+
+            :returns: list of arguments
+            :rtype: list
             """
-            self._replace(start_time=arg)
+            return args.split()
+
+        def do_name(self, args):
+            """Name task."""
+            args = self._parse(args)
+            if len(args) != 1:
+                print("usage: name name")
+            else:
+                self._replace(name=args[0])
             return
 
-        def do_end(self, arg):
-            """Set end time.
-
-            :param str arg: argument
-            """
-            self._replace(end_time=arg)
+        def do_start(self, args):
+            """Set start time."""
+            args = self._parse(args)
+            if len(args) != 1:
+                print("usage: start start_time")
+            else:
+                self._replace(start_time=args[0])
             return
 
-        def do_bye(self, arg):
+        def do_end(self, args):
+            """Set end time."""
+            args = self._parse(args)
+            if len(args) != 1:
+                print("usage: end end_time")
+            else:
+                self._replace(end_time=args[0])
+            return
+
+        def do_priority(self, args):
+            """Set priority."""
+            args = self._parse(args)
+            if len(args) != 1:
+                print("usage: priority priority")
+            else:
+                self._replace(priority=args[0])
+            return
+
+        def do_bye(self, args):
             """Close task shell."""
             return True
 
     prompt = "(eichhoernchen) "
     intro = "Eichhörnchen shell.\tType help or ? to list commands.\n"
 
-    def do_add(self, arg):
+    def do_add(self, args):
         """Add task."""
         task_shell = self.TaskShell()
         task_shell.cmdloop()
