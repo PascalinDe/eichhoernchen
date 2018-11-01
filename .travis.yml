@@ -10,4 +10,4 @@ install:
 jobs:
         - include:
                 - stage: code style
-                  script: pylint
+                  script: pylint src
