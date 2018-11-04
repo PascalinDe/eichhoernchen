@@ -23,6 +23,7 @@
 # standard library imports
 import cmd
 import readline
+import datetime
 
 # third party imports
 # library specific imports
@@ -33,15 +34,23 @@ class Shell(cmd.Cmd):
     """Eichhörnchen shell."""
 
     class TaskShell(cmd.Cmd):
-        """Task shell."""
+        """Task shell.
+
+        :cvar str DATE_FORMAT: format string (date)
+        :cvar str TIME_FORMAT: format string (time)
+        :ivar Task task: task
+        """
 
         prompt = "(task) "
         intro = "Task shell.\tType help or ? to list commands.\n"
 
+        DATE_FORMAT = "%Y-%m-%d"
+        TIME_FORMAT = "%H:%M"
+
         def __init__(self):
             """Initialize task shell."""
             super().__init__()
-            self.task = src.sqlite.Task("", "", "", "")
+            self.task = src.sqlite.Task("", "", "", "", "")
             return
 
         def _replace(self, **kwargs):
@@ -60,6 +69,39 @@ class Shell(cmd.Cmd):
             """
             return args.split()
 
+        def _get_time(string):
+            """Get time.
+
+            :param str string: string
+
+            :returns: time
+            :rtype: datetime.datetime
+            """
+            if string == "now":
+                time = datetime.datetime.now()
+            else:
+                time = datetime.datetime.strptime(string, self.TIME_FORMAT)
+            return time
+
+        def _get_date(string):
+            """Get date.
+
+            :param str string: string
+
+            :returns: date
+            :rtype: datetime.datetime
+            """
+            try:
+                date = datetime.datetime.strptime(string, self.DATE_FORMAT)
+            except ValueError:
+                substrings = string.split("-")
+                if len(substrings) == 1:
+                    day = substrings[0]
+                    month = str(datetime.datetime.now().month).zfill(2)
+                    year = str(datetime.datetime.now().year).zfill(2)
+                else:
+                    day = substrings[0]
+
         def do_name(self, args):
             """Name task."""
             args = self._parse(args)
@@ -70,30 +112,64 @@ class Shell(cmd.Cmd):
             return
 
         def do_start(self, args):
-            """Set start time."""
+            """
+            Set start time. Specify as hh:mm or use shortcut 'now' for
+            current date.
+            """
             args = self._parse(args)
             if len(args) != 1:
-                print("usage: start start_time")
+                print("usage: start hh:mm or use shortcut 'now'")
             else:
-                self._replace(start_time=args[0])
+                try:
+                    time = self._get_time(args[0])
+                except ValueError:
+                    print("usage: start hh:mm or use shortcut 'now'")
+                self._replace(start=start)
             return
 
         def do_end(self, args):
-            """Set end time."""
+            """
+            Set end time. Specify as hh:mm or use shortcut 'now' for
+            current date.
+            """
             args = self._parse(args)
             if len(args) != 1:
-                print("usage: end end_time")
+                print("usage: end hh:mm or use shortcut 'now'")
             else:
-                self._replace(end_time=args[0])
+                try:
+                    time = self._get_time(args[0])
+                except ValueError:
+                    print("usage: end hh:mm or use shortcut 'now'")
+                self._replace(end=end)
             return
 
-        def do_priority(self, args):
-            """Set priority."""
+        def do_total(self, args):
+            """Set total time. Specify as hh:mm."""
             args = self._parse(args)
             if len(args) != 1:
-                print("usage: priority priority")
+                print("usage: total hh:mm")
             else:
-                self._replace(priority=args[0])
+                try:
+                    time = self._get_time(args[0])
+                except ValueError:
+                    print("usage: total hh:mm")
+                self._replace(total=total)
+            return
+
+        def do_due(self, args):
+            """
+            Set due date. Specify as [YYYY-][MM-]DD
+            (leaving out either YYYY or MM assumes current).
+            """
+            args = self._parse(args)
+            if len(args) != 1:
+                print("usage: due [YYYY-][MM-]DD")
+            else:
+                try:
+                    date = self._get_date(args[0])
+                except ValueError:
+                    print("usage: due [YYYY-][MM-]DD")
+                self._replace(due=args[0])
             return
 
         def do_bye(self, args):
@@ -107,5 +183,10 @@ class Shell(cmd.Cmd):
         """Add task."""
         task_shell = self.TaskShell()
         task_shell.cmdloop()
-        print(task_shell.task)
+        sqlite = src.sqlite.SQLite()
+        sqlite.insert((task_shell.task,))
+        return
+
+    def do_bye(self, args):
+        """Close Eichhörnchen shell."""
         return True
