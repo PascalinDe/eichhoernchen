@@ -13,4 +13,5 @@ jobs:
                   script: pylint src
 
 stages:
+        - test
         - name: code style
