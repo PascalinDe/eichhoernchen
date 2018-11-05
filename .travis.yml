@@ -14,4 +14,4 @@ jobs:
 
 stages:
         - test
-        - name: code style
+        - code style
