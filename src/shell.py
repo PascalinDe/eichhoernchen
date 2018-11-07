@@ -69,7 +69,7 @@ class Shell(cmd.Cmd):
             """
             return args.split()
 
-        def _get_time(string):
+        def _get_time(self, string):
             """Get time.
 
             :param str string: string
@@ -83,7 +83,7 @@ class Shell(cmd.Cmd):
                 time = datetime.datetime.strptime(string, self.TIME_FORMAT)
             return time
 
-        def _get_date(string):
+        def _get_date(self, string):
             """Get date.
 
             :param str string: string
@@ -91,16 +91,24 @@ class Shell(cmd.Cmd):
             :returns: date
             :rtype: datetime.datetime
             """
+            now = datetime.datetime.now()
             try:
-                date = datetime.datetime.strptime(string, self.DATE_FORMAT)
+                date = datetime.datetime.strptime(string, "%Y-%m-%d")
+                year = date.year
+                month = date.month
+                day = date.day
             except ValueError:
-                substrings = string.split("-")
-                if len(substrings) == 1:
-                    day = substrings[0]
-                    month = str(datetime.datetime.now().month).zfill(2)
-                    year = str(datetime.datetime.now().year).zfill(2)
-                else:
-                    day = substrings[0]
+                try:
+                    date = datetime.datetime.strptime(string, "%m-%d")
+                    year = now.year
+                    month = date.month
+                    day = date.day
+                except ValueError:
+                    date = datetime.datetime.strptime(string, "%d")
+                    year = now.year
+                    month = now.month
+                    day = date.day
+            return datetime.datetime(year, month, day)
 
         def do_name(self, args):
             """Name task."""
@@ -124,7 +132,7 @@ class Shell(cmd.Cmd):
                     time = self._get_time(args[0])
                 except ValueError:
                     print("usage: start hh:mm or use shortcut 'now'")
-                self._replace(start=start)
+                self._replace(start=time)
             return
 
         def do_end(self, args):
@@ -140,7 +148,7 @@ class Shell(cmd.Cmd):
                     time = self._get_time(args[0])
                 except ValueError:
                     print("usage: end hh:mm or use shortcut 'now'")
-                self._replace(end=end)
+                self._replace(end=time)
             return
 
         def do_total(self, args):
@@ -153,7 +161,7 @@ class Shell(cmd.Cmd):
                     time = self._get_time(args[0])
                 except ValueError:
                     print("usage: total hh:mm")
-                self._replace(total=total)
+                self._replace(total=time)
             return
 
         def do_due(self, args):
@@ -169,7 +177,7 @@ class Shell(cmd.Cmd):
                     date = self._get_date(args[0])
                 except ValueError:
                     print("usage: due [YYYY-][MM-]DD")
-                self._replace(due=args[0])
+                self._replace(due=date)
             return
 
         def do_bye(self, args):
