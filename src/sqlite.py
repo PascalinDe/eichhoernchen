@@ -47,15 +47,30 @@ class Task(_Task):      # pylint: disable=missing-docstring
         return repr_
 
 
+class SQLiteError(Exception):
+    """Raised when SQL statement execution fails.
+
+    :ivar str sql: SQL statement
+    """
+
+    def __init__(self, sql, *args, **kwargs):
+        """Initialize SQLiteError.
+
+        :param str sql: SQL statement
+        """
+        super().__init__(*args, **kwargs)
+        self.sql = sql
+        return
+
+
 class SQLite():
     """Eichhörnchen SQLite database interface.
 
-    :cvar str DATABASE: SQLite database
     :cvar str TABLE: SQLite table
     :cvar dict COLUMN_DEFS: SQLite column definitions
+    :ivar str database: Eichhörnchen SQLite3 database
     """
 
-    DATABASE = "eichhoernchen"
     TABLE = "tasks"
     COLUMN_DEFS = {
         "name": "TEXT PRIMARY KEY",
@@ -65,26 +80,35 @@ class SQLite():
         "due": "TIMESTAMP",
     }
 
-    def __init__(self):
-        """Initialize SQLite3 database interface."""
+    def __init__(self, database):
+        """Initialize SQLite3 database interface.
+
+        :param str database: Eichhörnchen SQLite3 database
+        """
+        self.database = database
         return
 
     def connect(self):
         """Connect to Eichhörnchen SQLite3 database.
 
         :return: connection
-        :rtype: Connect
+        :rtype: Connection
         """
         connection = sqlite3.connect(
-            self.DATABASE,
+            self.database,
             detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
         )
         connection.row_factory = sqlite3.Row
         return connection
 
-    def create_table(self):
-        """Create tasks table."""
-        connection = self.connect()
+    def create_table(self, connection=None, close=True):
+        """Create tasks table.
+
+        :param Connection connection: connection
+        :param bool close: close database connection
+        """
+        if not connection:
+            connection = self.connect()
         sql = "CREATE TABLE IF NOT EXISTS {table} ({column_defs})".format(
             table=self.TABLE,
             column_defs=", ".join(
@@ -93,32 +117,43 @@ class SQLite():
         )
         connection.execute(sql)
         connection.commit()
-        connection.close()
+        if close:
+            connection.close()
         return
 
-    def insert(self, rows):
+    def insert(self, rows, connection=None, close=True):
         """Insert rows.
 
         :param list rows: rows
+        :param Connection connection: database connection
+        :param bool close: close database connection
         """
-        connection = self.connect()
-        sql = "INSERT INTO {table} VALUES ({columns})".format(
-            table=self.TABLE,
-            columns=", ".join(
-                "?" for _ in self.COLUMN_DEFS.items()
+        try:
+            if not connection:
+                connection = self.connect()
+            sql = "INSERT INTO {table} VALUES ({columns})".format(
+                table=self.TABLE,
+                columns=", ".join("?" for _ in self.COLUMN_DEFS.items())
             )
-        )
-        connection.executemany(sql, rows)
-        connection.commit()
-        connection.close()
+            connection.executemany(sql, rows)
+            connection.commit()
+        except sqlite3.IntegrityError as exception:
+            raise SQLiteError(sql, exception)
+        if close:
+            connection.close()
         return
 
-    def select_many(self, column="", parameters=(), operator="="):
+    def select_many(
+            self,
+            column="", parameters=(), operator="=", connection=None, close=True
+    ):
         """Select rows.
 
         :param str column: column
         :param tuple parameters: parameters
         :param str operator: operator
+        :param Connection connection: database connection
+        :param bool close: close database connection
 
         :returns: rows
         :rtype: list
@@ -136,12 +171,17 @@ class SQLite():
         rows = [tuple(row) for row in cursor]
         return rows
 
-    def select_one(self, column, parameters, operator="="):
+    def select_one(
+            self, column, parameters,
+            operator="=", connection=None, close=True
+    ):
         """Select row.
 
         :param str column: column
         :param tuple parameters: parameters
         :param str operator: operator
+        :param Connection: connection: database connection
+        :param bool close: close database connection
 
         :returns: row or None
         :rtype: tuple or None
