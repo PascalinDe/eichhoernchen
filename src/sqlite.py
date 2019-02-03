@@ -22,29 +22,31 @@
 
 # standard library imports
 import sqlite3
-import collections
+import datetime
+import typing
 
 # third party imports
 # library specific imports
 
 
-_Task = collections.namedtuple(
-    "Task", ["name", "start", "end", "total", "due"]
-)
+class Task(typing.NamedTuple):
+    """Typed named tuple Task."""
 
-
-class Task(_Task):      # pylint: disable=missing-docstring
-    __slots__ = ()
+    name: str
+    start: datetime.datetime
+    end: datetime.datetime
+    total: datetime.datetime
+    due: datetime.datetime
 
     def __repr__(self):
-        repr_ = "{name} ({start} - {end}, total: {total}) (due: {due})".format(
+        repr_ = "{name} ({start} - {end}, total : {total}) (due : {due})"
+        return repr_.format(
             name=self.name,
             start=self.start,
             end=self.end,
             total=self.total,
             due=self.due
         )
-        return repr_
 
 
 class SQLiteError(Exception):
@@ -53,7 +55,7 @@ class SQLiteError(Exception):
     :ivar str sql: SQL statement
     """
 
-    def __init__(self, sql, *args, **kwargs):
+    def __init__(self, *args, sql="", **kwargs):
         """Initialize SQLiteError.
 
         :param str sql: SQL statement
@@ -94,11 +96,15 @@ class SQLite():
         :return: connection
         :rtype: Connection
         """
-        connection = sqlite3.connect(
-            self.database,
-            detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
-        )
-        connection.row_factory = sqlite3.Row
+        try:
+            connection = sqlite3.connect(
+                self.database,
+                detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
+            )
+            connection.row_factory = sqlite3.Row
+        except sqlite3.Error as exception:
+            msg = "connecting to database failed"
+            raise SQLiteError(msg) from exception
         return connection
 
     def create_table(self, connection=None, close=True):
@@ -109,17 +115,21 @@ class SQLite():
         """
         if not connection:
             connection = self.connect()
-        sql = "CREATE TABLE IF NOT EXISTS {table} ({column_defs})".format(
-            table=self.TABLE,
-            column_defs=", ".join(
-                "{} {}".format(k, v) for k, v in self.COLUMN_DEFS.items()
+        try:
+            sql = "CREATE TABLE IF NOT EXISTS {table} ({column_defs})".format(
+                table=self.TABLE,
+                column_defs=", ".join(
+                    "{} {}".format(k, v) for k, v in self.COLUMN_DEFS.items()
+                )
             )
-        )
-        connection.execute(sql)
-        connection.commit()
-        if close:
-            connection.close()
-        return
+            connection.execute(sql)
+            connection.commit()
+        except sqlite3.Error as exception:
+            msg = "create table statement failed"
+            raise SQLiteError(msg, sql=sql) from exception
+        finally:
+            if close:
+                connection.close()
 
     def insert(self, rows, connection=None, close=True):
         """Insert rows.
@@ -128,9 +138,9 @@ class SQLite():
         :param Connection connection: database connection
         :param bool close: close database connection
         """
+        if not connection:
+            connection = self.connect()
         try:
-            if not connection:
-                connection = self.connect()
             sql = "INSERT INTO {table} VALUES ({columns})".format(
                 table=self.TABLE,
                 columns=", ".join("?" for _ in self.COLUMN_DEFS.items())
@@ -138,10 +148,14 @@ class SQLite():
             connection.executemany(sql, rows)
             connection.commit()
         except sqlite3.IntegrityError as exception:
-            raise SQLiteError(sql, exception)
-        if close:
-            connection.close()
-        return
+            msg = "insert statement affected integrity of the database"
+            raise SQLiteError(msg, sql=sql) from exception
+        except sqlite3.Error as exception:
+            msg = "insert statement failed"
+            raise SQLiteError(msg, sql=sql) from exception
+        finally:
+            if close:
+                connection.close()
 
     def select_many(
             self,
@@ -158,17 +172,25 @@ class SQLite():
         :returns: rows
         :rtype: list
         """
-        connection = self.connect()
-        if column and parameters:
-            sql = "SELECT * FROM {table} WHERE {column} {operator} ?"
-            sql = sql.format(
-                table=self.TABLE, column=column, operator=operator
-            )
-            cursor = connection.execute(sql, parameters)
-        else:
-            sql = "SELECT * FROM {table}".format(table=self.TABLE)
-            cursor = connection.execute(sql)
-        rows = [tuple(row) for row in cursor]
+        if not connection:
+            connection = self.connect()
+        try:
+            if column and parameters:
+                sql = "SELECT * FROM {table} WHERE {column} {operator} ?"
+                sql = sql.format(
+                    table=self.TABLE, column=column, operator=operator
+                )
+                cursor = connection.execute(sql, parameters)
+            else:
+                sql = "SELECT * FROM {table}".format(table=self.TABLE)
+                cursor = connection.execute(sql)
+            rows = [tuple(row) for row in cursor]
+        except sqlite3.Error as exception:
+            msg = "select statement failed"
+            raise SQLiteError(msg, sql=sql) from exception
+        finally:
+            if close:
+                connection.close()
         return rows
 
     def select_one(
@@ -187,27 +209,36 @@ class SQLite():
         :rtype: tuple or None
         """
         rows = self.select_many(
-            column=column, parameters=parameters, operator=operator
+            column=column,
+            parameters=parameters,
+            operator=operator,
+            connection=connection,
+            close=close
         )
         if len(rows) > 1:
-            raise RuntimeError("result-set contains more than one row")
+            raise SQLiteError("result-set contains more than one row")
         elif len(rows) == 1:
-            rows = rows[0]
+            row = rows[0]
         else:
             row = None
         return row
 
-    def update_many(self, column0, parameters, column1=""):
+    def update_many(
+            self, column0, parameters, column1="", connection=None, close=True
+    ):
         """Update rows.
 
         :param str column0: column to be updated
         :param tuple parameters: parameters
         :param str column1: column WHERE clause
+        :param Connection connection: database connection
+        :param bool close: close database connection
 
         :returns: rows
         :rtype: list
         """
-        connection = self.connect()
+        if not connection:
+            connection = self.connect()
         if column1:
             sql = "UPDATE {table} SET {column0} = ? WHERE {column1} = ?"
             sql = sql.format(
@@ -216,49 +247,74 @@ class SQLite():
         else:
             sql = "UPDATE {table} SET {column0} = ?"
             sql = sql.format(table=self.TABLE, column0=column0)
-        connection.executemany(sql, parameters)
+        try:
+            connection.execute(sql, parameters)
+        except sqlite3.Error as exception:
+            msg = "update statement failed"
+            raise SQLiteError(msg, sql=sql) from exception
         connection.commit()
-        connection.close()
+        if close:
+            connection.close()
         if column1:
-            parameters = [(row[1],) for row in parameters]
-        rows = [
-            self.select_many(column=column1, parameters=row)
-            for row in parameters
-        ]
+            parameters = (parameters[0],)
+        else:
+            parameters = ()
+        rows = self.select_many(
+            column=column0,
+            parameters=parameters,
+            connection=connection,
+            close=close
+        )
         return rows
 
-    def update_one(self, column0, column1, parameters):
+    def update_one(
+            self, column0, column1, parameters, connection=None, close=True
+    ):
         """Update row.
 
         :param str column0: column to be updated
         :param str column1: column WHERE clause
         :param tuple parameters: parameters
+        :param Connection connection: database connection
+        :param bool close: close database connection
 
         :returns: row or None
         :rtype: tuple or None
         """
         rows = self.update_many(
-            column0, (parameters,), column1=column1
-        ).pop(0)
+            column0, parameters,
+            column1=column1, connection=connection, close=close
+        )
         if len(rows) > 1:
-            raise RuntimeError("result-set contains more than one row")
+            raise SQLiteError("result-set contains more than one row")
         elif len(rows) == 1:
             row = rows[0]
         else:
             row = None
         return row
 
-    def delete(self, column, parameters, operator="="):
+    def delete(
+            self, column, parameters,
+            operator="=", connection=None, close=True
+    ):
         """Delete rows.
 
         :param str column: column
         :param tuple parameters: parameters
         :param str operator: operator
+        :param Connection connection: database connection
+        :param bool close: close database connection
         """
-        connection = self.connect()
+        if not connection:
+            connection = self.connect()
         sql = "DELETE FROM {table} WHERE {column} {operator} ?"
         sql = sql.format(table=self.TABLE, column=column, operator=operator)
-        connection.executemany(sql, parameters)
+        try:
+            connection.execute(sql, parameters)
+        except sqlite3.Error as exception:
+            msg = "delete statement failed"
+            raise SQLiteError(msg, sql=sql)
         connection.commit()
-        connection.close()
+        if close:
+            connection.close()
         return
