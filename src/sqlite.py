@@ -38,7 +38,7 @@ class Task(typing.NamedTuple):
     total: datetime.datetime
     due: datetime.datetime
 
-    def __repr__(self):
+    def __str__(self):
         repr_ = "{name} ({start} - {end}, total : {total}) (due : {due})"
         return repr_.format(
             name=self.name,
