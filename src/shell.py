@@ -30,85 +30,95 @@ import datetime
 import src.sqlite
 
 
-class Shell(cmd.Cmd):
-    """Eichhörnchen shell."""
+class ShellError(Exception):
+    """Raised when Task shell command fails.
 
-    class TaskShell(cmd.Cmd):
-        """Task shell.
+    :ivar str arg: argument(s)
+    """
 
-        :cvar str DATE_FORMAT: format string (date)
-        :cvar str TIME_FORMAT: format string (time)
-        :ivar Task task: task
+
+class TaskShell(cmd.Cmd):
+    """Task shell.
+
+    :cvar str DATE_FORMAT: format string (date)
+    :cvar str TIME_FORMAT: format string (time)
+    :ivar Task task: task
+    """
+
+    prompt = "(task) "
+    intro = "Task shell.\t Type help or ? to list commands.\n"
+
+    DATE_FORMAT = "%Y-%m-%d"
+    TIME_FORMAT = "%H:%M"
+
+    def __init__(self):
+        """Initialize task shell."""
+        super().__init__()
+        self.task = src.sqlite.Task("", "", "", "", "")
+        return
+
+    def _replace(self, **kwargs):
+        """Replace Task instance variable."""
+        self.task = self.task._replace(**kwargs)
+        return
+
+    @staticmethod
+    def _parse(arg, num, msg):
+        """Parse argument(s).
+
+        :param str arg: argument(s)
+        :param int num: number of arguments
+        :param str msg: usage message
+
+        :returns: list of arguments
+        :rtype: list
         """
+        args = arg.split()
+        return args
 
-        prompt = "(task) "
-        intro = "Task shell.\tType help or ? to list commands.\n"
+    def _get_time(self, string):
+        """Get time.
 
-        DATE_FORMAT = "%Y-%m-%d"
-        TIME_FORMAT = "%H:%M"
+        :param str string: string
 
-        def __init__(self):
-            """Initialize task shell."""
-            super().__init__()
-            self.task = src.sqlite.Task("", "", "", "", "")
-            return
+        :returns: time
+        :rtype: datetime.datetime
+        """
+        if string == "now":
+            time = datetime.datetime.now()
+        else:
+            time = datetime.datetime.strptime(string, self.TIME_FORMAT)
+        return time
 
-        def _replace(self, **kwargs):
-            """Replace Task instance variable."""
-            self.task = self.task._replace(**kwargs)
-            return
+    def _get_date(self, string):
+        """Get date.
 
-        @staticmethod
-        def _parse(args):
-            """Parse argument(s).
+        :param str string: string
 
-            :param str args: argument(s)
-
-            :returns: list of arguments
-            :rtype: list
-            """
-            return args.split()
-
-        def _get_time(self, string):
-            """Get time.
-
-            :param str string: string
-
-            :returns: time
-            :rtype: datetime.datetime
-            """
-            if string == "now":
-                time = datetime.datetime.now()
-            else:
-                time = datetime.datetime.strptime(string, self.TIME_FORMAT)
-            return time
-
-        def _get_date(self, string):
-            """Get date.
-
-            :param str string: string
-
-            :returns: date
-            :rtype: datetime.datetime
-            """
-            now = datetime.datetime.now()
+        :returns: date
+        :rtype: datetime.datetime
+        """
+        now = datetime.datetime.now()
+        try:
+            date = datetime.datetime.strptime(string, "%Y-%m-%d")
+            year = date.year
+            month = date.month
+            day = date.day
+        except ValueError:
             try:
-                date = datetime.datetime.strptime(string, "%Y-%m-%d")
-                year = date.year
+                date = datetime.datetime.strptime(string, "%m-%d")
+                year = now.year
                 month = date.month
                 day = date.day
             except ValueError:
-                try:
-                    date = datetime.datetime.strptime(string, "%m-%d")
-                    year = now.year
-                    month = date.month
-                    day = date.day
-                except ValueError:
-                    date = datetime.datetime.strptime(string, "%d")
-                    year = now.year
-                    month = now.month
-                    day = date.day
-            return datetime.datetime(year, month, day)
+                date = datetime.datetime.strptime(string, "%d")
+                year = now.year
+                month = now.month
+                day = date.day
+        return datetime.datetime(year, month, day)
+
+    def do_name(self, arg):
+        """Set name."""
 
         def do_name(self, args):
             """Name task."""
@@ -180,9 +190,28 @@ class Shell(cmd.Cmd):
                 self._replace(due=date)
             return
 
-        def do_bye(self, args):
-            """Close task shell."""
+        def do_abort(self, args):
+            """Close task shell without adding task."""
             return True
+
+        def do_add(self, args):
+            """Add task and close task shell."""
+            if not all((self.task.name, self.task.start)):
+                print("Values 'name' and 'start' are required.")
+                bye = False
+            else:
+                bye = True
+                sqlite = src.sqlite.SQLite()
+                try:
+                    sqlite.insert((self.task,))
+                except src.sqlite.SQLiteError as exception:
+                    msg = (
+                        "Failed to add task."
+                        "Common causes include duplicate names."
+                    )
+                    print(msg)
+                    bye = True
+            return bye
 
     prompt = "(eichhoernchen) "
     intro = "Eichhörnchen shell.\tType help or ? to list commands.\n"
@@ -191,8 +220,6 @@ class Shell(cmd.Cmd):
         """Add task."""
         task_shell = self.TaskShell()
         task_shell.cmdloop()
-        sqlite = src.sqlite.SQLite()
-        sqlite.insert((task_shell.task,))
         return
 
     def do_bye(self, args):
