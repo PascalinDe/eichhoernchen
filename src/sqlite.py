@@ -39,14 +39,7 @@ class Task(typing.NamedTuple):
     due: datetime.datetime
 
     def __str__(self):
-        repr_ = "{name} ({start} - {end}, total : {total}) (due : {due})"
-        return repr_.format(
-            name=self.name,
-            start=self.start,
-            end=self.end,
-            total=self.total,
-            due=self.due
-        )
+        return f"{self.name} ({self.start} - {self.end}, total : {self.total})"
 
 
 class SQLiteError(Exception):
@@ -116,12 +109,10 @@ class SQLite():
         if not connection:
             connection = self.connect()
         try:
-            sql = "CREATE TABLE IF NOT EXISTS {table} ({column_defs})".format(
-                table=self.TABLE,
-                column_defs=", ".join(
-                    "{} {}".format(k, v) for k, v in self.COLUMN_DEFS.items()
-                )
+            column_defs=", ".join(
+                f"{k} {v}" for k, v in self.COLUMN_DEFS.items()
             )
+            sql = f"CREATE TABLE IF NOT EXISTS {self.TABLE} ({column_defs})"
             connection.execute(sql)
             connection.commit()
         except sqlite3.Error as exception:
@@ -141,10 +132,8 @@ class SQLite():
         if not connection:
             connection = self.connect()
         try:
-            sql = "INSERT INTO {table} VALUES ({columns})".format(
-                table=self.TABLE,
-                columns=", ".join("?" for _ in self.COLUMN_DEFS.items())
-            )
+            columns=", ".join("?" for _ in self.COLUMN_DEFS.items())
+            sql = f"INSERT INTO {self.TABLE} VALUES ({columns})"
             connection.executemany(sql, rows)
             connection.commit()
         except sqlite3.IntegrityError as exception:
@@ -176,13 +165,10 @@ class SQLite():
             connection = self.connect()
         try:
             if column and parameters:
-                sql = "SELECT * FROM {table} WHERE {column} {operator} ?"
-                sql = sql.format(
-                    table=self.TABLE, column=column, operator=operator
-                )
+                sql = f"SELECT * FROM {self.TABLE} WHERE {column} {operator} ?"
                 cursor = connection.execute(sql, parameters)
             else:
-                sql = "SELECT * FROM {table}".format(table=self.TABLE)
+                sql = f"SELECT * FROM {self.TABLE}"
                 cursor = connection.execute(sql)
             rows = [tuple(row) for row in cursor]
         except sqlite3.Error as exception:
@@ -240,13 +226,9 @@ class SQLite():
         if not connection:
             connection = self.connect()
         if column1:
-            sql = "UPDATE {table} SET {column0} = ? WHERE {column1} = ?"
-            sql = sql.format(
-                table=self.TABLE, column0=column0, column1=column1
-            )
+            sql = f"UPDATE {self.TABLE} SET {column0} = ? WHERE {column1} = ?"
         else:
-            sql = "UPDATE {table} SET {column0} = ?"
-            sql = sql.format(table=self.TABLE, column0=column0)
+            sql = f"UPDATE {self.TABLE} SET {column0} = ?"
         try:
             connection.execute(sql, parameters)
         except sqlite3.Error as exception:
@@ -307,8 +289,7 @@ class SQLite():
         """
         if not connection:
             connection = self.connect()
-        sql = "DELETE FROM {table} WHERE {column} {operator} ?"
-        sql = sql.format(table=self.TABLE, column=column, operator=operator)
+        sql = f"DELETE FROM {self.TABLE} WHERE {column} {operator} ?"
         try:
             connection.execute(sql, parameters)
         except sqlite3.Error as exception:
