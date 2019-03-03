@@ -1,0 +1,97 @@
+#    This file is part of Eichhörnchen 1.0.
+#    Copyright (C) 2019  Carine Dengler
+#
+#    Eichhörnchen is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+"""
+:synopsis: Timing test cases.
+"""
+
+
+# standard library imports
+import datetime
+import unittest
+
+# third party imports
+# library specific imports
+import src.sqlite
+import src.timing
+
+
+class TestTiming(unittest.TestCase):
+    """Timing test cases.
+
+    :cvar str TIME_FORMAT: format string (time)
+    """
+
+    def test_read_current_time_in(self):
+        """Test read-in of time.
+
+        Trying: now
+        Expecting: current time
+        """
+        now = datetime.datetime.now()
+        self.assertTrue((src.timing.read_time_in("now") - now).seconds < 10)
+
+    def test_read_time_in(self):
+        """Test read-in of time.
+
+        Trying: 15:07
+        Expecting: 15:07 and current date (datetime object)
+        """
+        now = datetime.datetime.now()
+        self.assertEqual(
+            datetime.datetime(now.year, now.month, now.day, 15, 7),
+            src.timing.read_time_in("15:07")
+        )
+
+    def test_read_current_date_in(self):
+        """Test read-in of date.
+
+        Trying: today
+        Expecting: current date
+        """
+        today = datetime.datetime.now()
+        self.assertEqual((src.timing.read_date_in("today") - today).days, 0)
+
+    def test_read_date_in(self):
+        """Test read-in of date.
+
+        Trying: 2019-03-03
+        Expecting: 2019-03-03
+        """
+        self.assertEqual(
+            datetime.datetime(2019, 3, 3),
+            src.timing.read_date_in("2019-03-03")
+        )
+
+    def test_start(self):
+        """Test starting task.
+
+        Trying: starting task
+        Expecting: name and current time and date
+        """
+        timer = src.timing.Timer(debug=True)
+        timer.start("task")
+        self.assertEqual("task", timer.current_task.name)
+
+    def test_stop(self):
+        """Test stopping task.
+
+        Trying: stopping task
+        Expecting: database contains (updated) task
+        """
+        timer = src.timing.Timer(debug=True)
+        timer.stop("task")
