@@ -35,11 +35,16 @@ class Task(typing.NamedTuple):
     name: str
     start: datetime.datetime
     end: datetime.datetime
-    total: datetime.datetime
+    total: int
     due: datetime.datetime
 
     def __str__(self):
-        return f"{self.name} ({self.start} - {self.end}, total : {self.total})"
+        hours = self.total // 3600
+        minutes = (self.total % 3600) // 60
+        return (
+            f"{self.name} ({self.start} - {self.end}, "
+            f"total : {hours}h{minutes}m)"
+        )
 
 
 class SQLiteError(Exception):
@@ -71,7 +76,7 @@ class SQLite():
         "name": "TEXT PRIMARY KEY",
         "start": "TIMESTAMP",
         "end": "TIMESTAMP",
-        "total": "TIMESTAMP",
+        "total": "INT",
         "due": "TIMESTAMP",
     }
 
@@ -235,8 +240,6 @@ class SQLite():
             msg = "update statement failed"
             raise SQLiteError(msg, sql=sql) from exception
         connection.commit()
-        if close:
-            connection.close()
         if column1:
             parameters = (parameters[0],)
         else:

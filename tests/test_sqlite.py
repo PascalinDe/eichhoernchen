@@ -40,12 +40,13 @@ class TestTask(unittest.TestCase):
     def setUp(self):
         """Set test cases up.
 
-        Trying: name = 'name', start = end = total = '00:00:00'
+        Trying: name = 'name', start = end = '00:00:00', total = 0
         and due = '2019-01-01'
         """
-        start = end = total = datetime.datetime.strptime(
+        start = end = datetime.datetime.strptime(
             "00:00:00", "%H:%M:%S"
         )
+        total = 0
         due = datetime.datetime.strptime("2019-01-01", "%Y-%m-%d")
         self.task = src.sqlite.Task(
             "name", start, end, total, due
@@ -54,22 +55,24 @@ class TestTask(unittest.TestCase):
     def test_field_types(self):
         """Test field types.
 
-        Expecting: name = str, start = end = total = due = datetime.datetime
+        Expecting: name = str, start = end = due = datetime.datetime,
+        total = int
         """
         field_types = {
             "name": str,
             "start": datetime.datetime,
             "end": datetime.datetime,
-            "total": datetime.datetime,
+            "total": int,
             "due": datetime.datetime
         }
         self.assertEqual(field_types, self.task._field_types)
 
     def test_attributes(self):
         """Test attributes."""
-        start = end = total = datetime.datetime.strptime(
+        start = end = datetime.datetime.strptime(
             "00:00:00", "%H:%M:%S"
         )
+        total = 0
         due = datetime.datetime.strptime("2019-01-01", "%Y-%m-%d")
         self.assertEqual("name", self.task.name)
         self.assertEqual(start, self.task.start)
@@ -87,9 +90,10 @@ class TestSQLite(unittest.TestCase):
 
     def setUp(self):
         """Set test cases up."""
-        start = end = total = datetime.datetime.strptime(
+        start = end = datetime.datetime.strptime(
             "00:00:00", "%H:%M:%S"
         )
+        total = 0
         due = datetime.datetime.strptime("2019-01-01", "%Y-%m-%d")
         self.task = src.sqlite.Task(
             "{name}", start, end, total, due
@@ -128,9 +132,10 @@ class TestSQLite(unittest.TestCase):
         connection = self.sqlite.connect()
         self.sqlite.create_table(connection=connection, close=False)
         name = "name_{index}"
-        start = end = total = datetime.datetime.strptime(
+        start = end = datetime.datetime.strptime(
             "00:00:00", "%H:%M:%S"
         )
+        total = 0
         due = datetime.datetime.strptime("2019-01-01", "%Y-%m-%d")
         n = random.randint(1, 100)
         rows = [
@@ -171,9 +176,10 @@ class TestSQLite(unittest.TestCase):
         connection = self.sqlite.connect()
         self.sqlite.create_table(connection=connection, close=False)
         name = "name_{index}"
-        start = end = total = datetime.datetime.strptime(
+        start = end = datetime.datetime.strptime(
             "00:00:00", "%H:%M:%S"
         )
+        total = 0
         now = datetime.datetime.now()
         now = datetime.datetime.strptime(
             "{year}-{month}-{day}".format(
@@ -221,9 +227,10 @@ class TestSQLite(unittest.TestCase):
         connection = self.sqlite.connect()
         self.sqlite.create_table(connection=connection, close=False)
         name = "name_{index}"
-        start = end = total = datetime.datetime.strptime(
+        start = end = datetime.datetime.strptime(
             "00:00:00", "%H:%M:%S"
         )
+        total = 0
         due = datetime.datetime.strptime("2019-01-01", "%Y-%m-%d")
         now = datetime.datetime.now()
         now = datetime.datetime.strptime(
@@ -259,9 +266,10 @@ class TestSQLite(unittest.TestCase):
         connection = self.sqlite.connect()
         self.sqlite.create_table(connection=connection, close=False)
         name = "name"
-        start = end = total = datetime.datetime.strptime(
+        start = end = datetime.datetime.strptime(
             "00:00:00", "%H:%M:%S"
         )
+        total = 0
         due = datetime.datetime.strptime(
             "2019-01-01", "%Y-%m-%d"
         )
@@ -284,9 +292,10 @@ class TestSQLite(unittest.TestCase):
         connection = self.sqlite.connect()
         self.sqlite.create_table(connection=connection, close=False)
         name = "name"
-        start = end = total = datetime.datetime.strptime(
+        start = end = datetime.datetime.strptime(
             "00:00:00", "%H:%M:%S"
         )
+        total = 0
         due = datetime.datetime.strptime(
             "2019-01-01", "%Y-%m-%d"
         )
@@ -309,9 +318,10 @@ class TestSQLite(unittest.TestCase):
         connection = self.sqlite.connect()
         self.sqlite.create_table(connection=connection, close=False)
         name = "name_{index}"
-        start = end = total = datetime.datetime.strptime(
+        start = end = datetime.datetime.strptime(
             "00:00:00", "%H:%M:%S"
         )
+        total = 0
         now = datetime.datetime.now()
         now = datetime.datetime.strptime(
             "{year}-{month}-{day}".format(
@@ -357,9 +367,10 @@ class TestSQLite(unittest.TestCase):
         connection = self.sqlite.connect()
         self.sqlite.create_table(connection=connection, close=False)
         name = "name_{index}"
-        start = end = total = datetime.datetime.strptime(
+        start = end = datetime.datetime.strptime(
             "00:00:00", "%H:%M:%S"
         )
+        total = 0
         due = datetime.datetime.strptime(
             "2019-01-01", "%Y-%m-%d"
         )
@@ -398,9 +409,10 @@ class TestSQLite(unittest.TestCase):
         connection = self.sqlite.connect()
         self.sqlite.create_table(connection=connection, close=False)
         name = "name_{index}"
-        start = end = total = datetime.datetime.strptime(
+        start = end = datetime.datetime.strptime(
             "00:00:00", "%H:%M:%S"
         )
+        total = 0
         due = datetime.datetime.strptime(
             "2019-01-01", "%Y-%m-%d"
         )
@@ -429,9 +441,10 @@ class TestSQLite(unittest.TestCase):
         connection = self.sqlite.connect()
         self.sqlite.create_table(connection=connection, close=False)
         name = "name_{index}"
-        start = end = total = datetime.datetime.strptime(
+        start = end = datetime.datetime.strptime(
             "00:00:00", "%H:%M:%S"
         )
+        total = 0
         due = datetime.datetime.strptime(
             "2019-01-01", "%Y-%m-%d"
         )
@@ -487,9 +500,10 @@ class TestSQLite(unittest.TestCase):
         connection = self.sqlite.connect()
         self.sqlite.create_table(connection=connection, close=False)
         name = "name_{index}"
-        start = end = total = datetime.datetime.strptime(
+        start = end = datetime.datetime.strptime(
             "00:00:00", "%H:%M:%S"
         )
+        total = 0
         due = datetime.datetime.strptime(
             "2019-01-01", "%Y-%m-%d"
         )
@@ -531,9 +545,10 @@ class TestSQLite(unittest.TestCase):
         connection = self.sqlite.connect()
         self.sqlite.create_table(connection=connection, close=False)
         name = "name"
-        start = end = total = datetime.datetime.strptime(
+        start = end = datetime.datetime.strptime(
             "00:00:00", "%H:%M:%S"
         )
+        total = 0
         due = datetime.datetime.strptime(
             "2019-01-01", "%Y-%m-%d"
         )
@@ -566,9 +581,10 @@ class TestSQLite(unittest.TestCase):
         connection = self.sqlite.connect()
         self.sqlite.create_table(connection=connection, close=False)
         name = "foo"
-        start = end = total = datetime.datetime.strptime(
+        start = end = datetime.datetime.strptime(
             "00:00:00", "%H:%M:%S"
         )
+        total = 0
         now = datetime.datetime.now()
         now = datetime.datetime.strptime(
             "{year}-{month}-{day}".format(
@@ -598,9 +614,10 @@ class TestSQLite(unittest.TestCase):
         connection = self.sqlite.connect()
         self.sqlite.create_table(connection=connection, close=False)
         name = "name_{index}"
-        start = end = total = datetime.datetime.strptime(
+        start = end = datetime.datetime.strptime(
             "00:00:00", "%H:%M:%S"
         )
+        total = 0
         due = datetime.datetime.strptime(
             "2019-01-01", "%Y-%m-%d"
         )
@@ -631,9 +648,10 @@ class TestSQLite(unittest.TestCase):
         connection = self.sqlite.connect()
         self.sqlite.create_table(connection=connection, close=False)
         name = "name_{index}"
-        start = end = total = datetime.datetime.strptime(
+        start = end = datetime.datetime.strptime(
             "00:00:00", "%H:%M:%S"
         )
+        total = 0
         due = datetime.datetime.strptime(
             "2019-01-01", "%Y-%m-%d"
         )
