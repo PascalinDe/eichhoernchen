@@ -21,6 +21,8 @@
 
 
 # standard library imports
+import os
+import os.path
 import datetime
 import unittest
 
@@ -33,8 +35,14 @@ import src.timing
 class TestTiming(unittest.TestCase):
     """Timing test cases.
 
-    :cvar str TIME_FORMAT: format string (time)
+    :cvar str DATABASE: Eichhörnchen SQLite3 database
     """
+    DATABASE = "test.db"
+
+    def tearDown(self):
+        """Tear down test cases."""
+        if os.path.exists(self.DATABASE):
+            os.remove(self.DATABASE)
 
     def test_read_current_time_in(self):
         """Test read-in of time.
@@ -83,9 +91,11 @@ class TestTiming(unittest.TestCase):
         Trying: starting task
         Expecting: name and current time and date
         """
-        timer = src.timing.Timer(debug=True)
+        now = datetime.datetime.now()
+        timer = src.timing.Timer(self.DATABASE)
         timer.start("task")
         self.assertEqual("task", timer.current_task.name)
+        self.assertTrue((timer.current_task.start - now).seconds < 10)
 
     def test_stop(self):
         """Test stopping task.
@@ -93,5 +103,8 @@ class TestTiming(unittest.TestCase):
         Trying: stopping task
         Expecting: database contains (updated) task
         """
-        timer = src.timing.Timer(debug=True)
-        timer.stop("task")
+        timer = src.timing.Timer(self.DATABASE)
+        timer.start("task")
+        timer.stop()
+        now = datetime.datetime.now()
+        self.assertTrue((now - timer.current_task.end).seconds < 10)

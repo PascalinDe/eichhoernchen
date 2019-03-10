@@ -75,21 +75,19 @@ class Timer(object):
     :ivar Task current_task: current task
     """
 
-    def __init__(self, task=None):
+    def __init__(self, database, task=None):
         """Initialize timer.
 
+        :param str database: Eichhörnchen SQLite3 database
         :param task: task
         :type: Task or None
         """
-        if debug:
-            self.sqlite = src.sqlite.SQLite(":memory:")
-            self.sqlite.create_table(close=False)
-        else:
-            self.sqlite = src.sqlite.SQLite("eichhoernchen.db")
-            self.sqlite.create_table()
+        self.sqlite = src.sqlite.SQLite(database)
+        self.sqlite.create_table()
         if not task:
             name = ""
-            start = end = total = due = read_time_in("now")
+            start = end = due = read_time_in("now")
+            total = (end - start).seconds
             self.current_task = src.sqlite.Task(name, start, end, total, due)
         else:
             self.current_task = task
@@ -109,19 +107,18 @@ class Timer(object):
         else:
             self._replace(name=name, start=read_time_in("now"))
 
-    def stop(self, name):
-        """Stop task.
-
-        :param str name: name
-        """
-        if not self.current_task.name == name:
-            raise ValueError(f"unknown task {name}")
-        else:
-            self._replace(end=read_time_in("now"))
-            result_set = self.sqlite.update_one(
-                "end",
-                (self.current_task.end, self.current_task.name),
-                "name"
-            )
-            if not result_set:
-                self.sqlite.insert([[*self.current_task]])
+    def stop(self):
+        """Stop task."""
+        self._replace(end=read_time_in("now"))
+        total = (
+            self.current_task.total
+            + (self.current_task.end - self.current_task.start).seconds
+        )
+        self._replace(total=total)
+        row = self.sqlite.update_one(
+            "end",
+            "name",
+            (self.current_task.end, self.current_task.name)
+        )
+        if not row:
+            self.sqlite.insert([[*self.current_task]])
