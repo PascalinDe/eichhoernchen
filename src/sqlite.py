@@ -38,14 +38,6 @@ class Task(typing.NamedTuple):
     total: int
     due: datetime.datetime
 
-    def __str__(self):
-        hours = self.total // 3600
-        minutes = (self.total % 3600) // 60
-        return (
-            f"{self.name} ({self.start} - {self.end}, "
-            f"total : {hours}h{minutes}m)"
-        )
-
 
 class SQLiteError(Exception):
     """Raised when SQL statement execution fails.

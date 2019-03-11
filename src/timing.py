@@ -122,3 +122,19 @@ class Timer(object):
         )
         if not row:
             self.sqlite.insert([[*self.current_task]])
+
+    def show(self):
+        """Show current task.
+
+        :returns: current task
+        :rtype: str
+        """
+        start = self.current_task.start.strftime("%H:%M")
+        end = self.current_task.end.strftime("%H:%M")
+        hours = self.current_task.total // 3600
+        minutes = (self.current_task.total % 3600) // 60
+        current_task = (
+            f"{self.current_task.name} "
+            f"({start} - {end}, total: {hours}h{minutes}m)"
+        )
+        return current_task

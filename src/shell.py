@@ -56,6 +56,10 @@ class TaskShell(cmd.Cmd):
         """Stop task."""
         self.timer.stop()
 
+    def do_show(self, args):
+        """Show current task."""
+        print(self.timer.current_task)
+
     def do_bye(self, args):
         """Close task shell."""
         return True

@@ -112,3 +112,23 @@ class TestTiming(unittest.TestCase):
             (now - timer.current_task.end).seconds,
             timer.current_task.total
         )
+
+    def test_show(self):
+        """Test showing current task.
+
+        Trying: showing current task
+        Expecting: current task
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        timer.start("task")
+        current_task = timer.show()
+        timer.stop()
+        name, start, end, total, _ = timer.current_task
+        start = start.strftime("%H:%M")
+        end = end.strftime("%H:%M")
+        hours = total // 3600
+        minutes = (total % 3600) // 60
+        self.assertEqual(
+            f"{name} ({start} - {end}, total: {hours}h{minutes}m)",
+            current_task
+        )
