@@ -23,205 +23,39 @@
 # standard library imports
 import cmd
 import readline
-import datetime
 
 # third party imports
 # library specific imports
-import src.sqlite
-
-
-class ShellError(Exception):
-    """Raised when Task shell command fails.
-
-    :ivar str arg: argument(s)
-    """
+import src.timing
 
 
 class TaskShell(cmd.Cmd):
     """Task shell.
 
-    :cvar str DATE_FORMAT: format string (date)
-    :cvar str TIME_FORMAT: format string (time)
-    :ivar Task task: task
+    :ivar Timer timer: timer
     """
-
     prompt = "(task) "
     intro = "Task shell.\t Type help or ? to list commands.\n"
-
-    DATE_FORMAT = "%Y-%m-%d"
-    TIME_FORMAT = "%H:%M"
 
     def __init__(self):
         """Initialize task shell."""
         super().__init__()
-        self.task = src.sqlite.Task("", "", "", "", "")
+        self.timer = src.timing.Timer("eichhoernchen.db")
         return
 
-    def _replace(self, **kwargs):
-        """Replace Task instance variable."""
-        self.task = self.task._replace(**kwargs)
-        return
-
-    @staticmethod
-    def _parse(arg, num, msg):
-        """Parse argument(s).
-
-        :param str arg: argument(s)
-        :param int num: number of arguments
-        :param str msg: usage message
-
-        :returns: list of arguments
-        :rtype: list
-        """
-        args = arg.split()
-        return args
-
-    def _get_time(self, string):
-        """Get time.
-
-        :param str string: string
-
-        :returns: time
-        :rtype: datetime.datetime
-        """
-        if string == "now":
-            time = datetime.datetime.now()
+    def do_start(self, args):
+        """Start task."""
+        args = args.split()
+        if len(args) != 1:
+            print("usage: start name")
         else:
-            time = datetime.datetime.strptime(string, self.TIME_FORMAT)
-        return time
+            name = args[0]
+            self.timer.start(name)
 
-    def _get_date(self, string):
-        """Get date.
-
-        :param str string: string
-
-        :returns: date
-        :rtype: datetime.datetime
-        """
-        now = datetime.datetime.now()
-        try:
-            date = datetime.datetime.strptime(string, "%Y-%m-%d")
-            year = date.year
-            month = date.month
-            day = date.day
-        except ValueError:
-            try:
-                date = datetime.datetime.strptime(string, "%m-%d")
-                year = now.year
-                month = date.month
-                day = date.day
-            except ValueError:
-                date = datetime.datetime.strptime(string, "%d")
-                year = now.year
-                month = now.month
-                day = date.day
-        return datetime.datetime(year, month, day)
-
-    def do_name(self, arg):
-        """Set name."""
-
-        def do_name(self, args):
-            """Name task."""
-            args = self._parse(args)
-            if len(args) != 1:
-                print("usage: name name")
-            else:
-                self._replace(name=args[0])
-            return
-
-        def do_start(self, args):
-            """
-            Set start time. Specify as hh:mm or use shortcut 'now' for
-            current date.
-            """
-            args = self._parse(args)
-            if len(args) != 1:
-                print("usage: start hh:mm or use shortcut 'now'")
-            else:
-                try:
-                    time = self._get_time(args[0])
-                except ValueError:
-                    print("usage: start hh:mm or use shortcut 'now'")
-                self._replace(start=time)
-            return
-
-        def do_end(self, args):
-            """
-            Set end time. Specify as hh:mm or use shortcut 'now' for
-            current date.
-            """
-            args = self._parse(args)
-            if len(args) != 1:
-                print("usage: end hh:mm or use shortcut 'now'")
-            else:
-                try:
-                    time = self._get_time(args[0])
-                except ValueError:
-                    print("usage: end hh:mm or use shortcut 'now'")
-                self._replace(end=time)
-            return
-
-        def do_total(self, args):
-            """Set total time. Specify as hh:mm."""
-            args = self._parse(args)
-            if len(args) != 1:
-                print("usage: total hh:mm")
-            else:
-                try:
-                    time = self._get_time(args[0])
-                except ValueError:
-                    print("usage: total hh:mm")
-                self._replace(total=time)
-            return
-
-        def do_due(self, args):
-            """
-            Set due date. Specify as [YYYY-][MM-]DD
-            (leaving out either YYYY or MM assumes current).
-            """
-            args = self._parse(args)
-            if len(args) != 1:
-                print("usage: due [YYYY-][MM-]DD")
-            else:
-                try:
-                    date = self._get_date(args[0])
-                except ValueError:
-                    print("usage: due [YYYY-][MM-]DD")
-                self._replace(due=date)
-            return
-
-        def do_abort(self, args):
-            """Close task shell without adding task."""
-            return True
-
-        def do_add(self, args):
-            """Add task and close task shell."""
-            if not all((self.task.name, self.task.start)):
-                print("Values 'name' and 'start' are required.")
-                bye = False
-            else:
-                bye = True
-                sqlite = src.sqlite.SQLite()
-                try:
-                    sqlite.insert((self.task,))
-                except src.sqlite.SQLiteError as exception:
-                    msg = (
-                        "Failed to add task."
-                        "Common causes include duplicate names."
-                    )
-                    print(msg)
-                    bye = True
-            return bye
-
-    prompt = "(eichhoernchen) "
-    intro = "Eichhörnchen shell.\tType help or ? to list commands.\n"
-
-    def do_add(self, args):
-        """Add task."""
-        task_shell = self.TaskShell()
-        task_shell.cmdloop()
-        return
+    def do_stop(self, args):
+        """Stop task."""
+        self.timer.stop()
 
     def do_bye(self, args):
-        """Close Eichhörnchen shell."""
+        """Close task shell."""
         return True
