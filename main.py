@@ -16,7 +16,7 @@
 
 
 """
-:synopsis:
+:synopsis: Eichhörnchen 1.0.
 """
 
 
@@ -24,20 +24,12 @@
 # third party imports
 # library specific imports
 import src.shell
-import src.sqlite
 
 
 def main():
     """Main function."""
-    try:
-        sqlite = src.sqlite.SQLite()
-        sqlite.create_table()
-        shell = src.shell.Shell()
-        shell.cmdloop()
-    except Exception as exception:
-        msg = "failed to run Eichhörnchen 1.0:{}".format(exception)
-        raise RuntimeError(msg)
-    return
+    shell = src.shell.TaskShell()
+    shell.cmdloop()
 
 
 if __name__ == "__main__":
