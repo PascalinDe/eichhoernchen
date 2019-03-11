@@ -109,12 +109,12 @@ class Timer(object):
 
     def stop(self):
         """Stop task."""
-        self._replace(end=read_time_in("now"))
+        now = read_time_in("now")
         total = (
             self.current_task.total
-            + (self.current_task.end - self.current_task.start).seconds
+            + (now - self.current_task.start).seconds
         )
-        self._replace(total=total)
+        self._replace(end=read_time_in("now"), total=total)
         row = self.sqlite.update_one(
             "end",
             "name",

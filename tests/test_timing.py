@@ -108,3 +108,7 @@ class TestTiming(unittest.TestCase):
         timer.stop()
         now = datetime.datetime.now()
         self.assertTrue((now - timer.current_task.end).seconds < 10)
+        self.assertEqual(
+            (now - timer.current_task.end).seconds,
+            timer.current_task.total
+        )
