@@ -148,3 +148,27 @@ class Timer(object):
         else:
             current_task = "no current task"
         return current_task
+
+    def list(self):
+        """List tasks.
+
+        :returns: list of tasks
+        :rtype: str
+        """
+        now = datetime.datetime.now()
+        start_of_day = datetime.datetime(now.year, now.month, now.day, 0, 0)
+        tasks = [
+            src.sqlite.Task(*task)
+            for task in self.sqlite.select_many(
+                column="start",
+                parameters=(start_of_day,),
+                operator=">="
+            )
+        ]
+        hours = lambda x: x // 3600
+        minutes = lambda x: (x % 3600) // 60
+        tasks = "\n".join(
+            f"{task.name} (total: {hours(task.total)}h{minutes(task.total)}m)"
+            for task in tasks
+        )
+        return tasks
