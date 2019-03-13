@@ -45,12 +45,7 @@ class TaskShell(cmd.Cmd):
 
     def do_start(self, args):
         """Start task."""
-        args = args.split()
-        if len(args) != 1:
-            print("usage: start name")
-        else:
-            name = args[0]
-            self.timer.start(name)
+        self.timer.start(args)
 
     def do_stop(self, args):
         """Stop task."""
