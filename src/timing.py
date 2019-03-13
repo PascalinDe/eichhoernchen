@@ -100,11 +100,13 @@ class Timer(object):
 
         :param str name: name
         """
+        now = read_time_in("now")
         result_set = self.sqlite.select_one("name", (name,))
         if result_set:
-            self._replace(start=read_time_in("now"))
+            task = src.sqlite.Task(*result_set)
+            self._replace(name=name, start=now, total=task.total)
         else:
-            self._replace(name=name, start=read_time_in("now"))
+            self._replace(name=name, start=now)
 
     def stop(self):
         """Stop task."""
