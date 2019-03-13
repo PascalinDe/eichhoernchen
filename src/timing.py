@@ -28,20 +28,20 @@ import datetime
 import src.sqlite
 
 
-def read_time_in(string):
+def read_time_in(time):
     """Read time in.
 
-    :param str string: string
+    :param str time: time
 
     :returns: time
     :rtype: datetime.datetime
     """
-    if string == "now":
+    if time == "now":
         time = datetime.datetime.now()
     else:
         try:
             now = datetime.datetime.now()
-            time = datetime.datetime.strptime(string, "%H:%M")
+            time = datetime.datetime.strptime(time, "%H:%M")
             time = datetime.datetime(
                 now.year, now.month, now.day, time.hour, time.minute
             )
@@ -50,19 +50,19 @@ def read_time_in(string):
     return time
 
 
-def read_date_in(string):
+def read_date_in(date):
     """Read date in.
 
-    :param str string: string
+    :param str date: date
 
     :returns: date
     :rtype: datetime.datetime
     """
-    if string == "today":
+    if date == "today":
         date = datetime.datetime.now()
     else:
         try:
-            date = datetime.datetime.strptime(string, "%Y-%m-%d")
+            date = datetime.datetime.strptime(date, "%Y-%m-%d")
         except ValueError as exception:
             raise ValueError("yy-mm-dd or use shortcut 'today'") from exception
     return date
@@ -75,22 +75,21 @@ class Timer(object):
     :ivar Task current_task: current task
     """
 
-    def __init__(self, database, task=None):
+    def __init__(self, database):
         """Initialize timer.
 
         :param str database: Eichhörnchen SQLite3 database
-        :param task: task
-        :type: Task or None
         """
         self.sqlite = src.sqlite.SQLite(database)
         self.sqlite.create_table()
-        if not task:
-            name = ""
-            start = end = due = read_time_in("now")
-            total = (end - start).seconds
-            self.current_task = src.sqlite.Task(name, start, end, total, due)
-        else:
-            self.current_task = task
+        self._reset_current_task()
+
+    def _reset_current_task(self):
+        """Reset current task."""
+        name = ""
+        start = end = due = read_time_in("now")
+        total = (end - start).seconds
+        self.current_task = src.sqlite.Task(name, start, end, total, due)
 
     def _replace(self, **kwargs):
         """Replace current task."""
@@ -122,6 +121,7 @@ class Timer(object):
         )
         if not row:
             self.sqlite.insert([[*self.current_task]])
+        self._reset_current_task()
 
     def show(self):
         """Show current task.
@@ -129,12 +129,20 @@ class Timer(object):
         :returns: current task
         :rtype: str
         """
-        start = self.current_task.start.strftime("%H:%M")
-        end = self.current_task.end.strftime("%H:%M")
-        hours = self.current_task.total // 3600
-        minutes = (self.current_task.total % 3600) // 60
-        current_task = (
-            f"{self.current_task.name} "
-            f"({start} - {end}, total: {hours}h{minutes}m)"
-        )
+        if self.current_task.name:
+            start = self.current_task.start.strftime("%H:%M")
+            now = read_time_in("now")
+            total = (
+                self.current_task.total
+                + (now - self.current_task.start).seconds
+            )
+            now = now.strftime("%H:%M")
+            hours = total // 3600
+            minutes = (total % 3600) // 60
+            current_task = (
+                f"{self.current_task.name} "
+                f"({start}-{now}, total: {hours}h{minutes}m)"
+            )
+        else:
+            current_task = "no current task"
         return current_task

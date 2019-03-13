@@ -21,10 +21,10 @@
 
 
 # standard library imports
-import os
-import os.path
 import datetime
 import unittest
+import os
+import os.path
 
 # third party imports
 # library specific imports
@@ -106,29 +106,45 @@ class TestTiming(unittest.TestCase):
         timer = src.timing.Timer(self.DATABASE)
         timer.start("task")
         timer.stop()
+        current_task = src.sqlite.Task(
+            *timer.sqlite.select_one("name", ("task",))
+        )
         now = datetime.datetime.now()
-        self.assertTrue((now - timer.current_task.end).seconds < 10)
+        self.assertTrue((now - current_task.end).seconds < 10)
         self.assertEqual(
-            (now - timer.current_task.end).seconds,
-            timer.current_task.total
+            (now - current_task.end).seconds,
+            current_task.total
         )
 
-    def test_show(self):
+    def test_show_current_task(self):
         """Test showing current task.
 
-        Trying: showing current task
+        Trying: current task
         Expecting: current task
         """
         timer = src.timing.Timer(self.DATABASE)
         timer.start("task")
         current_task = timer.show()
-        timer.stop()
-        name, start, end, total, _ = timer.current_task
+        name, start, _, total, _ = timer.current_task
+        now = datetime.datetime.now()
+        total = timer.current_task.total + (now -start).seconds
         start = start.strftime("%H:%M")
-        end = end.strftime("%H:%M")
+        now = now.strftime("%H:%M")
         hours = total // 3600
         minutes = (total % 3600) // 60
         self.assertEqual(
-            f"{name} ({start} - {end}, total: {hours}h{minutes}m)",
+            f"{name} ({start}-{now}, total: {hours}h{minutes}m)",
             current_task
+        )
+
+    def test_show_no_current_task(self):
+        """Test showingn current task.
+
+        Trying: no current task
+        Expecting: no current task
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        self.assertEqual(
+            "no current task",
+            timer.show()
         )
