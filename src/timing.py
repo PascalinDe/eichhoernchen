@@ -100,6 +100,8 @@ class Timer(object):
 
         :param str name: name
         """
+        if self.current_task.name:
+            raise RuntimeError("there is a running task")
         now = read_time_in("now")
         result_set = self.sqlite.select_one("name", (name,))
         if result_set:

@@ -105,6 +105,17 @@ class TestTiming(unittest.TestCase):
             src.sqlite.Task(*timer.sqlite.select_one("name", ("task",)))
         )
 
+    def test_start_running_task(self):
+        """Test starting task when there is a running task.
+
+        Trying: starting task
+        Expecting: RuntimeError
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        timer.start("task0")
+        with self.assertRaises(RuntimeError):
+            timer.start("task1")
+
     def test_restart(self):
         """Test restarting task.
 
@@ -181,3 +192,11 @@ class TestTiming(unittest.TestCase):
             "no current task",
             timer.show()
         )
+
+    def test_list(self):
+        """Test listing tasks.
+
+        Trying: tasks
+        Expecting: list of tasks
+        """
+        pass

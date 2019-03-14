@@ -45,7 +45,16 @@ class TaskShell(cmd.Cmd):
 
     def do_start(self, args):
         """Start task."""
-        self.timer.start(args)
+        try:
+            self.timer.start(args)
+        except RuntimeError as exception:
+            print(exception)
+            stop = ""
+            while stop not in ["y", "n"]:
+                stop = input("stop running task [yn]? ").lower()
+            if stop == "y":
+                self.timer.stop()
+                self.timer.start(args)
 
     def do_stop(self, args):
         """Stop task."""
