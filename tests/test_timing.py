@@ -21,6 +21,7 @@
 
 
 # standard library imports
+import time
 import datetime
 import unittest
 import os
@@ -51,7 +52,7 @@ class TestTiming(unittest.TestCase):
         Expecting: current time
         """
         now = datetime.datetime.now()
-        self.assertTrue((src.timing.read_time_in("now") - now).seconds < 10)
+        self.assertEqual(0, (src.timing.read_time_in("now") - now).seconds)
 
     def test_read_time_in(self):
         """Test read-in of time.
@@ -72,7 +73,7 @@ class TestTiming(unittest.TestCase):
         Expecting: current date
         """
         today = datetime.datetime.now()
-        self.assertEqual((src.timing.read_date_in("today") - today).days, 0)
+        self.assertEqual(0, (src.timing.read_date_in("today") - today).days)
 
     def test_read_date_in(self):
         """Test read-in of date.
@@ -89,32 +90,64 @@ class TestTiming(unittest.TestCase):
         """Test starting task.
 
         Trying: starting task
-        Expecting: name and current time and date
+        Expecting: current task is initialized and
+        database contains initialized task
         """
         now = datetime.datetime.now()
         timer = src.timing.Timer(self.DATABASE)
         timer.start("task")
         self.assertEqual("task", timer.current_task.name)
-        self.assertTrue((timer.current_task.start - now).seconds < 10)
+        self.assertEqual(0, (timer.current_task.start - now).seconds)
+        self.assertTrue(timer.current_task.end == timer.current_task.due)
+        self.assertEqual(0, timer.current_task.total)
+        self.assertEqual(
+            timer.current_task,
+            src.sqlite.Task(*timer.sqlite.select_one("name", ("task",)))
+        )
+
+    def test_restart(self):
+        """Test restarting task.
+
+        Trying: restarting task
+        Expecting: current task is fetched from database
+        """
+        pass
 
     def test_stop(self):
         """Test stopping task.
 
         Trying: stopping task
-        Expecting: database contains (updated) task
+        Expecting: current task is reset and
+        database contains updated task
         """
         timer = src.timing.Timer(self.DATABASE)
         timer.start("task")
+        time.sleep(1)
         timer.stop()
+        # current task is reset
+        self.assertEqual(
+            "", timer.current_task.name
+        )
+        self.assertTrue(
+            timer.current_task.start
+            == timer.current_task.end
+            == timer.current_task.due
+        )
+        self.assertEqual(0, timer.current_task.total)
+        # database contains updated task
         current_task = src.sqlite.Task(
             *timer.sqlite.select_one("name", ("task",))
         )
-        now = datetime.datetime.now()
-        self.assertTrue((now - current_task.end).seconds < 10)
-        self.assertEqual(
-            (now - current_task.end).seconds,
-            current_task.total
-        )
+        self.assertEqual(1, (current_task.end - current_task.start).seconds)
+        self.assertEqual(1, current_task.total)
+
+    def test_stop_restarted_task(self):
+        """Test stopping restarted task.
+
+        Trying: stopping restarted task
+        Expecting: database contains updated task
+        """
+        pass
 
     def test_show_current_task(self):
         """Test showing current task.

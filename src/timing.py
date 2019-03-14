@@ -107,6 +107,7 @@ class Timer(object):
             self._replace(name=name, start=now, total=task.total)
         else:
             self._replace(name=name, start=now)
+            self.sqlite.insert([[*self.current_task]])
 
     def stop(self):
         """Stop task."""
@@ -123,6 +124,11 @@ class Timer(object):
         )
         if not row:
             self.sqlite.insert([[*self.current_task]])
+        self.sqlite.update_one(
+            "total",
+            "name",
+            (self.current_task.total, self.current_task.name)
+        )
         self._reset_current_task()
 
     def show(self):
