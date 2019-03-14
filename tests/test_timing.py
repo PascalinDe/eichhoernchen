@@ -138,7 +138,7 @@ class TestTiming(unittest.TestCase):
         )
 
     def test_show_no_current_task(self):
-        """Test showingn current task.
+        """Test showing current task.
 
         Trying: no current task
         Expecting: no current task
