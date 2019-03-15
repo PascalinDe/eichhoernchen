@@ -34,19 +34,27 @@ class TaskShell(cmd.Cmd):
 
     :ivar Timer timer: timer
     """
-    prompt = "(task) "
-    intro = "Task shell.\t Type help or ? to list commands.\n"
 
     def __init__(self):
         """Initialize task shell."""
         super().__init__()
+        self.intro = "Task shell.\t Type help or ? to list commands.\n"
         self.timer = src.timing.Timer("eichhoernchen.db")
+        self._reset_prompt()
         return
+
+    def _reset_prompt(self):
+        """Reset prompt."""
+        if self.timer.current_task.name:
+            self.prompt = f"{self.timer.current_task.name} ~> "
+        else:
+            self.prompt = "~> "
 
     def do_start(self, args):
         """Start task."""
         try:
             self.timer.start(args)
+            self._reset_prompt()
         except RuntimeError as exception:
             print(exception)
             stop = ""
@@ -59,6 +67,7 @@ class TaskShell(cmd.Cmd):
     def do_stop(self, args):
         """Stop task."""
         self.timer.stop()
+        self._reset_prompt()
 
     def do_show(self, args):
         """Show current task."""
