@@ -65,8 +65,11 @@ class TaskShell(cmd.Cmd):
 
     def do_stop(self, args):
         """Stop task."""
-        self.timer.stop()
-        self._reset_prompt()
+        if self.timer.current_task.name:
+            self.timer.stop()
+            self._reset_prompt()
+        else:
+            print("no current task")
 
     def do_show(self, args):
         """Show current task."""
