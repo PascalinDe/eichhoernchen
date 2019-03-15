@@ -173,10 +173,15 @@ class Timer(object):
                 operator=">="
             )
         ]
-        hours = lambda x: x // 3600
-        minutes = lambda x: (x % 3600) // 60
-        tasks = "\n".join(
-            f"{task.name} (total: {hours(task.total)}h{minutes(task.total)}m)"
-            for task in tasks
-        )
+        if tasks:
+            hours = lambda x: x // 3600
+            minutes = lambda x: (x % 3600) // 60
+            tasks = "\n".join(
+                (
+                    f"{task.name} "
+                    f"(total: {hours(task.total)}h{minutes(task.total)}m)"
+                ) for task in tasks
+            )
+        else:
+            tasks = "no tasks"
         return tasks
