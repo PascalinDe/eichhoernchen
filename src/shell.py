@@ -22,6 +22,7 @@
 
 # standard library imports
 import cmd
+import datetime
 import readline
 
 # third party imports
@@ -77,7 +78,7 @@ class TaskShell(cmd.Cmd):
 
     def do_list(self, args):
         """List tasks."""
-        print(self.timer.list())
+        print("\n".join(self.timer.list()))
 
     def do_bye(self, args):
         """Close task shell."""

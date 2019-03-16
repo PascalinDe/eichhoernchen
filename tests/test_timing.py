@@ -57,10 +57,9 @@ class TestTiming(unittest.TestCase):
         self.assertEqual(
             0, (datetime.datetime.now() - timer.current_task.start).seconds
         )
-        self.assertTrue(
-            timer.current_task.start
-            == timer.current_task.end
-            == timer.current_task.due
+        self.assertTrue(timer.current_task.start == timer.current_task.end)
+        self.assertEqual(
+            datetime.datetime(9999, 12, 31), timer.current_task.due
         )
         self.assertEqual(0, timer.current_task.total)
 
@@ -77,12 +76,30 @@ class TestTiming(unittest.TestCase):
         self.assertEqual(
             0, (datetime.datetime.now() - timer.current_task.start).seconds
         )
-        self.assertTrue(timer.current_task.end == timer.current_task.due)
+        self.assertEqual(
+            0, (datetime.datetime.now() - timer.current_task.end).seconds
+        )
         self.assertEqual(0, timer.current_task.total)
+        self.assertEqual(
+            datetime.datetime(9999, 12, 31), timer.current_task.due
+        )
         self.assertEqual(
             timer.current_task,
             src.sqlite.Task(*timer.sqlite.select_one("name", ("foo",)))
         )
+
+    def test_start_due_date(self):
+        """Test starting task with due date.
+
+        Trying: starting task with due date
+        Expecting: due date is set
+        """
+        name = "foo"
+        due = "2019-03-17"
+        timer = src.timing.Timer(self.DATABASE)
+        timer.start(f"{name} {due}")
+        due = datetime.datetime.strptime(due, "%Y-%m-%d")
+        self.assertEqual(due, timer.current_task.due)
 
     def test_start_running_task(self):
         """Test starting task when there is a running task.
@@ -131,9 +148,10 @@ class TestTiming(unittest.TestCase):
             "", timer.current_task.name
         )
         self.assertTrue(
-            timer.current_task.start
-            == timer.current_task.end
-            == timer.current_task.due
+            timer.current_task.start == timer.current_task.end
+        )
+        self.assertEqual(
+            datetime.datetime(9999, 12, 31), timer.current_task.due
         )
         self.assertEqual(0, timer.current_task.total)
         # database contains updated task
