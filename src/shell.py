@@ -81,4 +81,6 @@ class TaskShell(cmd.Cmd):
 
     def do_bye(self, args):
         """Close task shell."""
+        if self.timer.current_task.name:
+            self.timer.stop()
         return True

@@ -28,46 +28,6 @@ import datetime
 import src.sqlite
 
 
-def read_time_in(time):
-    """Read time in.
-
-    :param str time: time
-
-    :returns: time
-    :rtype: datetime.datetime
-    """
-    if time == "now":
-        time = datetime.datetime.now()
-    else:
-        try:
-            now = datetime.datetime.now()
-            time = datetime.datetime.strptime(time, "%H:%M")
-            time = datetime.datetime(
-                now.year, now.month, now.day, time.hour, time.minute
-            )
-        except ValueError as exception:
-            raise ValueError("hh:mm or use shortcut 'now'") from exception
-    return time
-
-
-def read_date_in(date):
-    """Read date in.
-
-    :param str date: date
-
-    :returns: date
-    :rtype: datetime.datetime
-    """
-    if date == "today":
-        date = datetime.datetime.now()
-    else:
-        try:
-            date = datetime.datetime.strptime(date, "%Y-%m-%d")
-        except ValueError as exception:
-            raise ValueError("yy-mm-dd or use shortcut 'today'") from exception
-    return date
-
-
 class Timer(object):
     """Timer.
 
@@ -87,9 +47,21 @@ class Timer(object):
     def _reset_current_task(self):
         """Reset current task."""
         name = ""
-        start = end = due = read_time_in("now")
+        start = end = due = datetime.datetime.now()
         total = (end - start).seconds
         self.current_task = src.sqlite.Task(name, start, end, total, due)
+
+    def _calculate_print(self, total):
+        """Calculate print.
+
+        :param int total: total
+
+        :returns: print
+        :rtype: str
+        """
+        hours = total // 3600
+        minutes = (total % 3600) // 60
+        return f"total: {hours}h{minutes}m"
 
     def _replace(self, **kwargs):
         """Replace current task."""
@@ -102,30 +74,33 @@ class Timer(object):
         """
         if self.current_task.name:
             raise RuntimeError("there is a running task")
-        now = read_time_in("now")
+        now = datetime.datetime.now()
         result_set = self.sqlite.select_one("name", (name,))
         if result_set:
             task = src.sqlite.Task(*result_set)
-            self._replace(name=name, start=now, total=task.total)
+            self._replace(
+                name=name, start=now, total=task.total
+            )
         else:
             self._replace(name=name, start=now)
             self.sqlite.insert([[*self.current_task]])
 
     def stop(self):
         """Stop task."""
-        now = read_time_in("now")
+        now = datetime.datetime.now()
         total = (
             self.current_task.total
             + (now - self.current_task.start).seconds
         )
-        self._replace(end=read_time_in("now"), total=total)
+        self._replace(end=now, total=total)
+        row = self.sqlite.select_one("name", (self.current_task.name,))
+        if not row:
+            self.sqlite.insert([[*self.current_task]])
         row = self.sqlite.update_one(
             "end",
             "name",
             (self.current_task.end, self.current_task.name)
         )
-        if not row:
-            self.sqlite.insert([[*self.current_task]])
         self.sqlite.update_one(
             "total",
             "name",
@@ -140,18 +115,16 @@ class Timer(object):
         :rtype: str
         """
         if self.current_task.name:
+            now = datetime.datetime.now()
             start = self.current_task.start.strftime("%H:%M")
-            now = read_time_in("now")
             total = (
                 self.current_task.total
                 + (now - self.current_task.start).seconds
             )
             now = now.strftime("%H:%M")
-            hours = total // 3600
-            minutes = (total % 3600) // 60
             current_task = (
                 f"{self.current_task.name} "
-                f"({start}-{now}, total: {hours}h{minutes}m)"
+                f"({start}-{now}, {self._calculate_print(total)})"
             )
         else:
             current_task = "no current task"
@@ -174,13 +147,9 @@ class Timer(object):
             )
         ]
         if tasks:
-            hours = lambda x: x // 3600
-            minutes = lambda x: (x % 3600) // 60
             tasks = "\n".join(
-                (
-                    f"{task.name} "
-                    f"(total: {hours(task.total)}h{minutes(task.total)}m)"
-                ) for task in tasks
+                f"{task.name} ({self._calculate_print(task.total)})"
+                for task in tasks
             )
         else:
             tasks = "no tasks"

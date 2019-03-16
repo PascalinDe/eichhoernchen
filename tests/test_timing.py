@@ -45,64 +45,43 @@ class TestTiming(unittest.TestCase):
         if os.path.exists(self.DATABASE):
             os.remove(self.DATABASE)
 
-    def test_read_current_time_in(self):
-        """Test read-in of time.
+    def test_reset_current_task(self):
+        """Test resetting current task.
 
-        Trying: now
-        Expecting: current time
+        Trying: resetting current task
+        Expecting: default task
         """
-        now = datetime.datetime.now()
-        self.assertEqual(0, (src.timing.read_time_in("now") - now).seconds)
-
-    def test_read_time_in(self):
-        """Test read-in of time.
-
-        Trying: 15:07
-        Expecting: 15:07 and current date (datetime object)
-        """
-        now = datetime.datetime.now()
+        timer = src.timing.Timer(self.DATABASE)
+        timer._reset_current_task()
+        self.assertEqual("", timer.current_task.name)
         self.assertEqual(
-            datetime.datetime(now.year, now.month, now.day, 15, 7),
-            src.timing.read_time_in("15:07")
+            0, (datetime.datetime.now() - timer.current_task.start).seconds
         )
-
-    def test_read_current_date_in(self):
-        """Test read-in of date.
-
-        Trying: today
-        Expecting: current date
-        """
-        today = datetime.datetime.now()
-        self.assertEqual(0, (src.timing.read_date_in("today") - today).days)
-
-    def test_read_date_in(self):
-        """Test read-in of date.
-
-        Trying: 2019-03-03
-        Expecting: 2019-03-03
-        """
-        self.assertEqual(
-            datetime.datetime(2019, 3, 3),
-            src.timing.read_date_in("2019-03-03")
+        self.assertTrue(
+            timer.current_task.start
+            == timer.current_task.end
+            == timer.current_task.due
         )
+        self.assertEqual(0, timer.current_task.total)
 
     def test_start(self):
         """Test starting task.
 
         Trying: starting task
-        Expecting: current task is initialized and
+        Expecting: task is initialized and
         database contains initialized task
         """
-        now = datetime.datetime.now()
         timer = src.timing.Timer(self.DATABASE)
-        timer.start("task")
-        self.assertEqual("task", timer.current_task.name)
-        self.assertEqual(0, (timer.current_task.start - now).seconds)
+        timer.start("foo")
+        self.assertEqual("foo", timer.current_task.name)
+        self.assertEqual(
+            0, (datetime.datetime.now() - timer.current_task.start).seconds
+        )
         self.assertTrue(timer.current_task.end == timer.current_task.due)
         self.assertEqual(0, timer.current_task.total)
         self.assertEqual(
             timer.current_task,
-            src.sqlite.Task(*timer.sqlite.select_one("name", ("task",)))
+            src.sqlite.Task(*timer.sqlite.select_one("name", ("foo",)))
         )
 
     def test_start_running_task(self):
@@ -112,9 +91,9 @@ class TestTiming(unittest.TestCase):
         Expecting: RuntimeError
         """
         timer = src.timing.Timer(self.DATABASE)
-        timer.start("task0")
+        timer.start("foo")
         with self.assertRaises(RuntimeError):
-            timer.start("task1")
+            timer.start("bar")
 
     def test_restart(self):
         """Test restarting task.
@@ -122,7 +101,19 @@ class TestTiming(unittest.TestCase):
         Trying: restarting task
         Expecting: current task is fetched from database
         """
-        pass
+        name = "foo"
+        start = end = due = datetime.datetime.now()
+        task = src.sqlite.Task(name, start, end, 0, due)
+        timer = src.timing.Timer(self.DATABASE)
+        timer.sqlite.insert([[*task]])
+        time.sleep(1)
+        timer.start(name)
+        self.assertEqual(
+            0, (datetime.datetime.now() - timer.current_task.start).seconds
+        )
+        self.assertEqual(
+            1, (datetime.datetime.now() - timer.current_task.end).seconds
+        )
 
     def test_stop(self):
         """Test stopping task.
@@ -151,11 +142,3 @@ class TestTiming(unittest.TestCase):
         )
         self.assertEqual(1, (current_task.end - current_task.start).seconds)
         self.assertEqual(1, current_task.total)
-
-    def test_stop_restarted_task(self):
-        """Test stopping restarted task.
-
-        Trying: stopping restarted task
-        Expecting: database contains updated task
-        """
-        pass
