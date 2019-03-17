@@ -52,18 +52,6 @@ class Timer(object):
         total = (end - start).seconds
         self.current_task = src.sqlite.Task(name, start, end, total, due)
 
-    def _calculate_print(self, total):
-        """Calculate print.
-
-        :param int total: total
-
-        :returns: print
-        :rtype: str
-        """
-        hours = total // 3600
-        minutes = (total % 3600) // 60
-        return f"total: {hours}h{minutes}m"
-
     def _replace(self, **kwargs):
         """Replace current task."""
         self.current_task = self.current_task._replace(**kwargs)
@@ -74,7 +62,7 @@ class Timer(object):
         :param str args: arguments
         """
         if self.current_task.name:
-            raise RuntimeError("there is a running task")
+            raise RuntimeError
         try:
             name = " ".join(args.split(" ")[:-1])
             due = datetime.datetime.strptime(args.split(" ")[-1], "%Y-%m-%d")
@@ -121,61 +109,18 @@ class Timer(object):
         )
         self._reset_current_task()
 
-    def show(self):
-        """Show current task.
-
-        :returns: current task
-        :rtype: str
-        """
-        if self.current_task.name:
-            now = datetime.datetime.now()
-            start = self.current_task.start.strftime("%H:%M")
-            total = (
-                self.current_task.total
-                + (now - self.current_task.start).seconds
-            )
-            now = now.strftime("%H:%M")
-            if self.current_task.due != datetime.datetime(9999, 12, 31):
-                due = self.current_task.due
-                current_task = (
-                    f"{self.current_task.name} "
-                    f"{start}-{now} ({self._calculate_print(total)}, "
-                    f"due: {datetime.datetime.strftime(due, '%Y-%m-%d')})"
-                )
-            else:
-                current_task = (
-                    f"{self.current_task.name} "
-                    f"{start}-{now} ({self._calculate_print(total)})"
-                )
-        else:
-            current_task = "no current task"
-        return current_task
-
     def list(self):
         """List tasks.
 
         :returns: list of tasks
-        :rtype: str
+        :rtype: list
         """
         now = datetime.datetime.now()
         start_of_day = datetime.datetime(now.year, now.month, now.day, 0, 0)
         tasks = [
             src.sqlite.Task(*task)
             for task in self.sqlite.select_many(
-                column="start",
-                parameters=(start_of_day,),
-                operator=">="
+                column="start", parameters=(start_of_day,), operator=">="
             )
         ]
-        if tasks:
-            for task in tasks:
-                if task.due != datetime.datetime(9999, 12, 31):
-                    yield(
-                        f"{task.name} ({self._calculate_print(task.total)}, "
-                        f"due: "
-                        f"{datetime.datetime.strftime(task.due, '%Y-%m-%d')})"
-                    )
-                else:
-                    yield f"{task.name} ({self._calculate_print(task.total)})"
-        else:
-            yield "no tasks"
+        return tasks

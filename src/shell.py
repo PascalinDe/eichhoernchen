@@ -51,6 +51,52 @@ class TaskShell(cmd.Cmd):
         else:
             self.prompt = "~> "
 
+    def _return_total_attr(self, total):
+        """Return string representation of total attribute.
+
+        :param int total: total
+
+        :returns: total
+        :rtype: str
+        """
+        hours = total // 3600
+        minutes = (total % 3600) // 60
+        return f"total: {hours}h{minutes}m"
+
+    def _return_due_attr(self, due):
+        """Return string representation of due attribute.
+
+        :param datetime due: due date
+
+        :returns: due date
+        :rtype: str
+        """
+        if due != datetime.datetime(9999, 12, 31):
+            due = datetime.datetime.strftime(due, "%Y-%m-%d")
+            due = f", due: {due}"
+        else:
+            due = ""
+        return due
+
+    def _return_task_object(self, task, now=True):
+        """Return string representation of Task object.
+
+        :param Task task: task
+        :param bool now: toggle end time is now on/off
+
+        :returns: task
+        :rtype: str
+        """
+        start = task.start.strftime("%H:%M")
+        total = task.total + (datetime.datetime.now() - task.start).seconds
+        if now:
+            end = datetime.datetime.now().strftime("%H:%M")
+        else:
+            end = task.end.strftime("%H:%M")
+        total = self._return_total_attr(task.total)
+        due = self._return_due_attr(task.due)
+        return f"{task.name} {start}-{end} ({total}{due})"
+
     def do_start(self, args):
         """Start task."""
         try:
@@ -74,11 +120,21 @@ class TaskShell(cmd.Cmd):
 
     def do_show(self, args):
         """Show current task."""
-        print(self.timer.show())
+        current_task = self.timer.current_task
+        if current_task.name:
+            print(self._return_task_object(self.current_task))
+        else:
+            print("no current task")
 
     def do_list(self, args):
         """List tasks."""
-        print("\n".join(self.timer.list()))
+        tasks = self.timer.list()
+        tasks.sort(key=lambda x: x.start)
+        if not tasks:
+            print("no tasks")
+        else:
+            for i, task in enumerate(tasks):
+                print(f"{i+1} {self._return_task_object(task, now=False)}")
 
     def do_bye(self, args):
         """Close task shell."""
