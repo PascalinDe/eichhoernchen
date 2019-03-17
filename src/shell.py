@@ -122,7 +122,7 @@ class TaskShell(cmd.Cmd):
         """Show current task."""
         current_task = self.timer.current_task
         if current_task.name:
-            print(self._return_task_object(self.current_task))
+            print(self._return_task_object(current_task))
         else:
             print("no current task")
 
@@ -135,6 +135,11 @@ class TaskShell(cmd.Cmd):
         else:
             for i, task in enumerate(tasks):
                 print(f"{i+1} {self._return_task_object(task, now=False)}")
+
+    def do_sum(self, args):
+        """Sum up two tasks (comma-separated)."""
+        name0, name1 = args.split(",")
+        print(self._return_total_attr(self.timer.sum(name1, name1)))
 
     def do_bye(self, args):
         """Close task shell."""

@@ -140,7 +140,7 @@ class TestTiming(unittest.TestCase):
         database contains updated task
         """
         timer = src.timing.Timer(self.DATABASE)
-        timer.start("task")
+        timer.start("foo")
         time.sleep(1)
         timer.stop()
         # current task is reset
@@ -156,7 +156,35 @@ class TestTiming(unittest.TestCase):
         self.assertEqual(0, timer.current_task.total)
         # database contains updated task
         current_task = src.sqlite.Task(
-            *timer.sqlite.select_one("name", ("task",))
+            *timer.sqlite.select_one("name", ("foo",))
         )
         self.assertEqual(1, (current_task.end - current_task.start).seconds)
         self.assertEqual(1, current_task.total)
+
+    def test_sum(self):
+        """Test summing up two tasks.
+
+        Trying: summing up two tasks
+        Expecting: sum of total attributes
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        timer.start("foo")
+        time.sleep(1)
+        timer.stop()
+        timer.start("bar")
+        time.sleep(2)
+        timer.stop()
+        self.assertEqual(3, timer.sum("foo", "bar"))
+
+    def test_sum_nonexisting(self):
+        """Test summing up two tasks.
+
+        Trying: summing up task and nonexisting task
+        Expecting: ValueError
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        timer.start("foo")
+        time.sleep(1)
+        timer.stop()
+        with self.assertRaises(ValueError):
+            timer.sum("foo", "bar")
