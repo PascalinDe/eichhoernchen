@@ -135,21 +135,18 @@ class Timer(object):
         ]
         return tasks
 
-    def sum(self, name0, name1):
-        """Sum up two tasks.
+    def sum(self, names):
+        """Sum up tasks.
 
-        :param str name0: name
-        :param str name1: name
+        :param list names: list of names
 
         :returns: sum of total attributes
         :rtype: int
         """
-        task0 = self.sqlite.select_one(column="name", parameters=(name0,))
-        if not task0:
-            raise ValueError(f"'{name0}' does not exist")
-        task0 = src.sqlite.Task(*task0)
-        task1 = self.sqlite.select_one(column="name", parameters=(name1,))
-        if not task1:
-            raise ValueError(f"'{name1}' does not exist")
-        task1 = src.sqlite.Task(*task1)
-        return task0.total + task1.total
+        tasks = []
+        for name in names:
+            task = self.sqlite.select_one(column="name", parameters=(name,))
+            if not task:
+                raise ValueError(f"'{name}' does not exist")
+            tasks.append(src.sqlite.Task(*task))
+        return sum([task.total for task in tasks])

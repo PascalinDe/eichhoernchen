@@ -137,9 +137,10 @@ class TaskShell(cmd.Cmd):
                 print(f"{i+1} {self._return_task_object(task, now=False)}")
 
     def do_sum(self, args):
-        """Sum up two tasks (comma-separated)."""
-        name0, name1 = args.split(",")
-        print(self._return_total_attr(self.timer.sum(name1, name1)))
+        """Sum up tasks (comma-separated)."""
+        names = args.split(",")
+        total = self._return_total_attr(self.timer.sum(names))
+        print(total)
 
     def do_bye(self, args):
         """Close task shell."""
