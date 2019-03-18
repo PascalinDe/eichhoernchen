@@ -172,9 +172,9 @@ class TestTiming(unittest.TestCase):
         time.sleep(1)
         timer.stop()
         timer.start("bar")
-        time.sleep(2)
+        time.sleep(1)
         timer.stop()
-        self.assertEqual(3, timer.sum("foo", "bar"))
+        self.assertEqual(2, timer.sum("foo", "bar"))
 
     def test_sum_nonexisting(self):
         """Test summing up two tasks.

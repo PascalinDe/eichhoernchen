@@ -233,11 +233,13 @@ class SQLite():
             raise SQLiteError(msg, sql=sql) from exception
         connection.commit()
         if column1:
+            column = column1
             parameters = (parameters[0],)
         else:
+            column = column0
             parameters = ()
         rows = self.select_many(
-            column=column0,
+            column=column,
             parameters=parameters,
             connection=connection,
             close=close
