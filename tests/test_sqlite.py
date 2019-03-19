@@ -31,73 +31,14 @@ import unittest
 import src.sqlite
 
 
-class TestTask(unittest.TestCase):
-    """Test typed named tuple Task.
-
-    :ivar Task task: typed named tuple Task
-    """
-
-    def setUp(self):
-        """Set test cases up.
-
-        Trying: name = 'name', start = end = '00:00:00', total = 0
-        and due = '2019-01-01'
-        """
-        start = end = datetime.datetime.strptime(
-            "00:00:00", "%H:%M:%S"
-        )
-        total = 0
-        due = datetime.datetime.strptime("2019-01-01", "%Y-%m-%d")
-        self.task = src.sqlite.Task(
-            "name", start, end, total, due
-        )
-
-    def test_field_types(self):
-        """Test field types.
-
-        Expecting: name = str, start = end = due = datetime.datetime,
-        total = int
-        """
-        field_types = {
-            "name": str,
-            "start": datetime.datetime,
-            "end": datetime.datetime,
-            "total": int,
-            "due": datetime.datetime
-        }
-        self.assertEqual(field_types, self.task._field_types)
-
-    def test_attributes(self):
-        """Test attributes."""
-        start = end = datetime.datetime.strptime(
-            "00:00:00", "%H:%M:%S"
-        )
-        total = 0
-        due = datetime.datetime.strptime("2019-01-01", "%Y-%m-%d")
-        self.assertEqual("name", self.task.name)
-        self.assertEqual(start, self.task.start)
-        self.assertEqual(end, self.task.end)
-        self.assertEqual(total, self.task.total)
-        self.assertEqual(due, self.task.due)
-
-
 class TestSQLite(unittest.TestCase):
     """Test Eichhörnchen SQLite database interface.
 
-    :ivar Task task: typed named tuple Task
     :ivar SQLite sqlite: Eichhörnchen SQLite database interface
     """
 
     def setUp(self):
         """Set test cases up."""
-        start = end = datetime.datetime.strptime(
-            "00:00:00", "%H:%M:%S"
-        )
-        total = 0
-        due = datetime.datetime.strptime("2019-01-01", "%Y-%m-%d")
-        self.task = src.sqlite.Task(
-            "{name}", start, end, total, due
-        )
         self.sqlite = src.sqlite.SQLite(":memory:")
 
     def test_connect(self):
@@ -108,19 +49,18 @@ class TestSQLite(unittest.TestCase):
         connection = self.sqlite.connect()
         self.assertIs(sqlite3.Connection, type(connection))
 
-    def test_create_table(self):
+    def test_create_tables(self):
         """Test table creation.
 
         Expecting: table exists
         """
         connection = self.sqlite.connect()
-        self.sqlite.create_table(connection=connection, close=False)
-        sql = (
-            "SELECT name FROM sqlite_master "
-            "WHERE type='table' AND name='{name}'"
-        ).format(name=self.sqlite.TABLE)
+        self.sqlite.create_tables(connection=connection, close=False)
+        sql = f"SELECT name FROM sqlite_master WHERE type='table'"
         cursor = connection.execute(sql)
-        self.assertEqual(1, len(list(cursor)))
+        self.assertEqual(
+            [row[0] for row in cursor], list(self.sqlite.COLUMN_DEFS.keys())
+        )
         connection.close()
 
     def test_insert_many(self):

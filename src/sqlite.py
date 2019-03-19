@@ -58,18 +58,22 @@ class SQLiteError(Exception):
 class SQLite():
     """Eichhörnchen SQLite database interface.
 
-    :cvar str TABLE: SQLite table
     :cvar dict COLUMN_DEFS: SQLite column definitions
     :ivar str database: Eichhörnchen SQLite3 database
     """
 
-    TABLE = "tasks"
     COLUMN_DEFS = {
-        "name": "TEXT PRIMARY KEY",
-        "start": "TIMESTAMP",
-        "end": "TIMESTAMP",
-        "total": "INT",
-        "due": "TIMESTAMP",
+        "tasks": (
+            "name TEXT PRIMARY KEY, "
+            "start TIMESTAMP, "
+            "end TIMESTAMP, "
+            "total INT"
+        ),
+        "tags": (
+            "text TEXT, "
+            "name TEXT, "
+            "FOREIGN KEY (name) REFERENCES tasks (name)"
+        )
     }
 
     def __init__(self, database):
@@ -97,7 +101,7 @@ class SQLite():
             raise SQLiteError(msg) from exception
         return connection
 
-    def create_table(self, connection=None, close=True):
+    def create_tables(self, connection=None, close=True):
         """Create tasks table.
 
         :param Connection connection: connection
@@ -106,12 +110,10 @@ class SQLite():
         if not connection:
             connection = self.connect()
         try:
-            column_defs=", ".join(
-                f"{k} {v}" for k, v in self.COLUMN_DEFS.items()
-            )
-            sql = f"CREATE TABLE IF NOT EXISTS {self.TABLE} ({column_defs})"
-            connection.execute(sql)
-            connection.commit()
+            for table, column_def in self.COLUMN_DEFS.items():
+                sql = f"CREATE TABLE IF NOT EXISTS {table} ({column_def})"
+                connection.execute(sql)
+                connection.commit()
         except sqlite3.Error as exception:
             msg = "create table statement failed"
             raise SQLiteError(msg, sql=sql) from exception
