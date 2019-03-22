@@ -36,7 +36,7 @@ class Task(typing.NamedTuple):
     start: datetime.datetime
     end: datetime.datetime
     total: int
-    due: datetime.datetime
+    tags: list
 
 
 class SQLiteError(Exception):
@@ -64,15 +64,15 @@ class SQLite():
 
     COLUMN_DEFS = {
         "tasks": (
-            "name TEXT PRIMARY KEY, "
-            "start TIMESTAMP, "
-            "end TIMESTAMP, "
+            "name TEXT PRIMARY KEY",
+            "start TIMESTAMP",
+            "end TIMESTAMP",
             "total INT"
         ),
         "tags": (
-            "text TEXT, "
-            "name TEXT, "
-            "FOREIGN KEY (name) REFERENCES tasks (name)"
+            "text TEXT",
+            "name TEXT",
+            "FOREIGN KEY(name) REFERENCES tasks(name)"
         )
     }
 
@@ -95,7 +95,6 @@ class SQLite():
                 self.database,
                 detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
             )
-            connection.row_factory = sqlite3.Row
         except sqlite3.Error as exception:
             msg = "connecting to database failed"
             raise SQLiteError(msg) from exception
@@ -111,6 +110,7 @@ class SQLite():
             connection = self.connect()
         try:
             for table, column_def in self.COLUMN_DEFS.items():
+                column_def = ", ".join(column_def)
                 sql = f"CREATE TABLE IF NOT EXISTS {table} ({column_def})"
                 connection.execute(sql)
                 connection.commit()
@@ -121,9 +121,10 @@ class SQLite():
             if close:
                 connection.close()
 
-    def insert(self, rows, connection=None, close=True):
+    def insert(self, table, rows, connection=None, close=True):
         """Insert rows.
 
+        :param str table: table
         :param list rows: rows
         :param Connection connection: database connection
         :param bool close: close database connection
@@ -131,8 +132,10 @@ class SQLite():
         if not connection:
             connection = self.connect()
         try:
-            columns=", ".join("?" for _ in self.COLUMN_DEFS.items())
-            sql = f"INSERT INTO {self.TABLE} VALUES ({columns})"
+            placeholders = ", ".join(
+                "?" for _ in range(len(self.COLUMN_DEFS[table]))
+            )
+            sql = f"INSERT INTO {table} VALUES ({placeholders})"
             connection.executemany(sql, rows)
             connection.commit()
         except sqlite3.IntegrityError as exception:
@@ -145,12 +148,13 @@ class SQLite():
             if close:
                 connection.close()
 
-    def select_many(
-            self,
+    def select(
+            self, table,
             column="", parameters=(), operator="=", connection=None, close=True
     ):
         """Select rows.
 
+        :param str table: table
         :param str column: column
         :param tuple parameters: parameters
         :param str operator: operator
@@ -164,12 +168,12 @@ class SQLite():
             connection = self.connect()
         try:
             if column and parameters:
-                sql = f"SELECT * FROM {self.TABLE} WHERE {column} {operator} ?"
+                sql = f"SELECT * FROM {table} WHERE {column} {operator} ?"
                 cursor = connection.execute(sql, parameters)
             else:
-                sql = f"SELECT * FROM {self.TABLE}"
+                sql = f"SELECT * FROM {table}"
                 cursor = connection.execute(sql)
-            rows = [tuple(row) for row in cursor]
+            rows = list(cursor)
         except sqlite3.Error as exception:
             msg = "select statement failed"
             raise SQLiteError(msg, sql=sql) from exception
@@ -178,41 +182,13 @@ class SQLite():
                 connection.close()
         return rows
 
-    def select_one(
-            self, column, parameters,
-            operator="=", connection=None, close=True
-    ):
-        """Select row.
-
-        :param str column: column
-        :param tuple parameters: parameters
-        :param str operator: operator
-        :param Connection: connection: database connection
-        :param bool close: close database connection
-
-        :returns: row or None
-        :rtype: tuple or None
-        """
-        rows = self.select_many(
-            column=column,
-            parameters=parameters,
-            operator=operator,
-            connection=connection,
-            close=close
-        )
-        if len(rows) > 1:
-            raise SQLiteError("result-set contains more than one row")
-        elif len(rows) == 1:
-            row = rows[0]
-        else:
-            row = None
-        return row
-
-    def update_many(
-            self, column0, parameters, column1="", connection=None, close=True
+    def update(
+            self, table, column0, parameters,
+            column1="", connection=None, close=True
     ):
         """Update rows.
 
+        :param str table: table
         :param str column0: column to be updated
         :param tuple parameters: parameters
         :param str column1: column WHERE clause
@@ -225,61 +201,43 @@ class SQLite():
         if not connection:
             connection = self.connect()
         if column1:
-            sql = f"UPDATE {self.TABLE} SET {column0} = ? WHERE {column1} = ?"
+            sql = f"UPDATE {table} SET {column0} = ? WHERE {column1} = ?"
         else:
-            sql = f"UPDATE {self.TABLE} SET {column0} = ?"
+            sql = f"UPDATE {table} SET {column0} = ?"
         try:
             connection.execute(sql, parameters)
         except sqlite3.Error as exception:
             msg = "update statement failed"
             raise SQLiteError(msg, sql=sql) from exception
         connection.commit()
-        if column1:
-            column = column1
-            parameters = (parameters[0],)
+        if column1 and column0 != column1:
+            sql = (
+                f"SELECT * FROM {table} "
+                f"WHERE {column0} = ? AND {column1} = ?"
+            )
+            cursor = connection.execute(sql, parameters)
+            rows = list(cursor)
+        elif column1:
+            rows = self.select(
+                table,
+                column=column0,
+                parameters=(parameters[0],),
+                connection=connection,
+                close=close
+            )
         else:
-            column = column0
-            parameters = ()
-        rows = self.select_many(
-            column=column,
-            parameters=parameters,
-            connection=connection,
-            close=close
-        )
+            rows = self.select(
+                table, column=column0, connection=connection, close=close
+            )
         return rows
 
-    def update_one(
-            self, column0, column1, parameters, connection=None, close=True
-    ):
-        """Update row.
-
-        :param str column0: column to be updated
-        :param str column1: column WHERE clause
-        :param tuple parameters: parameters
-        :param Connection connection: database connection
-        :param bool close: close database connection
-
-        :returns: row or None
-        :rtype: tuple or None
-        """
-        rows = self.update_many(
-            column0, parameters,
-            column1=column1, connection=connection, close=close
-        )
-        if len(rows) > 1:
-            raise SQLiteError("result-set contains more than one row")
-        elif len(rows) == 1:
-            row = rows[0]
-        else:
-            row = None
-        return row
-
     def delete(
-            self, column, parameters,
+            self, table, column, parameters,
             operator="=", connection=None, close=True
     ):
         """Delete rows.
 
+        :param str table: table
         :param str column: column
         :param tuple parameters: parameters
         :param str operator: operator
@@ -288,7 +246,7 @@ class SQLite():
         """
         if not connection:
             connection = self.connect()
-        sql = f"DELETE FROM {self.TABLE} WHERE {column} {operator} ?"
+        sql = f"DELETE FROM {table} WHERE {column} {operator} ?"
         try:
             connection.execute(sql, parameters)
         except sqlite3.Error as exception:
