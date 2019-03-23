@@ -59,9 +59,8 @@ class TestSQLite(unittest.TestCase):
             "SELECT name FROM sqlite_master WHERE type = 'table'"
         )
         self.assertEqual(
-            list(self.sqlite.COLUMN_DEFS.keys()), [row[0] for row in cursor]
+            [row[0] for row in cursor], list(self.sqlite.COLUMN_DEFS.keys())
         )
-        connection.close()
 
     def test_insert_many(self):
         """Test row insertion.
@@ -79,7 +78,7 @@ class TestSQLite(unittest.TestCase):
         ]
         self.sqlite.insert("tasks", rows, connection=connection, close=False)
         cursor = connection.execute("SELECT * FROM tasks")
-        self.assertEqual(rows, list(cursor))
+        self.assertEqual(list(cursor), rows)
 
     def test_insert_empty(self):
         """Test empty list insertion.
@@ -91,7 +90,7 @@ class TestSQLite(unittest.TestCase):
         self.sqlite.create_tables(connection=connection, close=False)
         self.sqlite.insert("tasks", [], connection=connection, close=False)
         cursor = connection.execute("SELECT * FROM tasks")
-        self.assertEqual([], list(cursor))
+        self.assertEqual(list(cursor), [])
 
     def test_select_existing(self):
         """Test one or more row(s) selection.
@@ -206,8 +205,6 @@ class TestSQLite(unittest.TestCase):
             connection=connection,
             close=False
         )
-        print(expected)
-        print(actual)
         self.assertTrue(set(expected).issubset(set(actual)))
 
     def test_update_one_non_existing(self):
