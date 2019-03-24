@@ -41,16 +41,13 @@ class Timer(object):
         :param str database: Eichhörnchen SQLite3 database
         """
         self.sqlite = src.sqlite.SQLite(database)
-        self.sqlite.create_table()
+        self.sqlite.create_tables()
         self._reset_current_task()
 
     def _reset_current_task(self):
         """Reset current task."""
-        name = ""
-        start = end = due = datetime.datetime.now()
-        due = datetime.datetime(9999, 12, 31)
-        total = (end - start).seconds
-        self.current_task = src.sqlite.Task(name, start, end, total, due)
+        start = end = datetime.datetime.now()
+        self.current_task = src.sqlite.Task("", start, end, 0, [])
 
     def _replace(self, **kwargs):
         """Replace current task."""
@@ -62,60 +59,38 @@ class Timer(object):
         :param str args: arguments
         """
         if self.current_task.name:
-            raise RuntimeError
-        try:
-            name = " ".join(args.split(" ")[:-1])
-            due = datetime.datetime.strptime(args.split(" ")[-1], "%Y-%m-%d")
-        except ValueError:
-            name = args
-            due = None
+            raise Warning("there is already a running task")
         now = datetime.datetime.now()
-        result_set = self.sqlite.select_one("name", (name,))
-        if result_set:
-            task = src.sqlite.Task(*result_set)
-            if due:
-                self._replace(
-                    name=name, start=now, total=task.total, due=due
-                )
-                self.sqlite.update_one(
-                    "due",
-                    "name",
-                    (self.current_task.due, self.current_task.name)
-                )
-            else:
-                self._replace(name=name, start=now, total=task.total)
-            self.sqlite.update_one(
-                "start",
-                "name",
-                (self.current_task.start, self.current_task.name)
+        self._replace(name=args, start=now, end=now)
+        rows = self.sqlite.select("tasks", column="name", parameters=(args,))
+        if rows:
+            task = src.sqlite.Task(*(rows[0] + ([],)))
+            self._replace(total=task.total)
+            self.sqlite.update(
+                "tasks", "start", column1="name", parameters=(now, args)
             )
         else:
-            if due:
-                self._replace(name=name, start=now, due=due)
-            else:
-                self._replace(name=name, start=now)
-            self.sqlite.insert([[*self.current_task]])
+            self.sqlite.insert("tasks", [self.current_task[:-1]])
 
     def stop(self):
         """Stop task."""
         now = datetime.datetime.now()
-        total = (
-            self.current_task.total
-            + (now - self.current_task.start).seconds
+        total = (now - self.current_task.start).seconds
+        self._replace(end=now, total=self.current_task.total+total)
+        rows = self.sqlite.select(
+            "tasks", column="name", parameters=(self.current_task.name,)
         )
-        self._replace(end=now, total=total)
-        row = self.sqlite.select_one("name", (self.current_task.name,))
-        if not row:
-            self.sqlite.insert([[*self.current_task]])
-        row = self.sqlite.update_one(
-            "end",
-            "name",
-            (self.current_task.end, self.current_task.name)
-        )
-        self.sqlite.update_one(
+        self.sqlite.update(
+            "tasks",
             "total",
-            "name",
-            (self.current_task.total, self.current_task.name)
+            (self.current_task.total, self.current_task.name),
+            column1="name"
+        )
+        self.sqlite.update(
+            "tasks",
+            "end",
+            (self.current_task.end, self.current_task.name),
+            column1="name"
         )
         self._reset_current_task()
 
@@ -128,8 +103,9 @@ class Timer(object):
         now = datetime.datetime.now()
         start_of_day = datetime.datetime(now.year, now.month, now.day, 0, 0)
         tasks = [
-            src.sqlite.Task(*task)
-            for task in self.sqlite.select_many(
+            src.sqlite.Task(*row, [])
+            for row in self.sqlite.select(
+                "tasks",
                 column="start", parameters=(start_of_day,), operator=">="
             )
         ]
@@ -145,8 +121,10 @@ class Timer(object):
         """
         tasks = []
         for name in names:
-            task = self.sqlite.select_one(column="name", parameters=(name,))
-            if not task:
+            rows = self.sqlite.select(
+                "tasks", column="name", parameters=(name,)
+            )
+            if not rows:
                 raise ValueError(f"'{name}' does not exist")
-            tasks.append(src.sqlite.Task(*task))
+            tasks.append(src.sqlite.Task(*rows[0], []))
         return sum([task.total for task in tasks])

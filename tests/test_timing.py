@@ -39,6 +39,7 @@ class TestTiming(unittest.TestCase):
     :cvar str DATABASE: Eichhörnchen SQLite3 database
     """
     DATABASE = "test.db"
+    SECONDS = datetime.timedelta(seconds=1)
 
     def tearDown(self):
         """Tear down test cases."""
@@ -52,16 +53,18 @@ class TestTiming(unittest.TestCase):
         Expecting: default task
         """
         timer = src.timing.Timer(self.DATABASE)
-        timer._reset_current_task()
-        self.assertEqual("", timer.current_task.name)
-        self.assertEqual(
-            0, (datetime.datetime.now() - timer.current_task.start).seconds
+        timer._reset_current_task()     # pylint: disable=protected-access
+        start = end = datetime.datetime.now()
+        expected = src.sqlite.Task("", start, end, 0, [])
+        self.assertEqual(timer.current_task.name, expected.name)
+        self.assertTrue(
+            expected.start - timer.current_task.start < self.SECONDS
         )
-        self.assertTrue(timer.current_task.start == timer.current_task.end)
-        self.assertEqual(
-            datetime.datetime(9999, 12, 31), timer.current_task.due
+        self.assertTrue(
+            expected.end - timer.current_task.end < self.SECONDS
         )
-        self.assertEqual(0, timer.current_task.total)
+        self.assertEqual(timer.current_task.total, expected.total)
+        self.assertEqual(timer.current_task.tags, expected.tags)
 
     def test_start(self):
         """Test starting task.
@@ -71,35 +74,19 @@ class TestTiming(unittest.TestCase):
         database contains initialized task
         """
         timer = src.timing.Timer(self.DATABASE)
-        timer.start("foo")
-        self.assertEqual("foo", timer.current_task.name)
-        self.assertEqual(
-            0, (datetime.datetime.now() - timer.current_task.start).seconds
-        )
-        self.assertEqual(
-            0, (datetime.datetime.now() - timer.current_task.end).seconds
-        )
-        self.assertEqual(0, timer.current_task.total)
-        self.assertEqual(
-            datetime.datetime(9999, 12, 31), timer.current_task.due
-        )
-        self.assertEqual(
-            timer.current_task,
-            src.sqlite.Task(*timer.sqlite.select_one("name", ("foo",)))
-        )
-
-    def test_start_due_date(self):
-        """Test starting task with due date.
-
-        Trying: starting task with due date
-        Expecting: due date is set
-        """
         name = "foo"
-        due = "2019-03-17"
-        timer = src.timing.Timer(self.DATABASE)
-        timer.start(f"{name} {due}")
-        due = datetime.datetime.strptime(due, "%Y-%m-%d")
-        self.assertEqual(due, timer.current_task.due)
+        start = end = datetime.datetime.now()
+        expected = src.sqlite.Task(name, start, end, 0, [])
+        timer.start(name)
+        self.assertEqual(timer.current_task.name, expected.name)
+        self.assertTrue(
+            timer.current_task.start - expected.start < self.SECONDS
+        )
+        self.assertTrue(timer.current_task.end - expected.end < self.SECONDS)
+        self.assertEqual(timer.current_task.total, expected.total)
+        self.assertEqual(timer.current_task.tags, expected.tags)
+        rows = timer.sqlite.select("tasks", column="name", parameters=(name,))
+        self.assertEqual(len(rows), 1)
 
     def test_start_running_task(self):
         """Test starting task when there is a running task.
@@ -109,7 +96,7 @@ class TestTiming(unittest.TestCase):
         """
         timer = src.timing.Timer(self.DATABASE)
         timer.start("foo")
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(Warning):
             timer.start("bar")
 
     def test_restart(self):
@@ -118,18 +105,18 @@ class TestTiming(unittest.TestCase):
         Trying: restarting task
         Expecting: current task is fetched from database
         """
-        name = "foo"
-        start = end = due = datetime.datetime.now()
-        task = src.sqlite.Task(name, start, end, 0, due)
         timer = src.timing.Timer(self.DATABASE)
-        timer.sqlite.insert([[*task]])
+        name = "foo"
+        start = end = datetime.datetime.now()
+        current_task = src.sqlite.Task(name, start, end, 0, [])
+        timer.sqlite.insert("tasks", [current_task[:-1]])
         time.sleep(1)
         timer.start(name)
-        self.assertEqual(
-            0, (datetime.datetime.now() - timer.current_task.start).seconds
+        self.assertTrue(
+            datetime.datetime.now() - timer.current_task.start < self.SECONDS
         )
-        self.assertEqual(
-            1, (datetime.datetime.now() - timer.current_task.end).seconds
+        self.assertTrue(
+            datetime.datetime.now() - timer.current_task.end < self.SECONDS
         )
 
     def test_stop(self):
@@ -140,26 +127,26 @@ class TestTiming(unittest.TestCase):
         database contains updated task
         """
         timer = src.timing.Timer(self.DATABASE)
-        timer.start("foo")
+        name = "foo"
+        timer.start(name)
         time.sleep(1)
         timer.stop()
         # current task is reset
-        self.assertEqual(
-            "", timer.current_task.name
+        start = end = datetime.datetime.now()
+        expected = src.sqlite.Task("", start, end, 0, [])
+        self.assertEqual(expected.name, timer.current_task.name)
+        self.assertTrue(
+            expected.start - timer.current_task.start < self.SECONDS
         )
         self.assertTrue(
-            timer.current_task.start == timer.current_task.end
+            expected.end - timer.current_task.end < self.SECONDS
         )
-        self.assertEqual(
-            datetime.datetime(9999, 12, 31), timer.current_task.due
-        )
-        self.assertEqual(0, timer.current_task.total)
+        self.assertEqual(expected.total, timer.current_task.total)
         # database contains updated task
-        current_task = src.sqlite.Task(
-            *timer.sqlite.select_one("name", ("foo",))
+        rows = timer.sqlite.select(
+            "tasks", column="name", parameters=(name,)
         )
-        self.assertEqual(1, (current_task.end - current_task.start).seconds)
-        self.assertEqual(1, current_task.total)
+        self.assertEqual(len(rows), 1)
 
     def test_sum(self):
         """Test summing up two tasks.
