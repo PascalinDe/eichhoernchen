@@ -40,7 +40,7 @@ class TaskShell(cmd.Cmd):
         """Initialize task shell."""
         super().__init__()
         self.intro = "Task shell.\t Type help or ? to list commands.\n"
-        self.timer = src.timing.Timer("eichhoernchen.db")
+        self.timer = src.timing.Timer(".local/share/eichhoernchen.db")
         self._reset_prompt()
         return
 
@@ -59,43 +59,27 @@ class TaskShell(cmd.Cmd):
         :returns: total
         :rtype: str
         """
-        hours = total // 3600
-        minutes = (total % 3600) // 60
+        minutes, seconds = divmod(total, 60)
+        hours, minutes = divmod(minutes, 60)
         return f"total: {hours}h{minutes}m"
 
-    def _return_due_attr(self, due):
-        """Return string representation of due attribute.
-
-        :param datetime due: due date
-
-        :returns: due date
-        :rtype: str
-        """
-        if due != datetime.datetime(9999, 12, 31):
-            due = datetime.datetime.strftime(due, "%Y-%m-%d")
-            due = f", due: {due}"
-        else:
-            due = ""
-        return due
-
-    def _return_task_object(self, task, now=True):
+    def _return_task_object(self, task):
         """Return string representation of Task object.
 
         :param Task task: task
-        :param bool now: toggle end time is now on/off
 
         :returns: task
         :rtype: str
         """
         start = task.start.strftime("%H:%M")
-        total = task.total + (datetime.datetime.now() - task.start).seconds
-        if now:
-            end = datetime.datetime.now().strftime("%H:%M")
+        now = datetime.datetime.now()
+        total = task.total + (now - task.start).seconds
+        if task.name == self.timer.current_task.name:
+            end = now.strftime("%H:%M")
         else:
             end = task.end.strftime("%H:%M")
         total = self._return_total_attr(task.total)
-        due = self._return_due_attr(task.due)
-        return f"{task.name} {start}-{end} ({total}{due})"
+        return f"{task.name} {start}-{end} ({total})"
 
     def do_start(self, args):
         """Start task."""
@@ -116,7 +100,7 @@ class TaskShell(cmd.Cmd):
             self.timer.stop()
             self._reset_prompt()
         else:
-            print("no current task")
+            print("no running task")
 
     def do_show(self, args):
         """Show current task."""
@@ -124,7 +108,7 @@ class TaskShell(cmd.Cmd):
         if current_task.name:
             print(self._return_task_object(current_task))
         else:
-            print("no current task")
+            print("no running task")
 
     def do_list(self, args):
         """List tasks."""
@@ -133,8 +117,7 @@ class TaskShell(cmd.Cmd):
         if not tasks:
             print("no tasks")
         else:
-            for i, task in enumerate(tasks):
-                print(f"{i+1} {self._return_task_object(task, now=False)}")
+            print(f"{self._return_task_object(task)}")
 
     def do_sum(self, args):
         """Sum up tasks (comma-separated)."""
