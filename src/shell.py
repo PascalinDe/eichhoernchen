@@ -23,6 +23,8 @@
 # standard library imports
 import cmd
 import datetime
+import os.path
+import pathlib
 import readline
 
 # third party imports
@@ -40,7 +42,10 @@ class TaskShell(cmd.Cmd):
         """Initialize task shell."""
         super().__init__()
         self.intro = "Task shell.\t Type help or ? to list commands.\n"
-        self.timer = src.timing.Timer(".local/share/eichhoernchen.db")
+        database = os.path.join(
+            pathlib.Path.home(), ".local/share/eichhoernchen.db"
+        )
+        self.timer = src.timing.Timer(database)
         self._reset_prompt()
         return
 
@@ -117,7 +122,10 @@ class TaskShell(cmd.Cmd):
         if not tasks:
             print("no tasks")
         else:
-            print(f"{self._return_task_object(task)}")
+            tasks = "\n".join(
+                f"{self._return_task_object(task)}" for task in tasks
+            )
+            print(tasks)
 
     def do_sum(self, args):
         """Sum up tasks (comma-separated)."""
