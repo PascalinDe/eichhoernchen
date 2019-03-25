@@ -83,7 +83,7 @@ class TaskShell(cmd.Cmd):
             end = now.strftime("%H:%M")
         else:
             end = task.end.strftime("%H:%M")
-        total = self._return_total_attr(task.total)
+        total = self._return_total_attr(total)
         return f"{task.name} {start}-{end} ({total})"
 
     def do_start(self, args):
