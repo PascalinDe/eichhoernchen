@@ -78,10 +78,11 @@ class TaskShell(cmd.Cmd):
         """
         start = task.start.strftime("%H:%M")
         now = datetime.datetime.now()
-        total = task.total + (now - task.start).seconds
         if task.name == self.timer.current_task.name:
+            total = task.total + (now - task.start).seconds
             end = now.strftime("%H:%M")
         else:
+            total = task.total
             end = task.end.strftime("%H:%M")
         total = self._return_total_attr(total)
         return f"{task.name} {start}-{end} ({total})"
