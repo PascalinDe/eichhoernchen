@@ -130,6 +130,7 @@ class TestTiming(unittest.TestCase):
         tags = ["foo", "bar"]
         name = "baz"
         timer.start(f"[{tags[0]}][{tags[1]}]{name}")
+        self.assertEqual(timer.current_task.name, name)
         self.assertEqual(timer.current_task.tags, tags)
         rows = timer.sqlite.select("tags", column="name", parameters=(name,))
         self.assertCountEqual([row[0] for row in rows], tags)
@@ -147,6 +148,7 @@ class TestTiming(unittest.TestCase):
         timer.stop()
         tags.append("foobar")
         timer.start(f"[{tags[2]}]{name}")
+        self.assertEqual(timer.current_task.name, name)
         self.assertCountEqual(timer.current_task.tags, tags)
 
     def test_stop(self):
