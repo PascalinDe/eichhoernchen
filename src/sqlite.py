@@ -132,9 +132,14 @@ class SQLite():
         if not connection:
             connection = self.connect()
         try:
-            placeholders = ", ".join(
-                "?" for _ in range(len(self.COLUMN_DEFS[table]))
-            )
+            if table != "tags":
+                placeholders = ", ".join(
+                    "?" for _ in range(len(self.COLUMN_DEFS[table]))
+                )
+            else:
+                placeholders = ", ".join(
+                    "?" for _ in range(len(self.COLUMN_DEFS[table]) - 1)
+                )
             sql = f"INSERT INTO {table} VALUES ({placeholders})"
             connection.executemany(sql, rows)
             connection.commit()

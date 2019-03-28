@@ -129,10 +129,10 @@ class TestTiming(unittest.TestCase):
         timer = src.timing.Timer(self.DATABASE)
         tags = ["foo", "bar"]
         name = "baz"
-        timer.start(f"[{tags[0]}][tags[1]]{name}")
+        timer.start(f"[{tags[0]}][{tags[1]}]{name}")
         self.assertEqual(timer.current_task.tags, tags)
         rows = timer.sqlite.select("tags", column="name", parameters=(name,))
-        self.assertEqual([row[0] for row in rows], tags)
+        self.assertCountEqual([row[0] for row in rows], tags)
 
     def test_restart_tagged(self):
         """Test restarting task with 2 tags and 1 new tag.
@@ -146,8 +146,8 @@ class TestTiming(unittest.TestCase):
         timer.start(f"[{tags[0]}][{tags[1]}]{name}")
         timer.stop()
         tags.append("foobar")
-        timer.start(f"[tags[2]]{name}")
-        self.assertEqual(timer.current_task.tags, tags)
+        timer.start(f"[{tags[2]}]{name}")
+        self.assertCountEqual(timer.current_task.tags, tags)
 
     def test_stop(self):
         """Test stopping task.

@@ -65,9 +65,7 @@ class Timer(object):
             raise Warning("there is already a running task")
         now = datetime.datetime.now()
         tags = self.TAG_PATTERN.findall(args)
-        name = args
-        for tag in tags:
-            name = name.replace(f"[{tag}]", "")
+        name = self.TAG_PATTERN.sub("", args)
         self._replace(name=name, start=now, end=now, tags=tags)
         rows0 = self.sqlite.select("tasks", column="name", parameters=(name,))
         if rows0:
