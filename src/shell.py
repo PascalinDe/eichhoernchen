@@ -109,14 +109,6 @@ class TaskShell(cmd.Cmd):
         else:
             print("no running task")
 
-    def do_show(self, args):
-        """Show current task."""
-        current_task = self.timer.current_task
-        if current_task.name:
-            print(self._return_task_object(current_task))
-        else:
-            print("no running task")
-
     def do_list(self, args):
         """List tasks."""
         tasks = self.timer.list()
