@@ -91,7 +91,8 @@ class TaskShell(cmd.Cmd):
         """Start task."""
         try:
             self.timer.start(args)
-        except RuntimeError as exception:
+        except Warning as exception:
+            print(exception)
             stop = ""
             while stop not in ["y", "n"]:
                 stop = input("replace running task [yn]? ").lower()
@@ -131,7 +132,10 @@ class TaskShell(cmd.Cmd):
     def do_sum(self, args):
         """Sum up tasks (comma-separated)."""
         names = args.split(",")
-        total = self._return_total_attr(self.timer.sum(names))
+        try:
+            total = self._return_total_attr(self.timer.sum(names))
+        except ValueError as exception:
+            print(exception)
         print(total)
 
     def do_bye(self, args):
