@@ -111,7 +111,7 @@ class TaskShell(cmd.Cmd):
 
     def do_list(self, args):
         """List tasks."""
-        tasks = self.timer.list()
+        tasks = self.timer.list(tags=args)
         tasks.sort(key=lambda x: x.start)
         if not tasks:
             print("no tasks")

@@ -114,21 +114,33 @@ class Timer(object):
         )
         self._reset_current_task()
 
-    def list(self):
+    def list(self, tags=""):
         """List tasks.
+
+        :param str tags: list of tags
 
         :returns: list of tasks
         :rtype: list
         """
+        tags = self.TAG_PATTERN.findall(tags)
         now = datetime.datetime.now()
         start_of_day = datetime.datetime(now.year, now.month, now.day, 0, 0)
-        tasks = [
-            src.sqlite.Task(*row, [])
-            for row in self.sqlite.select(
-                "tasks",
-                column="start", parameters=(start_of_day,), operator=">="
-            )
-        ]
+        rows0 = self.sqlite.select(
+            "tasks", column="start", parameters=(start_of_day,), operator=">="
+        )
+        if not tags:
+            tasks = [src.sqlite.Task(*row0, []) for row0 in rows0]
+        else:
+            tasks = []
+            for row0 in rows0:
+                known = [
+                    row[0]
+                    for row in self.sqlite.select(
+                        "tags", column="name", parameters=(row0[0],)
+                    )
+                ]
+                if set(known).intersection(set(tags)):
+                    tasks.append(src.sqlite.Task(*row0, tags))
         return tasks
 
     def sum(self, names):
