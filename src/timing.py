@@ -21,6 +21,7 @@
 
 
 # standard library imports
+import re
 import datetime
 
 # third party imports
@@ -34,6 +35,8 @@ class Timer(object):
     :ivar SQLite sqlite: Eichhörnchen SQLite database interface
     :ivar Task current_task: current task
     """
+
+    TAG_PATTERN = re.compile(r"\[(.+?)\]")
 
     def __init__(self, database):
         """Initialize timer.
@@ -61,16 +64,35 @@ class Timer(object):
         if self.current_task.name:
             raise Warning("there is already a running task")
         now = datetime.datetime.now()
-        self._replace(name=args, start=now, end=now)
-        rows = self.sqlite.select("tasks", column="name", parameters=(args,))
-        if rows:
-            task = src.sqlite.Task(*(rows[0] + ([],)))
+        tags = self.TAG_PATTERN.findall(args)
+        name = args
+        for tag in tags:
+            name = name.replace(f"[{tag}]", "")
+        self._replace(name=name, start=now, end=now, tags=tags)
+        rows0 = self.sqlite.select("tasks", column="name", parameters=(name,))
+        if rows0:
+            rows1 = self.sqlite.select(
+                "tags", column="name", parameters=(name,)
+            )
+            if rows1:
+                known = [row[0] for row in rows1]
+                rows = [
+                    (tag, self.current_task.name)
+                    for tag in tags if tag not in known
+                ]
+                self.sqlite.insert("tags", rows)
+                tags += known
+            task = src.sqlite.Task(*(rows0[0] + (tags,)))
             self._replace(total=task.total)
             self.sqlite.update(
-                "tasks", "start", column1="name", parameters=(now, args)
+                "tasks", "start", column1="name", parameters=(now, name)
             )
         else:
             self.sqlite.insert("tasks", [self.current_task[:-1]])
+            rows = [
+                (tag, self.current_task.name) for tag in self.current_task.tags
+            ]
+            self.sqlite.insert("tags", rows)
 
     def stop(self):
         """Stop task."""
