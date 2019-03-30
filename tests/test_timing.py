@@ -193,7 +193,7 @@ class TestTiming(unittest.TestCase):
         timer.start("bar")
         time.sleep(1)
         timer.stop()
-        self.assertEqual(timer.sum(names="foo,bar"), 2)
+        self.assertEqual(timer.sum("foo,bar"), 2)
 
     def test_sum_nonexisting_task(self):
         """Test summing up two tasks.
@@ -206,7 +206,7 @@ class TestTiming(unittest.TestCase):
         time.sleep(1)
         timer.stop()
         with self.assertRaises(ValueError):
-            timer.sum(names="foo,bar")
+            timer.sum("foo,bar")
 
     def test_sum_tags(self):
         """Test summing up tags.
@@ -221,7 +221,7 @@ class TestTiming(unittest.TestCase):
         timer.start("[foo]baz")
         time.sleep(1)
         timer.stop()
-        self.assertEqual(timer.sum(tags="[foo]"), 2)
+        self.assertEqual(timer.sum("[foo]"), 2)
 
     def test_sum_nonexisting_tag(self):
         """Test summing up nonexisting tag.
@@ -231,4 +231,4 @@ class TestTiming(unittest.TestCase):
         """
         timer = src.timing.Timer(self.DATABASE)
         with self.assertRaises(ValueError):
-            timer.sum(tags="[foo]")
+            timer.sum("[foo]")

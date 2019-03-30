@@ -143,28 +143,19 @@ class Timer(object):
                     tasks.append(src.sqlite.Task(*row0, tags))
         return tasks
 
-    def sum(self, names="", tags=""):
+    def sum(self, args):
         """Sum up tasks.
 
-        :param str names: list of names
-        :param str tags: list of tags
+        :param str args: arguments
 
         :returns: sum of total attributes
         :rtype: int
         """
+        if not args:
+            raise ValueError("neither tasks nor tags given")
         total = 0
-        if names:
-            names = names.split(",")
-            for name in names:
-                rows = self.sqlite.select(
-                    "tasks", column="name", parameters=(name,)
-                )
-                if not rows:
-                    raise ValueError(f"'{name}' does not exist")
-                total += rows[0][3]
-        elif tags:
-            tasks = []
-            tags = self.TAG_PATTERN.findall(tags)
+        tags = self.TAG_PATTERN.findall(args)
+        if tags:
             for tag in tags:
                 rows0 = self.sqlite.select(
                     "tags", column="text", parameters=(tag,)
@@ -176,4 +167,13 @@ class Timer(object):
                         "tasks", column="name", parameters=(row0[1],)
                     )
                     total += sum(row1[3] for row1 in rows1)
+        else:
+            names = args.split(",")
+            for name in names:
+                rows = self.sqlite.select(
+                    "tasks", column="name", parameters=(name,)
+                )
+                if not rows:
+                    raise ValueError(f"'{name}' does not exist")
+                total += rows[0][3]
         return total

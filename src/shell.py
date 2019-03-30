@@ -123,9 +123,8 @@ class TaskShell(cmd.Cmd):
 
     def do_sum(self, args):
         """Sum up tasks (comma-separated)."""
-        names = args.split(",")
         try:
-            total = self._return_total_attr(self.timer.sum(names))
+            total = self._return_total_attr(self.timer.sum(args))
         except ValueError as exception:
             print(exception)
         print(total)
