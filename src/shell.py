@@ -85,7 +85,11 @@ class TaskShell(cmd.Cmd):
             total = task.total
             end = task.end.strftime("%H:%M")
         total = self._return_total_attr(total)
-        return f"{task.name} {start}-{end} ({total})"
+        if task.tags:
+            tags = f" [{','.join(tag for tag in task.tags)}]"
+        else:
+            tags = ""
+        return f"{task.name} {start}-{end} ({total}){tags}"
 
     def do_start(self, args):
         """Start task."""
@@ -109,10 +113,11 @@ class TaskShell(cmd.Cmd):
         else:
             print("no running task")
 
-    def do_list(self, args):
-        """List tasks."""
-        tasks = self.timer.list(tags=args)
-        tasks.sort(key=lambda x: x.start)
+    def do_tasks(self, args):
+        """List tasks. Use '[tag0,tag1,...]' to list
+        only corresponding tasks.
+        """
+        tasks = self.timer.list_tasks(args=args)
         if not tasks:
             print("no tasks")
         else:
@@ -120,6 +125,15 @@ class TaskShell(cmd.Cmd):
                 f"{self._return_task_object(task)}" for task in tasks
             )
             print(tasks)
+
+    def do_tags(self, args):
+        """List tags."""
+        tags = self.timer.list_tags()
+        if not tags:
+            print("no tags")
+        else:
+            tags = "\n".join(f"[{tag}]" for tag in tags)
+            print(tags)
 
     def do_sum(self, args):
         """Sum up tasks (comma-separated)."""

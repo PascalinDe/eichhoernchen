@@ -114,24 +114,40 @@ class Timer(object):
         )
         self._reset_current_task()
 
-    def list(self, tags=""):
+    def list_tasks(self, args="", today=True):
         """List tasks.
 
-        :param str tags: list of tags
+        :param str args: arguments
+        :param bool today: toggle listing today's tasks on/off
 
-        :returns: list of tasks
+        :returns: list of tasks (sorted by starting time)
         :rtype: list
         """
-        tags = self.TAG_PATTERN.findall(tags)
-        now = datetime.datetime.now()
-        start_of_day = datetime.datetime(now.year, now.month, now.day, 0, 0)
-        rows0 = self.sqlite.select(
-            "tasks", column="start", parameters=(start_of_day,), operator=">="
-        )
-        if not tags:
-            tasks = [src.sqlite.Task(*row0, []) for row0 in rows0]
+        tasks = []
+        if today:
+            now = datetime.datetime.now()
+            start_of_day = datetime.datetime(
+                now.year, now.month, now.day, 0, 0
+            )
+            rows0 = self.sqlite.select(
+                "tasks",
+                column="start", parameters=(start_of_day,), operator=">="
+            )
         else:
-            tasks = []
+            rows0 = self.sqlite.select("tasks")
+        tags = []
+        matches = self.TAG_PATTERN.findall(args)
+        for match in matches:
+            tags += match.split(",")
+        if not tags:
+            for row0 in rows0:
+                rows1 = self.sqlite.select(
+                    "tags", column="name", parameters=(row0[0],)
+                )
+                tasks.append(
+                    src.sqlite.Task(*row0, [row1[0] for row1 in rows1])
+                )
+        else:
             for row0 in rows0:
                 known = [
                     row[0]
@@ -140,8 +156,19 @@ class Timer(object):
                     )
                 ]
                 if set(known).intersection(set(tags)):
-                    tasks.append(src.sqlite.Task(*row0, tags))
+                    tasks.append(src.sqlite.Task(*row0, known))
+        tasks.sort(key=lambda x: x.start)
         return tasks
+
+    def list_tags(self):
+        """List tags.
+
+        :returns: list of tags
+        :rtype: list
+        """
+        tags = [row[0] for row in self.sqlite.select("tags")]
+        tags.sort()
+        return tags
 
     def sum(self, args):
         """Sum up tasks.
@@ -154,7 +181,10 @@ class Timer(object):
         if not args:
             raise ValueError("neither tasks nor tags given")
         total = 0
-        tags = self.TAG_PATTERN.findall(args)
+        tags = []
+        matches = self.TAG_PATTERN.findall(args)
+        for match in matches:
+            tags += match.split(",")
         if tags:
             for tag in tags:
                 rows0 = self.sqlite.select(
