@@ -22,7 +22,6 @@
 
 # standard library imports
 import sqlite3
-import datetime
 import unittest
 
 # third party imports
@@ -37,241 +36,28 @@ class TestSQLite(unittest.TestCase):
     """
 
     def setUp(self):
-        """Set test cases up."""
+        """Initialize SQLite database interface."""
         self.sqlite = src.sqlite.SQLite(":memory:")
 
     def test_connect(self):
-        """Test connection to Eichhörnchen SQLite3 database.
+        """Test connecting to Eichhörnchen SQLite3 database.
 
         Expecting: Connection object
         """
         connection = self.sqlite.connect()
         self.assertIs(sqlite3.Connection, type(connection))
 
-    def test_create_tables(self):
+    def test_create_table(self):
         """Test table creation.
 
         Expecting: table exists
         """
         connection = self.sqlite.connect()
-        self.sqlite.create_tables(connection=connection, close=False)
+        for table in self.sqlite.COLUMN_DEF:
+            self.sqlite.create_table(table, connection=connection, close=False)
         cursor = connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table'"
         )
         self.assertEqual(
-            [row[0] for row in cursor], list(self.sqlite.COLUMN_DEFS.keys())
+            [row[0] for row in cursor], list(self.sqlite.COLUMN_DEF.keys())
         )
-
-    def test_insert_many(self):
-        """Test row insertion.
-
-        Trying: insert 3 rows
-        Expecting: database contains 3 rows
-        """
-        connection = self.sqlite.connect()
-        self.sqlite.create_tables(connection=connection, close=False)
-        start = end = datetime.datetime.now()
-        rows = [
-            ("foo", start, end, 0),
-            ("bar", start, end, 0),
-            ("baz", start, end, 0)
-        ]
-        self.sqlite.insert("tasks", rows, connection=connection, close=False)
-        cursor = connection.execute("SELECT * FROM tasks")
-        self.assertEqual(list(cursor), rows)
-
-    def test_insert_empty(self):
-        """Test empty list insertion.
-
-        Trying: insert empty list
-        Expecting: database contains 0 rows
-        """
-        connection = self.sqlite.connect()
-        self.sqlite.create_tables(connection=connection, close=False)
-        self.sqlite.insert("tasks", [], connection=connection, close=False)
-        cursor = connection.execute("SELECT * FROM tasks")
-        self.assertEqual(list(cursor), [])
-
-    def test_select_existing(self):
-        """Test one or more row(s) selection.
-
-        Trying: insert 2 rows and select 1 row
-        Expecting: result-set contains 1 row
-        """
-        connection = self.sqlite.connect()
-        self.sqlite.create_tables(connection=connection, close=False)
-        start = end = datetime.datetime.now()
-        rows = [
-            ("foo", start, end, 0),
-            ("bar", start, end, 0)
-        ]
-        self.sqlite.insert("tasks", rows, connection=connection, close=False)
-        actual = self.sqlite.select(
-            "tasks",
-            column="name",
-            parameters=("foo",),
-            connection=connection,
-            close=False
-        )
-        self.assertEqual(actual, [rows[0]])
-
-    def test_select_non_existing(self):
-        """Test one or more row(s) selection.
-
-        Trying: insert 2 rows and select non-existing rows
-        Expecting: empty result-set
-        """
-        connection = self.sqlite.connect()
-        self.sqlite.create_tables(connection=connection, close=False)
-        start = end = datetime.datetime.now()
-        rows = [
-            ("foo", start, end, 0),
-            ("bar", start, end, 0)
-        ]
-        self.sqlite.insert("tasks", rows, connection=connection, close=False)
-        actual = self.sqlite.select(
-            "tasks",
-            column="name",
-            parameters=("baz",),
-            connection=connection,
-            close=False
-        )
-        self.assertEqual(actual, [])
-
-    def test_update_entire_column_existing(self):
-        """Test one or more row(s) update.
-
-        Trying: update entire column containing 3 rows
-        Expecting: result-set contains 3 rows
-        """
-        connection = self.sqlite.connect()
-        self.sqlite.create_tables(connection=connection, close=False)
-        start = end = datetime.datetime.now()
-        rows = [
-            ("foo", start, end, 0),
-            ("bar", start, end, 0),
-            ("baz", start, end, 0)
-        ]
-        self.sqlite.insert("tasks", rows, connection=connection, close=False)
-        expected = [row[:-1] + (1,) for row in rows]
-        actual = self.sqlite.update(
-            "tasks", "total",
-            parameters=(1,), connection=connection, close=False
-        )
-        self.assertEqual(actual, expected)
-
-    def test_update_entire_column_non_existing(self):
-        """Test one or more row(s) update.
-
-        Trying: update entire non-existing column
-        Expecting: SQLiteError
-        """
-        connection = self.sqlite.connect()
-        self.sqlite.create_tables(connection=connection, close=False)
-        start = end = datetime.datetime.now()
-        rows = [
-            ("foo", start, end, 0),
-            ("bar", start, end, 0)
-        ]
-        self.sqlite.insert("tasks", rows, connection=connection, close=False)
-        with self.assertRaises(src.sqlite.SQLiteError):
-            self.sqlite.update(
-                "tasks", "baz",
-                parameters=("foobar",), connection=connection, close=False
-            )
-
-    def test_update_one_existing(self):
-        """Test one or more row(s) update.
-
-        Trying: update 1 existing row
-        Expecting: result-set contains 1 row
-        """
-        connection = self.sqlite.connect()
-        self.sqlite.create_tables(connection=connection, close=False)
-        start = end = datetime.datetime.now()
-        rows = [
-            ("foo", start, end, 0),
-            ("bar", start, end, 0)
-        ]
-        self.sqlite.insert("tasks", rows, connection=connection, close=False)
-        expected = [
-            ("baz",) + rows[0][1:],
-        ]
-        actual = self.sqlite.update(
-            "tasks",
-            "name",
-            parameters=("baz", "foo"),
-            column1="name",
-            connection=connection,
-            close=False
-        )
-        self.assertTrue(set(expected).issubset(set(actual)))
-
-    def test_update_one_non_existing(self):
-        """Test one or more row(s) update.
-
-        Trying: update 1 non-existing row
-        Expecting: empty result-set
-        """
-        connection = self.sqlite.connect()
-        self.sqlite.create_tables(connection=connection, close=False)
-        start = end = datetime.datetime.now()
-        rows = [
-            ("foo", start, end, 0),
-            ("bar", start, end, 0)
-        ]
-        self.sqlite.insert("tasks", rows, connection=connection, close=False)
-        actual = self.sqlite.update(
-            "tasks",
-            "name",
-            parameters=("foobar", "baz"),
-            column1="name",
-            connection=connection,
-            close=False
-        )
-        self.assertEqual(actual, [])
-
-    def test_delete_existing(self):
-        """Test row deletion.
-
-        Trying: delete 1 out of 3 existing rows
-        Expecting: database contains 2 rows
-        """
-        connection = self.sqlite.connect()
-        self.sqlite.create_tables(connection=connection, close=False)
-        start = end = datetime.datetime.now()
-        rows = [
-            ("foo", start, end, 0),
-            ("bar", start, end, 0),
-            ("baz", start, end, 0)
-        ]
-        self.sqlite.insert("tasks", rows, connection=connection, close=False)
-        self.sqlite.delete(
-            "tasks", "name",
-            parameters=("foo",), connection=connection, close=False
-        )
-        actual = connection.execute("SELECT * FROM tasks").fetchall()
-        expected = rows[1:]
-        self.assertEqual(actual, expected)
-
-    def test_delete_non_existing(self):
-        """Test row deletion.
-
-        Trying: delete 1 non-existing rows
-        Expecting: database contains 3 rows
-        """
-        connection = self.sqlite.connect()
-        self.sqlite.create_tables(connection=connection, close=False)
-        start = end = datetime.datetime.now()
-        rows = [
-            ("foo", start, end, 0),
-            ("bar", start, end, 0),
-            ("baz", start, end, 0)
-        ]
-        self.sqlite.insert("tasks", rows, connection=connection, close=False)
-        self.sqlite.delete(
-            "tasks", "name",
-            parameters=("foobar",), connection=connection, close=False
-        )
-        actual = connection.execute("SELECT * FROM tasks").fetchall()
-        self.assertEqual(actual, rows)

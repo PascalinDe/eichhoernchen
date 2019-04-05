@@ -23,20 +23,9 @@
 # standard library imports
 import sqlite3
 import datetime
-import typing
 
 # third party imports
 # library specific imports
-
-
-class Task(typing.NamedTuple):
-    """Typed named tuple Task."""
-
-    name: str
-    start: datetime.datetime
-    end: datetime.datetime
-    total: int
-    tags: list
 
 
 class SQLiteError(Exception):
@@ -52,27 +41,28 @@ class SQLiteError(Exception):
         """
         super().__init__(*args, **kwargs)
         self.sql = sql
-        return
 
 
-class SQLite():
+class SQLite(object):
     """Eichhörnchen SQLite database interface.
 
-    :cvar dict COLUMN_DEFS: SQLite column definitions
+    :cvar dict COLUMN_DEF: SQLite column definitions
     :ivar str database: Eichhörnchen SQLite3 database
     """
-
-    COLUMN_DEFS = {
-        "tasks": (
-            "name TEXT PRIMARY KEY",
+    COLUMN_DEF = {
+        "task": ("name TEXT PRIMARY KEY",),
+        "tag": (
+            "text TEXT PRIMARY KEY",
+            "name TEXT",
+            "FOREIGN KEY(name) REFERENCES task(name)"
+        ),
+        "time_span": (
             "start TIMESTAMP",
             "end TIMESTAMP",
-            "total INT"
-        ),
-        "tags": (
-            "text TEXT",
             "name TEXT",
-            "FOREIGN KEY(name) REFERENCES tasks(name)"
+            "text TEXT",
+            "FOREIGN KEY(name) REFERENCES task(name)",
+            "FOREIGN KEY(text) REFERENCES tag(text)"
         )
     }
 
@@ -82,7 +72,6 @@ class SQLite():
         :param str database: Eichhörnchen SQLite3 database
         """
         self.database = database
-        return
 
     def connect(self):
         """Connect to Eichhörnchen SQLite3 database.
@@ -96,168 +85,29 @@ class SQLite():
                 detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
             )
         except sqlite3.Error as exception:
-            msg = "connecting to database failed"
-            raise SQLiteError(msg) from exception
+            raise SQLiteError("connecting failed")
         return connection
 
-    def create_tables(self, connection=None, close=True):
-        """Create tasks table.
+    def create_table(self, table, connection=None, close=True):
+        """Create table.
 
+        :param str table: table
         :param Connection connection: connection
-        :param bool close: close database connection
+        :param bool close: toggle closing database connection on/off
         """
         if not connection:
             connection = self.connect()
         try:
-            for table, column_def in self.COLUMN_DEFS.items():
-                column_def = ", ".join(column_def)
-                sql = f"CREATE TABLE IF NOT EXISTS {table} ({column_def})"
-                connection.execute(sql)
-                connection.commit()
-        except sqlite3.Error as exception:
-            msg = "create table statement failed"
-            raise SQLiteError(msg, sql=sql) from exception
-        finally:
-            if close:
-                connection.close()
-
-    def insert(self, table, rows, connection=None, close=True):
-        """Insert rows.
-
-        :param str table: table
-        :param list rows: rows
-        :param Connection connection: database connection
-        :param bool close: close database connection
-        """
-        if not connection:
-            connection = self.connect()
-        try:
-            if table != "tags":
-                placeholders = ", ".join(
-                    "?" for _ in range(len(self.COLUMN_DEFS[table]))
-                )
-            else:
-                placeholders = ", ".join(
-                    "?" for _ in range(len(self.COLUMN_DEFS[table]) - 1)
-                )
-            sql = f"INSERT INTO {table} VALUES ({placeholders})"
-            connection.executemany(sql, rows)
+            column_def = ",".join(self.COLUMN_DEF[table])
+            sql = f"CREATE TABLE IF NOT EXISTS {table} ({column_def})"
+            connection.execute(sql)
             connection.commit()
-        except sqlite3.IntegrityError as exception:
-            msg = "insert statement affected integrity of the database"
-            raise SQLiteError(msg, sql=sql) from exception
         except sqlite3.Error as exception:
-            msg = "insert statement failed"
-            raise SQLiteError(msg, sql=sql) from exception
+            raise SQLiteError(
+                "create table statement failed", sql=sql
+            ) from exception
+        except KeyError as exception:
+            raise ValueError(f"'{table}' is not defined")
         finally:
             if close:
                 connection.close()
-
-    def select(
-            self, table,
-            column="", parameters=(), operator="=", connection=None, close=True
-    ):
-        """Select rows.
-
-        :param str table: table
-        :param str column: column
-        :param tuple parameters: parameters
-        :param str operator: operator
-        :param Connection connection: database connection
-        :param bool close: close database connection
-
-        :returns: rows
-        :rtype: list
-        """
-        if not connection:
-            connection = self.connect()
-        try:
-            if column and parameters:
-                sql = f"SELECT * FROM {table} WHERE {column} {operator} ?"
-                cursor = connection.execute(sql, parameters)
-            else:
-                sql = f"SELECT * FROM {table}"
-                cursor = connection.execute(sql)
-            rows = list(cursor)
-        except sqlite3.Error as exception:
-            msg = "select statement failed"
-            raise SQLiteError(msg, sql=sql) from exception
-        finally:
-            if close:
-                connection.close()
-        return rows
-
-    def update(
-            self, table, column0, parameters,
-            column1="", connection=None, close=True
-    ):
-        """Update rows.
-
-        :param str table: table
-        :param str column0: column to be updated
-        :param tuple parameters: parameters
-        :param str column1: column WHERE clause
-        :param Connection connection: database connection
-        :param bool close: close database connection
-
-        :returns: rows
-        :rtype: list
-        """
-        if not connection:
-            connection = self.connect()
-        if column1:
-            sql = f"UPDATE {table} SET {column0} = ? WHERE {column1} = ?"
-        else:
-            sql = f"UPDATE {table} SET {column0} = ?"
-        try:
-            connection.execute(sql, parameters)
-        except sqlite3.Error as exception:
-            msg = "update statement failed"
-            raise SQLiteError(msg, sql=sql) from exception
-        connection.commit()
-        if column1 and column0 != column1:
-            sql = (
-                f"SELECT * FROM {table} "
-                f"WHERE {column0} = ? AND {column1} = ?"
-            )
-            cursor = connection.execute(sql, parameters)
-            rows = list(cursor)
-        elif column1:
-            rows = self.select(
-                table,
-                column=column0,
-                parameters=(parameters[0],),
-                connection=connection,
-                close=close
-            )
-        else:
-            rows = self.select(
-                table, column=column0, connection=connection, close=close
-            )
-        return rows
-
-    def delete(
-            self, table, column, parameters,
-            operator="=", connection=None, close=True
-    ):
-        """Delete rows.
-
-        :param str table: table
-        :param str column: column
-        :param tuple parameters: parameters
-        :param str operator: operator
-        :param Connection connection: database connection
-        :param bool close: close database connection
-        """
-        if not connection:
-            connection = self.connect()
-        sql = f"DELETE FROM {table} WHERE {column} {operator} ?"
-        try:
-            connection.execute(sql, parameters)
-        except sqlite3.Error as exception:
-            msg = "delete statement failed"
-            raise SQLiteError(msg, sql=sql)
-        connection.commit()
-        if close:
-            connection.close()
-        return
