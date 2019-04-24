@@ -46,145 +46,181 @@ class TestTiming(unittest.TestCase):
         if os.path.exists(self.DATABASE):
             os.remove(self.DATABASE)
 
-    def test_reset_current_task(self):
-        """Test resetting current task.
-
-        Trying: resetting current task
-        Expecting: default task
-        """
-        timer = src.timing.Timer(self.DATABASE)
-        timer._reset_current_task()     # pylint: disable=protected-access
-        start = end = datetime.datetime.now()
-        expected = src.sqlite.Task("", start, end, 0, [])
-        self.assertEqual(timer.current_task.name, expected.name)
-        self.assertTrue(
-            expected.start - timer.current_task.start < self.SECONDS
-        )
-        self.assertTrue(
-            expected.end - timer.current_task.end < self.SECONDS
-        )
-        self.assertEqual(timer.current_task.total, expected.total)
-        self.assertEqual(timer.current_task.tags, expected.tags)
-
     def test_start(self):
         """Test starting task.
 
         Trying: starting task
-        Expecting: task is initialized and
-        database contains initialized task
+        Expecting: task is initialized and 'task' table contains task
         """
         timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
         name = "foo"
-        start = end = datetime.datetime.now()
-        expected = src.sqlite.Task(name, start, end, 0, [])
         timer.start(name)
-        self.assertEqual(timer.current_task.name, expected.name)
+        actual = timer.task
+        now = datetime.datetime.now()
+        time_span = [(now, now)]
+        expected = src.timing.Task(name, "", time_span)
+        self.assertEqual(actual.name, expected.name)
+        self.assertEqual(actual.tag, expected.tag)
+        f = lambda x, y: (x[0] - y[0], x[1] - y[1])
         self.assertTrue(
-            timer.current_task.start - expected.start < self.SECONDS
+            f(expected.time_span[0], actual.time_span[0])
+            < (self.SECONDS, self.SECONDS)
         )
-        self.assertTrue(timer.current_task.end - expected.end < self.SECONDS)
-        self.assertEqual(timer.current_task.total, expected.total)
-        self.assertEqual(timer.current_task.tags, expected.tags)
-        rows = timer.sqlite.select("tasks", column="name", parameters=(name,))
-        self.assertEqual(len(rows), 1)
+        sql = "SELECT * FROM task WHERE name = ?"
+        actual = connection.execute(sql, (name,)).fetchall()
+        self.assertEqual(1, len(actual))
+
+    def test_start_tagged(self):
+        """Test starting task with 1 tag.
+
+        Trying: starting task with 1 tag
+        Expecting: current task has 1 tag and table 'tag'
+        contains task
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        name = "foo"
+        tag = "bar"
+        timer.start(f"[{tag}]{name}")
+        actual = timer.task
+        self.assertEqual(actual.tag, tag)
+        sql = "SELECT * FROM tag WHERE name = ?"
+        actual = connection.execute(sql, (name,)).fetchall()
+        self.assertEqual(1, len(actual))
+        actual = actual[0]
+        self.assertEqual(actual[0], tag)
+        self.assertEqual(actual[1], name)
 
     def test_start_running_task(self):
         """Test starting task when there is a running task.
 
         Trying: starting task
-        Expecting: RuntimeError
+        Expecting: Warning
         """
         timer = src.timing.Timer(self.DATABASE)
         timer.start("foo")
         with self.assertRaises(Warning):
             timer.start("bar")
 
-    def test_restart(self):
-        """Test restarting task.
-
-        Trying: restarting task
-        Expecting: current task is fetched from database
-        """
-        timer = src.timing.Timer(self.DATABASE)
-        name = "foo"
-        start = end = datetime.datetime.now()
-        current_task = src.sqlite.Task(name, start, end, 0, [])
-        timer.sqlite.insert("tasks", [current_task[:-1]])
-        time.sleep(1)
-        timer.start(name)
-        self.assertTrue(
-            datetime.datetime.now() - timer.current_task.start < self.SECONDS
-        )
-        self.assertTrue(
-            datetime.datetime.now() - timer.current_task.end < self.SECONDS
-        )
-
-    def test_start_tagged(self):
-        """Test starting task with 2 tags.
-
-        Trying: starting task with 2 tags
-        Expecting: current task has 2 tags and 2 tags are fetched
-        from database
-        """
-        timer = src.timing.Timer(self.DATABASE)
-        tags = ["foo", "bar"]
-        name = "baz"
-        timer.start(f"[{tags[0]}][{tags[1]}]{name}")
-        self.assertEqual(timer.current_task.name, name)
-        self.assertEqual(timer.current_task.tags, tags)
-        rows = timer.sqlite.select("tags", column="name", parameters=(name,))
-        self.assertCountEqual([row[0] for row in rows], tags)
-
-    def test_restart_tagged(self):
-        """Test restarting task with 2 tags and 1 new tag.
-
-        Trying: restarting task with 2 tags
-        Expecting: current task has 3 tags
-        """
-        timer = src.timing.Timer(self.DATABASE)
-        tags = ["foo", "bar"]
-        name = "baz"
-        timer.start(f"[{tags[0]}][{tags[1]}]{name}")
-        timer.stop()
-        tags.append("foobar")
-        timer.start(f"[{tags[2]}]{name}")
-        self.assertEqual(timer.current_task.name, name)
-        self.assertCountEqual(timer.current_task.tags, tags)
-
     def test_stop(self):
         """Test stopping task.
 
         Trying: stopping task
-        Expecting: current task is reset and
-        database contains updated task
+        Expecting: table 'time_span' has been updated
         """
         timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
         name = "foo"
         timer.start(name)
         time.sleep(1)
         timer.stop()
-        # current task is reset
-        start = end = datetime.datetime.now()
-        expected = src.sqlite.Task("", start, end, 0, [])
-        self.assertEqual(expected.name, timer.current_task.name)
+        sql = "SELECT start,end FROM time_span WHERE name = ?"
+        actual = connection.execute(sql, (name,)).fetchall()
+        actual = actual.pop(0)
         self.assertTrue(
-            expected.start - timer.current_task.start < self.SECONDS
+            self.SECONDS < actual[1] - actual[0] < 2 * self.SECONDS
         )
-        self.assertTrue(
-            expected.end - timer.current_task.end < self.SECONDS
+
+    def test_list(self):
+        """Test listing tasks (toggle listing today's tasks on).
+
+        Trying: listing tasks (no running task)
+        Expecting: list of tasks
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        sql = (
+            "INSERT INTO time_span (start,end,name) "
+            "VALUES (datetime('now','-2 day'),datetime('now','-1 day'),'foo')"
         )
-        self.assertEqual(expected.total, timer.current_task.total)
-        # database contains updated task
-        rows = timer.sqlite.select(
-            "tasks", column="name", parameters=(name,)
+        connection.execute(sql)
+        connection.commit()
+        name = "bar"
+        timer.start(name)
+        time.sleep(1)
+        timer.stop()
+        sql = "SELECT start,end FROM time_span WHERE name = ?"
+        time_span = connection.execute(sql, (name,)).fetchall()
+        expected = [src.timing.Task(name, "", time_span)]
+        actual = timer.list()
+        self.assertEqual(actual, expected)
+
+    def test_list_running_task(self):
+        """Test listing tasks when there is a running task.
+
+        Trying: listing tasks (running task)
+        Expecting: list of tasks
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        now = datetime.datetime.now()
+        name = "foo"
+        timer.start(name)
+        time.sleep(1)
+        actual = timer.list().pop(0)
+        expected = src.timing.Task(name, "", [(now, now + self.SECONDS)])
+        self.assertEqual(actual.name, expected.name)
+        self.assertEqual(actual.tag, expected.tag)
+        actual = actual.time_span.pop(0)
+        expected = expected.time_span.pop(0)
+        self.assertTrue(expected[0] - actual[0] < self.SECONDS)
+        self.assertTrue(expected[1] - actual[1] < self.SECONDS)
+
+    def test_list_today_off(self):
+        """Test listing tasks (toggle listing today's tasks off).
+
+        Trying: listing tasks
+        Expecting: list of tasks
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        sql = (
+            "INSERT INTO time_span (start,end,name) "
+            "VALUES (datetime('now','-2 day'),datetime('now','-1 day'),'foo')"
         )
-        self.assertEqual(len(rows), 1)
+        connection.execute(sql)
+        connection.commit()
+        name = "bar"
+        timer.start(name)
+        time.sleep(1)
+        timer.stop()
+        sql = "SELECT start,end,name FROM time_span"
+        time_span = connection.execute(sql).fetchall()
+        expected = [
+            src.timing.Task(name, "", [(start, end)])
+            for start, end, name in time_span
+        ]
+        actual = timer.list(today=False)
+        self.assertEqual(actual, expected)
 
     def test_sum(self):
-        """Test summing up two tasks.
+        """Test summing up tasks.
 
-        Trying: summing up two tasks
-        Expecting: sum of total attributes
+        Trying: summing up tasks (no running task)
+        Expecting: sum of run times
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        sql = (
+            "INSERT INTO time_span (start,end,name) "
+            "VALUES (datetime('now','-2 day'),datetime('now','-1 day'),'foo')"
+        )
+        connection.execute(sql)
+        connection.commit()
+        timer.start("bar")
+        time.sleep(1)
+        timer.stop()
+        timer.start("baz")
+        time.sleep(1)
+        timer.stop()
+        self.assertEqual(2, timer.sum())
+
+    def test_sum_running_task(self):
+        """Test summing up tasks.
+
+        Trying: summing up tasks (running task)
+        Expecting: sum of run times
         """
         timer = src.timing.Timer(self.DATABASE)
         timer.start("foo")
@@ -192,43 +228,58 @@ class TestTiming(unittest.TestCase):
         timer.stop()
         timer.start("bar")
         time.sleep(1)
-        timer.stop()
-        self.assertEqual(timer.sum("foo,bar"), 2)
+        self.assertEqual(2, timer.sum())
 
-    def test_sum_nonexisting_task(self):
-        """Test summing up two tasks.
+    def test_sum_tag(self):
+        """Test summing up tagged tasks.
 
-        Trying: summing up task and nonexisting task
-        Expecting: ValueError
+        Trying: summing up tagged tasks
+        Expecting: sum of run times of tagged tasks
         """
         timer = src.timing.Timer(self.DATABASE)
         timer.start("foo")
         time.sleep(1)
         timer.stop()
-        with self.assertRaises(ValueError):
-            timer.sum("foo,bar")
-
-    def test_sum_tags(self):
-        """Test summing up tags.
-
-        Trying: summing up tags
-        Expecting: sum of total attributes
-        """
-        timer = src.timing.Timer(self.DATABASE)
-        timer.start("[foo]bar")
+        timer.start("bar[foobar]")
         time.sleep(1)
         timer.stop()
-        timer.start("[foo]baz")
+        timer.start("baz[foobar]")
         time.sleep(1)
         timer.stop()
-        self.assertEqual(timer.sum("[foo]"), 2)
+        self.assertEqual(2, timer.sum("[foobar]"))
 
-    def test_sum_nonexisting_tag(self):
-        """Test summing up nonexisting tag.
+    def test_sum_tag_running_task(self):
+        """Test summing up tagged tasks.
 
-        Trying: summing up nonexisting tag
-        Expecting: ValueError
+        Trying: summing up tagged tasks (running task)
+        Expecting: sum of run times of tagged tasks
         """
         timer = src.timing.Timer(self.DATABASE)
-        with self.assertRaises(ValueError):
-            timer.sum("[foo]")
+        timer.start("foo[foobar]")
+        time.sleep(1)
+        timer.stop()
+        timer.start("bar[foobar]")
+        time.sleep(1)
+        self.assertEqual(2, timer.sum("[foobar]"))
+
+    def test_sum_today_off(self):
+        """Test summing up tasks (toggle listing today's tasks off).
+
+        Trying: summing up tasks
+        Expecting: sum of run times
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        sql = (
+            "INSERT INTO time_span (start,end,name) "
+            "VALUES (datetime('now','-2 day'),datetime('now','-1 day'),'foo')"
+        )
+        connection.execute(sql)
+        connection.commit()
+        timer.start("bar")
+        time.sleep(1)
+        timer.stop()
+        timer.start("baz")
+        time.sleep(1)
+        timer.stop()
+        self.assertEqual(24 * 60 * 60 + 2, timer.sum(today=False))

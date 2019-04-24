@@ -23,17 +23,47 @@
 # standard library imports
 import re
 import datetime
+import collections
 
 # third party imports
 # library specific imports
 import src.sqlite
 
 
+_Task = collections.namedtuple("Task", ["name", "tag", "time_span"])
+
+
+class Task(_Task):
+    """Task."""
+
+    __slots__ = ()
+
+    def __str__(self):
+        start, end = self.time_span.pop(index=0)
+        start = start.strftime("%H:%M")
+        end = end.strftime("%H:%M")
+        if self.tag:
+            tag = f" [{self.tag}]"
+        else:
+            tag = ""
+        return f"{self.name} {start}-{end} ({self.total}){tag}"
+
+    @property
+    def total(self):
+        seconds = sum([(end - start).seconds for start, end in self.time_span])
+        seconds = (self.end - self.start).seconds
+        minutes, seconds = divmod(total, 60)
+        hours, minutes = divmod(minutes, 60)
+        return f"total: {hours}h{minutes}m"
+
+
 class Timer(object):
     """Timer.
 
+    :cvar Pattern TAG_PATTERN: regular expression matching tag
+
     :ivar SQLite sqlite: Eichhörnchen SQLite database interface
-    :ivar Task current_task: current task
+    :ivar Task task: current task
     """
 
     TAG_PATTERN = re.compile(r"\[(.+?)\]")
@@ -44,166 +74,157 @@ class Timer(object):
         :param str database: Eichhörnchen SQLite3 database
         """
         self.sqlite = src.sqlite.SQLite(database)
-        self.sqlite.create_tables()
-        self._reset_current_task()
+        for table in self.sqlite.COLUMN_DEF:
+            self.sqlite.create_table(table)
+        self._reset_task()
 
-    def _reset_current_task(self):
+    def _reset_task(self):
         """Reset current task."""
-        start = end = datetime.datetime.now()
-        self.current_task = src.sqlite.Task("", start, end, 0, [])
+        self.task = Task("", "", [])
 
-    def _replace(self, **kwargs):
+    def _replace_task(self, **kwargs):
         """Replace current task."""
-        self.current_task = self.current_task._replace(**kwargs)
+        self.task = self.task._replace(**kwargs)
 
     def start(self, args):
         """Start task.
 
-        :param str args: arguments
+        :param str args: command-line arguments
         """
-        if self.current_task.name:
+        connection = self.sqlite.connect()
+        if self.task.name:
             raise Warning("there is already a running task")
-        now = datetime.datetime.now()
-        tags = self.TAG_PATTERN.findall(args)
         name = self.TAG_PATTERN.sub("", args).strip()
-        self._replace(name=name, start=now, end=now, tags=tags)
-        rows0 = self.sqlite.select("tasks", column="name", parameters=(name,))
-        if rows0:
-            rows1 = self.sqlite.select(
-                "tags", column="name", parameters=(name,)
-            )
-            if rows1:
-                known = [row[0] for row in rows1]
-                rows = [
-                    (tag, self.current_task.name)
-                    for tag in tags if tag not in known
-                ]
-                self.sqlite.insert("tags", rows)
-                tags += known
-            task = src.sqlite.Task(*(rows0[0] + (tags,)))
-            self._replace(total=task.total)
-            self.sqlite.update(
-                "tasks", "start", column1="name", parameters=(now, name)
-            )
+        match = self.TAG_PATTERN.search(args)
+        if match:
+            tag = match.group(1)
         else:
-            self.sqlite.insert("tasks", [self.current_task[:-1]])
-            rows = [
-                (tag, self.current_task.name) for tag in self.current_task.tags
-            ]
-            self.sqlite.insert("tags", rows)
+            tag = ""
+        if tag:
+            sql = (
+                "SELECT start,end FROM time_span WHERE name = ? "
+                "AND text = ? ORDER BY start DESC"
+            )
+            time_span = connection.execute(sql, (name, tag)).fetchall()
+        else:
+            sql = (
+                "SELECT start,end FROM time_span WHERE name = ? "
+                "AND text IS NULL"
+            )
+            time_span = connection.execute(sql, (name,)).fetchall()
+        if not time_span:
+            now = datetime.datetime.now()
+            time_span = [(now, now)]
+            if tag:
+                sql = "INSERT OR IGNORE INTO tag (text,name) VALUES (?,?)"
+                connection.execute(sql, (tag, name))
+                connection.commit()
+            sql = "INSERT OR IGNORE INTO task (name) VALUES (?)"
+            connection.execute(sql, (name,))
+            connection.commit()
+        else:
+            time_span = [(now, now)] + time_span
+        self._replace_task(name=name, tag=tag, time_span=time_span)
 
     def stop(self):
         """Stop task."""
+        connection = self.sqlite.connect()
         now = datetime.datetime.now()
-        total = (now - self.current_task.start).seconds
-        self._replace(end=now, total=self.current_task.total+total)
-        rows = self.sqlite.select(
-            "tasks", column="name", parameters=(self.current_task.name,)
-        )
-        self.sqlite.update(
-            "tasks",
-            "total",
-            (self.current_task.total, self.current_task.name),
-            column1="name"
-        )
-        self.sqlite.update(
-            "tasks",
-            "end",
-            (self.current_task.end, self.current_task.name),
-            column1="name"
-        )
-        self._reset_current_task()
+        time_span = self.task.time_span.pop(0)
+        start = time_span[0]
+        if self.task.tag:
+            sql = (
+                "INSERT INTO time_span (start,end,name,text) "
+                "VALUES (?,?,?,?)"
+            )
+            parameters = (start, now, self.task.name, self.task.tag)
+            connection.execute(sql, parameters)
+            connection.commit()
+        else:
+            sql = (
+                "INSERT INTO time_span (start,end,name,text) "
+                "VALUES (?,?,?,NULL)"
+            )
+            parameters = (start, now, self.task.name)
+            connection.execute(sql, parameters)
+            connection.commit()
+        self._reset_task()
 
-    def list_tasks(self, args="", today=True):
+    def list(self, today=True):
         """List tasks.
 
-        :param str args: arguments
         :param bool today: toggle listing today's tasks on/off
 
         :returns: list of tasks (sorted by starting time)
         :rtype: list
         """
-        tasks = []
+        connection = self.sqlite.connect()
+        task = []
+        time_span = collections.defaultdict(list)
         if today:
+            sql = (
+                "SELECT start,end,name,text FROM time_span "
+                "WHERE start >= datetime('now','localtime','start of day')"
+            )
+        else:
+            sql = "SELECT start,end,name,text FROM time_span"
+        rows = connection.execute(sql).fetchall()
+        for row in rows:
+            time_span[(row[2], row[3])].append((row[0], row[1]))
+        if self.task.name:
+            start, _ = self.task.time_span.pop(0)
             now = datetime.datetime.now()
-            start_of_day = datetime.datetime(
-                now.year, now.month, now.day, 0, 0
-            )
-            rows0 = self.sqlite.select(
-                "tasks",
-                column="start", parameters=(start_of_day,), operator=">="
-            )
-        else:
-            rows0 = self.sqlite.select("tasks")
-        tags = []
-        matches = self.TAG_PATTERN.findall(args)
-        for match in matches:
-            tags += match.split(",")
-        if not tags:
-            for row0 in rows0:
-                rows1 = self.sqlite.select(
-                    "tags", column="name", parameters=(row0[0],)
-                )
-                tasks.append(
-                    src.sqlite.Task(*row0, [row1[0] for row1 in rows1])
-                )
-        else:
-            for row0 in rows0:
-                known = [
-                    row[0]
-                    for row in self.sqlite.select(
-                        "tags", column="name", parameters=(row0[0],)
-                    )
-                ]
-                if set(known).intersection(set(tags)):
-                    tasks.append(src.sqlite.Task(*row0, known))
-        tasks.sort(key=lambda x: x.start)
-        return tasks
+            time_span[(self.task.name, self.task.tag)].append((start, now))
+        for k, v in time_span.items():
+            v.sort(key=lambda x: x[0], reverse=True)
+            task.append(Task(k[0], k[1] if k[1] else "", v))
+        task.sort(key=lambda x: x[2][-1])
+        return task
 
-    def list_tags(self):
-        """List tags.
-
-        :returns: list of tags
-        :rtype: list
-        """
-        tags = [row[0] for row in self.sqlite.select("tags")]
-        tags.sort()
-        return tags
-
-    def sum(self, args):
+    def sum(self, args="", today=True):
         """Sum up tasks.
 
-        :param str args: arguments
+        :param str args: command-line arguments
+        :param bool today: toggle listing today's tasks on/off
 
-        :returns: sum of total attributes
+        :returns: sum of run times
         :rtype: int
         """
-        if not args:
-            raise ValueError("neither tasks nor tags given")
-        total = 0
-        tags = []
-        matches = self.TAG_PATTERN.findall(args)
-        for match in matches:
-            tags += match.split(",")
-        if tags:
-            for tag in tags:
-                rows0 = self.sqlite.select(
-                    "tags", column="text", parameters=(tag,)
-                )
-                if not rows0:
-                    raise ValueError(f"'{tag}' does not exist")
-                for row0 in rows0:
-                    rows1 = self.sqlite.select(
-                        "tasks", column="name", parameters=(row0[1],)
-                    )
-                    total += sum(row1[3] for row1 in rows1)
+        connection = self.sqlite.connect()
+        time_span = []
+        match = self.TAG_PATTERN.match(args)
+        if match:
+            tag = match.group(1)
         else:
-            names = args.split(",")
-            for name in names:
-                rows = self.sqlite.select(
-                    "tasks", column="name", parameters=(name,)
-                )
-                if not rows:
-                    raise ValueError(f"'{name}' does not exist")
-                total += rows[0][3]
-        return total
+            tag = ""
+            parameters = ()
+        if today:
+            sql = (
+                "SELECT start,end,name,text FROM time_span "
+                "WHERE start >= datetime('now','localtime','start of day')"
+            )
+            if tag:
+                sql += " AND text = ?"
+                parameters = (tag,)
+        else:
+            sql = "SELECT start,end,name,text FROM time_span"
+            if tag:
+                sql += "WHERE text = ?"
+                parameters = (tag,)
+        if parameters:
+            rows = connection.execute(sql, parameters).fetchall()
+        else:
+            rows = connection.execute(sql).fetchall()
+        for row in rows:
+            time_span.append((row[0], row[1]))
+        if self.task.name:
+            start, _ = self.task.time_span[0]
+            now = datetime.datetime.now()
+            if tag:
+                if self.task.tag == tag:
+                    time_span.append((start, now))
+            else:
+                time_span.append((start, now))
+        return sum(
+            [int((end - start).total_seconds()) for start, end in time_span]
+        )
