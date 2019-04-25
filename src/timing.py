@@ -182,7 +182,7 @@ class Timer(object):
         return task
 
     def sum(self, args="", today=True):
-        """Sum up tasks.
+        """Sum up run times.
 
         :param str args: command-line arguments
         :param bool today: toggle listing today's tasks on/off
