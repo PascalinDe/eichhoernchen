@@ -41,55 +41,21 @@ class TaskShell(cmd.Cmd):
     def __init__(self):
         """Initialize task shell."""
         super().__init__()
-        self.intro = "Task shell.\t Type help or ? to list commands.\n"
+        self.intro = "Task shell.\tType help or ? to list commands.\n"
         database = os.path.join(
             pathlib.Path.home(), ".local/share/eichhoernchen.db"
         )
         self.timer = src.timing.Timer(database)
         self._reset_prompt()
-        return
 
     def _reset_prompt(self):
         """Reset prompt."""
-        if self.timer.current_task.name:
-            self.prompt = f"{self.timer.current_task.name} ~> "
+        if self.timer.task.name:
+            start, _ = self.timer.task.time_span[0]
+            start = datetime.datetime.strftime(start, "%H:%M")
+            self.prompt = f"{self.timer.task.name} (start -) ~> "
         else:
             self.prompt = "~> "
-
-    def _return_total_attr(self, total):
-        """Return string representation of total attribute.
-
-        :param int total: total
-
-        :returns: total
-        :rtype: str
-        """
-        minutes, seconds = divmod(total, 60)
-        hours, minutes = divmod(minutes, 60)
-        return f"total: {hours}h{minutes}m"
-
-    def _return_task_object(self, task):
-        """Return string representation of Task object.
-
-        :param Task task: task
-
-        :returns: task
-        :rtype: str
-        """
-        start = task.start.strftime("%H:%M")
-        now = datetime.datetime.now()
-        if task.name == self.timer.current_task.name:
-            total = task.total + (now - task.start).seconds
-            end = now.strftime("%H:%M")
-        else:
-            total = task.total
-            end = task.end.strftime("%H:%M")
-        total = self._return_total_attr(total)
-        if task.tags:
-            tags = f" [{','.join(tag for tag in task.tags)}]"
-        else:
-            tags = ""
-        return f"{task.name} {start}-{end} ({total}){tags}"
 
     def do_start(self, args):
         """Start task."""
@@ -107,44 +73,29 @@ class TaskShell(cmd.Cmd):
 
     def do_stop(self, args):
         """Stop task."""
-        if self.timer.current_task.name:
+        if self.timer.task.name:
             self.timer.stop()
             self._reset_prompt()
         else:
             print("no running task")
 
-    def do_tasks(self, args):
-        """List tasks. Use '[tag0,tag1,...]' to list
-        only corresponding tasks.
-        """
-        tasks = self.timer.list_tasks(args=args)
+    def do_list(self, args):
+        """List tasks."""
+        tasks = self.timer.list()
         if not tasks:
             print("no tasks")
         else:
-            tasks = "\n".join(
-                f"{self._return_task_object(task)}" for task in tasks
-            )
-            print(tasks)
-
-    def do_tags(self, args):
-        """List tags."""
-        tags = self.timer.list_tags()
-        if not tags:
-            print("no tags")
-        else:
-            tags = "\n".join(f"[{tag}]" for tag in tags)
-            print(tags)
+            print("\n".join(tasks))
 
     def do_sum(self, args):
-        """Sum up tasks (comma-separated)."""
-        try:
-            total = self._return_total_attr(self.timer.sum(args))
-        except ValueError as exception:
-            print(exception)
-        print(total)
+        """Sum up run times."""
+        total = self.timer.sum(args=args)
+        minutes, seconds = divmod(total, 60)
+        hours, minutes = divmod(minutes, 60)
+        print(f"total: {hours}h{minutes}m")
 
     def do_bye(self, args):
         """Close task shell."""
-        if self.timer.current_task.name:
+        if self.timer.task.name:
             self.timer.stop()
         return True
