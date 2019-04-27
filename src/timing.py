@@ -39,20 +39,16 @@ class Task(_Task):
     __slots__ = ()
 
     def __str__(self):
-        start, end = self.time_span.pop(index=0)
-        start = start.strftime("%H:%M")
-        end = end.strftime("%H:%M")
         if self.tag:
             tag = f" [{self.tag}]"
         else:
             tag = ""
-        return f"{self.name} {start}-{end} ({self.total}){tag}"
+        return f"{self.name} {self.total}{tag}"
 
     @property
     def total(self):
         seconds = sum([(end - start).seconds for start, end in self.time_span])
-        seconds = (self.end - self.start).seconds
-        minutes, seconds = divmod(total, 60)
+        minutes, seconds = divmod(seconds, 60)
         hours, minutes = divmod(minutes, 60)
         return f"total: {hours}h{minutes}m"
 
@@ -112,8 +108,8 @@ class Timer(object):
                 "AND text IS NULL"
             )
             time_span = connection.execute(sql, (name,)).fetchall()
+        now = datetime.datetime.now()
         if not time_span:
-            now = datetime.datetime.now()
             time_span = [(now, now)]
             if tag:
                 sql = "INSERT OR IGNORE INTO tag (text,name) VALUES (?,?)"
@@ -123,15 +119,16 @@ class Timer(object):
             connection.execute(sql, (name,))
             connection.commit()
         else:
-            time_span = [(now, now)] + time_span
+            time_span.append((now, now))
         self._replace_task(name=name, tag=tag, time_span=time_span)
 
     def stop(self):
         """Stop task."""
         connection = self.sqlite.connect()
         now = datetime.datetime.now()
-        time_span = self.task.time_span.pop(0)
-        start = time_span[0]
+        start, _ = sorted(
+            self.task.time_span, key=lambda x: x[0], reverse=True
+        ).pop(0)
         if self.task.tag:
             sql = (
                 "INSERT INTO time_span (start,end,name,text) "
@@ -170,15 +167,17 @@ class Timer(object):
             sql = "SELECT start,end,name,text FROM time_span"
         rows = connection.execute(sql).fetchall()
         for row in rows:
-            time_span[(row[2], row[3])].append((row[0], row[1]))
+            time_span[(row[2], row[3] if row[3] else "")].append(
+                (row[0], row[1])
+            )
         if self.task.name:
-            start, _ = self.task.time_span.pop(0)
+            start, _ = sorted(
+                self.task.time_span, key=lambda x: x[0], reverse=True
+            ).pop(0)
             now = datetime.datetime.now()
             time_span[(self.task.name, self.task.tag)].append((start, now))
         for k, v in time_span.items():
-            v.sort(key=lambda x: x[0], reverse=True)
-            task.append(Task(k[0], k[1] if k[1] else "", v))
-        task.sort(key=lambda x: x[2][-1])
+            task.append(Task(k[0], k[1], v))
         return task
 
     def sum(self, args="", today=True):
@@ -218,7 +217,9 @@ class Timer(object):
         for row in rows:
             time_span.append((row[0], row[1]))
         if self.task.name:
-            start, _ = self.task.time_span[0]
+            start, _ = sorted(
+                self.task.time_span[0], key=lambda x: x[0], reverse=True
+            ).pop(0)
             now = datetime.datetime.now()
             if tag:
                 if self.task.tag == tag:

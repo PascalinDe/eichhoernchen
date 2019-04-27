@@ -51,9 +51,11 @@ class TaskShell(cmd.Cmd):
     def _reset_prompt(self):
         """Reset prompt."""
         if self.timer.task.name:
-            start, _ = self.timer.task.time_span[0]
+            start, _ = sorted(
+                self.timer.task.time_span, key=lambda x: x[0], reverse=True
+            ).pop(0)
             start = datetime.datetime.strftime(start, "%H:%M")
-            self.prompt = f"{self.timer.task.name} (start -) ~> "
+            self.prompt = f"{self.timer.task.name} ({start}-) ~> "
         else:
             self.prompt = "~> "
 
@@ -85,7 +87,7 @@ class TaskShell(cmd.Cmd):
         if not tasks:
             print("no tasks")
         else:
-            print("\n".join(tasks))
+            print("\n".join(str(task) for task in tasks))
 
     def do_sum(self, args):
         """Sum up run times."""
