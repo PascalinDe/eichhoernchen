@@ -38,13 +38,6 @@ class Task(_Task):
 
     __slots__ = ()
 
-    def __str__(self):
-        if self.tag:
-            tag = f" [{self.tag}]"
-        else:
-            tag = ""
-        return f"{self.name} {self.total}{tag}"
-
     @property
     def total(self):
         seconds = sum([(end - start).seconds for start, end in self.time_span])

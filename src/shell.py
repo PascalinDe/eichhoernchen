@@ -23,6 +23,7 @@
 # standard library imports
 import cmd
 import datetime
+import collections
 import os.path
 import pathlib
 import readline
@@ -83,11 +84,21 @@ class TaskShell(cmd.Cmd):
 
     def do_list(self, args):
         """List tasks."""
-        tasks = self.timer.list()
-        if not tasks:
+        task = self.timer.list()
+        if not task:
             print("no tasks")
         else:
-            print("\n".join(str(task) for task in tasks))
+            task = [
+                src.timing.Task(item.name, item.tag, [v])
+                for item in task for v in item.time_span
+            ]
+            task.sort(key=lambda x: x.time_span[0])
+            for item in task:
+                start, end = item.time_span.pop(0)
+                start = datetime.datetime.strftime(start, "%H:%M")
+                end = datetime.datetime.strftime(end, "%H:%M")
+                tag = f" [{item.tag}]" if item.tag else ""
+                print(f"({start}-{end}) {item.name}{tag}")
 
     def do_sum(self, args):
         """Sum up run times."""
