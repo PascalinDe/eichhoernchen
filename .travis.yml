@@ -7,10 +7,12 @@ python:
 install:
         - pip install flake8 pylint
 
+script: pytest-3 tests
+
 jobs:
         - include:
                 - stage: code style
-                  script: pylint src
+                  script: pylint3 --extension-pkg-whitelist=lxml src
 
 stages:
         - test
