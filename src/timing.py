@@ -23,30 +23,15 @@
 # standard library imports
 import re
 import datetime
-import collections
 
 # third party imports
 # library specific imports
 import src.sqlite
+import src.listing
+from src import Task
 
 
-_Task = collections.namedtuple("Task", ["name", "tag", "time_span"])
-
-
-class Task(_Task):
-    """Task."""
-
-    __slots__ = ()
-
-    @property
-    def total(self):
-        seconds = sum([(end - start).seconds for start, end in self.time_span])
-        minutes, seconds = divmod(seconds, 60)
-        hours, minutes = divmod(minutes, 60)
-        return f"total: {hours}h{minutes}m"
-
-
-class Timer(object):
+class Timer():
     """Timer.
 
     :cvar Pattern TAG_PATTERN: regular expression matching tag
@@ -67,13 +52,13 @@ class Timer(object):
             self.sqlite.create_table(table)
         self._reset_task()
 
-    def _reset_task(self):
+    def _reset_task(self, task=Task("", "", [])):
         """Reset current task."""
-        self.task = Task("", "", [])
+        self.task = task
 
     def _replace_task(self, **kwargs):
         """Replace current task."""
-        self.task = self.task._replace(**kwargs)
+        self._reset_task(task=self.task._replace(**kwargs))
 
     def start(self, args):
         """Start task.
@@ -140,7 +125,7 @@ class Timer(object):
             connection.commit()
         self._reset_task()
 
-    def list(self, today=True):
+    def list_tasks(self, today=True):
         """List tasks.
 
         :param bool today: toggle listing today's tasks on/off
@@ -148,30 +133,9 @@ class Timer(object):
         :returns: list of tasks (sorted by starting time)
         :rtype: list
         """
-        connection = self.sqlite.connect()
-        task = []
-        time_span = collections.defaultdict(list)
-        if today:
-            sql = (
-                "SELECT start,end,name,text FROM time_span "
-                "WHERE start >= datetime('now','localtime','start of day')"
-            )
-        else:
-            sql = "SELECT start,end,name,text FROM time_span"
-        rows = connection.execute(sql).fetchall()
-        for row in rows:
-            time_span[(row[2], row[3] if row[3] else "")].append(
-                (row[0], row[1])
-            )
-        if self.task.name:
-            start, _ = sorted(
-                self.task.time_span, key=lambda x: x[0], reverse=True
-            ).pop(0)
-            now = datetime.datetime.now()
-            time_span[(self.task.name, self.task.tag)].append((start, now))
-        for k, v in time_span.items():
-            task.append(Task(k[0], k[1], v))
-        return task
+        rows = src.listing.list_tasks(self.sqlite, task=self.task, today=today)
+        tasks = [Task(row[2], row[3], [(row[0], row[1])]) for row in rows]
+        return tasks
 
     def sum(self, args="", today=True):
         """Sum up run times.
@@ -211,7 +175,7 @@ class Timer(object):
             time_span.append((row[0], row[1]))
         if self.task.name:
             start, _ = sorted(
-                self.task.time_span[0], key=lambda x: x[0], reverse=True
+                self.task.time_span, key=lambda x: x[0], reverse=True
             ).pop(0)
             now = datetime.datetime.now()
             if tag:

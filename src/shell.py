@@ -22,9 +22,9 @@
 
 # standard library imports
 import cmd
-import datetime
 import collections
 import os.path
+from datetime import datetime
 import pathlib
 import readline
 
@@ -55,7 +55,7 @@ class TaskShell(cmd.Cmd):
             start, _ = sorted(
                 self.timer.task.time_span, key=lambda x: x[0], reverse=True
             ).pop(0)
-            start = datetime.datetime.strftime(start, "%H:%M")
+            start = datetime.strftime(start, "%H:%M")
             self.prompt = f"{self.timer.task.name} ({start}-) ~> "
         else:
             self.prompt = "~> "
@@ -84,21 +84,17 @@ class TaskShell(cmd.Cmd):
 
     def do_list(self, args):
         """List tasks."""
-        task = self.timer.list()
-        if not task:
+        tasks = self.timer.list_tasks()
+        if not tasks:
             print("no tasks")
         else:
-            task = [
-                src.timing.Task(item.name, item.tag, [v])
-                for item in task for v in item.time_span
-            ]
-            task.sort(key=lambda x: x.time_span[0])
-            for item in task:
-                start, end = item.time_span.pop(0)
-                start = datetime.datetime.strftime(start, "%H:%M")
-                end = datetime.datetime.strftime(end, "%H:%M")
-                tag = f" [{item.tag}]" if item.tag else ""
-                print(f"({start}-{end}) {item.name}{tag}")
+            tasks.sort(key=lambda x: x.time_span[0])
+            for task in tasks:
+                start, end = task.time_span[0]
+                start = datetime.strftime(start, "%H:%M")
+                end = datetime.strftime(end, "%H:%M")
+                tag = f" [{task.tag}]" if task.tag else ""
+                print(f"({start}-{end}) {task.name}{tag}")
 
     def do_sum(self, args):
         """Sum up run times."""
