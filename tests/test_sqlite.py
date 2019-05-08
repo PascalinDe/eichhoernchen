@@ -40,8 +40,9 @@ class TestSQLite(unittest.TestCase):
         self.sqlite = src.sqlite.SQLite(":memory:")
 
     def test_connect(self):
-        """Test connecting to Eichhörnchen SQLite3 database.
+        """Test connecting to Eichhörnchen SQLite database.
 
+        Trying: connecting to database
         Expecting: Connection object
         """
         connection = self.sqlite.connect()
@@ -50,14 +51,15 @@ class TestSQLite(unittest.TestCase):
     def test_create_table(self):
         """Test table creation.
 
-        Expecting: table exists
+        Trying: creating table(s)
+        Expecting: table(s) exists
         """
         connection = self.sqlite.connect()
-        for table in self.sqlite.COLUMN_DEF:
-            self.sqlite.create_table(table, connection=connection, close=False)
+        for table in src.sqlite.COLUMN_DEF:
+            src.sqlite.create_table(connection, table, close=False)
         cursor = connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table'"
         )
         self.assertEqual(
-            [row[0] for row in cursor], list(self.sqlite.COLUMN_DEF.keys())
+            [row[0] for row in cursor], list(src.sqlite.COLUMN_DEF.keys())
         )

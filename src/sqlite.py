@@ -23,9 +23,54 @@
 # standard library imports
 import sqlite3
 import datetime
+import collections
 
 # third party imports
 # library specific imports
+
+
+TIME_SPAN_COLUMN_DEF = (
+    "time_span", ("start TIMESTAMP PRIMARY KEY", "end TIMESTAMP")
+)
+TAGGED_COLUMN_DEF = (
+    "tagged", (
+        "tag TEXT PRIMARY KEY",
+        "start TIMESTAMP",
+        "FOREIGN KEY(start) REFERENCES time_span(start)"
+    )
+)
+RUNNING_COLUMN_DEF = (
+    "running", (
+        "start TIMESTAMP",
+        "FOREIGN KEY(start) REFERENCES time_span(start)"
+    )
+)
+COLUMN_DEF = collections.OrderedDict(
+    [TIME_SPAN_COLUMN_DEF, TAGGED_COLUMN_DEF, RUNNING_COLUMN_DEF]
+)
+
+
+def create_table(connection, table, close=True):
+    """Create table.
+
+    :param Connection connection: Eichhörnchen SQLite3 database connection
+    :param str table: table
+    :param bool close: toggle closing database connection on/off
+    """
+    try:
+        column_def = ",".join(COLUMN_DEF[table])
+        sql = f"CREATE TABLE IF NOT EXISTS {table} ({column_def})"
+        connection.execute(sql)
+        connection.commit()
+    except sqlite3.Error as exception:
+        raise SQLiteError(
+            "create table statement failed", sql=sql
+        ) from exception
+    except KeyError as exception:
+        raise ValueError(f"'{table}' is not defined")
+    finally:
+        if close:
+            connection.close()
 
 
 class SQLiteError(Exception):
@@ -43,28 +88,11 @@ class SQLiteError(Exception):
         self.sql = sql
 
 
-class SQLite(object):
+class SQLite():
     """Eichhörnchen SQLite database interface.
 
-    :cvar dict COLUMN_DEF: SQLite column definitions
     :ivar str database: Eichhörnchen SQLite3 database
     """
-    COLUMN_DEF = {
-        "task": ("name TEXT PRIMARY KEY",),
-        "tag": (
-            "text TEXT PRIMARY KEY",
-            "name TEXT",
-            "FOREIGN KEY(name) REFERENCES task(name)"
-        ),
-        "time_span": (
-            "start TIMESTAMP",
-            "end TIMESTAMP",
-            "name TEXT",
-            "text TEXT",
-            "FOREIGN KEY(name) REFERENCES task(name)",
-            "FOREIGN KEY(text) REFERENCES tag(text)"
-        )
-    }
 
     def __init__(self, database):
         """Initialize SQLite3 database interface.
@@ -76,7 +104,7 @@ class SQLite(object):
     def connect(self):
         """Connect to Eichhörnchen SQLite3 database.
 
-        :return: connection
+        :returns: connection
         :rtype: Connection
         """
         try:
@@ -85,29 +113,7 @@ class SQLite(object):
                 detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
             )
         except sqlite3.Error as exception:
-            raise SQLiteError("connecting failed")
-        return connection
-
-    def create_table(self, table, connection=None, close=True):
-        """Create table.
-
-        :param str table: table
-        :param Connection connection: connection
-        :param bool close: toggle closing database connection on/off
-        """
-        if not connection:
-            connection = self.connect()
-        try:
-            column_def = ",".join(self.COLUMN_DEF[table])
-            sql = f"CREATE TABLE IF NOT EXISTS {table} ({column_def})"
-            connection.execute(sql)
-            connection.commit()
-        except sqlite3.Error as exception:
             raise SQLiteError(
-                "create table statement failed", sql=sql
+                "connecting to Eichhörnchen SQLite3 database failed"
             ) from exception
-        except KeyError as exception:
-            raise ValueError(f"'{table}' is not defined")
-        finally:
-            if close:
-                connection.close()
+        return connection
