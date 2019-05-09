@@ -21,16 +21,21 @@
 
 
 # standard library imports
+import re
 import cmd
 import collections
 import os.path
-from datetime import datetime
 import pathlib
 import readline
+from datetime import datetime
 
 # third party imports
 # library specific imports
 import src.timing
+
+
+TAG_PATTERN = re.compile(r"\[(\w+)\]")
+PERIOD_PATTERN = re.compile(r"all|year|month|week|yesterday|today")
 
 
 class TaskShell(cmd.Cmd):
@@ -52,20 +57,21 @@ class TaskShell(cmd.Cmd):
     def _reset_prompt(self):
         """Reset prompt."""
         if self.timer.task.name:
-            start, _ = sorted(
-                self.timer.task.time_span, key=lambda x: x[0], reverse=True
-            ).pop(0)
+            tags = "".join(f"[{tag}]" for tag in self.timer.task.tags)
+            start, _ = self.timer.task.time_span
             start = datetime.strftime(start, "%H:%M")
-            self.prompt = f"{self.timer.task.name} ({start}-) ~> "
+            self.prompt = f"{self.timer.task.name}{tags} ({start}-) ~> "
         else:
             self.prompt = "~> "
 
     def do_start(self, args):
         """Start task."""
         try:
-            self.timer.start(args)
-        except Warning as exception:
-            print(exception)
+            task = TAG_PATTERN.sub("", args).strip()
+            tags = TAG_PATTERN.findall(args)
+            self.timer.start(task, tags=tags)
+        except Warning as warning:
+            print(warning)
             stop = ""
             while stop not in ["y", "n"]:
                 stop = input("replace running task [yn]? ").lower()
@@ -84,21 +90,34 @@ class TaskShell(cmd.Cmd):
 
     def do_list(self, args):
         """List tasks."""
-        tasks = self.timer.list_tasks()
+        period = PERIOD_PATTERN.match(args)
+        tasks = self.timer.list_tasks(period=period)
         if not tasks:
             print("no tasks")
         else:
             tasks.sort(key=lambda x: x.time_span[0])
             for task in tasks:
-                start, end = task.time_span[0]
-                start = datetime.strftime(start, "%H:%M")
-                end = datetime.strftime(end, "%H:%M")
-                tag = f" [{task.tag}]" if task.tag else ""
-                print(f"({start}-{end}) {task.name}{tag}")
+                start, end = task.time_span
+                if period = "today":
+                    start = datetime.strftime(start, "%H:%M")
+                    end = datetime.strftime(end, "%H:%M")
+                else:
+                    start = datetime.strftime(start, "%H:%M %Y-%m-%d")
+                    if (end.month, end.day) != (start.month, start.day):
+                        end = datetime.strftime(end, "%H:%M %Y-%m-%d")
+                    else:
+                        end = datetime.strftime(end, "%H:%M")
+                tags = "".join(f"[{tag}]" for tag in task.tags)
+                print(f"{start}-{end} {task.name}{tag}")
 
     def do_sum(self, args):
         """Sum up run times."""
-        total = self.timer.sum(args=args)
+        if not args:
+            print("list tasks (comma-separated) or tags (in brackets)")
+        else:
+            tasks = TAG_PATTERN.sub("", args).strip().split(",")
+            tags = TAG_PATTERN.findall(args)
+        total = self.timer.sum_run_times(tasks=tasks, tags=tags)
         minutes, seconds = divmod(total, 60)
         hours, minutes = divmod(minutes, 60)
         print(f"total: {hours}h{minutes}m")
@@ -107,4 +126,5 @@ class TaskShell(cmd.Cmd):
         """Close task shell."""
         if self.timer.task.name:
             self.timer.stop()
+            print("stopped running task")
         return True
