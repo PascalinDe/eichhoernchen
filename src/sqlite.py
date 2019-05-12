@@ -41,6 +41,7 @@ TAGGED_COLUMN_DEF = (
 )
 RUNNING_COLUMN_DEF = (
     "running", (
+        "name TEXT",
         "start TIMESTAMP",
         "FOREIGN KEY(start) REFERENCES time_span(start)"
     )

@@ -27,7 +27,7 @@ import collections
 # library specific imports
 
 
-_Task = collections.namedtuple("Task", ["name", "tag", "time_span"])
+_Task = collections.namedtuple("Task", ["name", "tags", "time_span"])
 
 
 class Task(_Task):
@@ -37,7 +37,7 @@ class Task(_Task):
 
     @property
     def total(self):
-        seconds = sum([(end - start).seconds for start, end in self.time_span])
-        minutes, seconds = divmod(seconds, 60)
-        hours, minutes = divmod(minutes, 60)
-        return f"total: {hours}h{minutes}m"
+        """Run time (in seconds) attribute."""
+        start, end = self.time_span
+        seconds = (end - start).seconds
+        return seconds

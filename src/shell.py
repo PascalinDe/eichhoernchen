@@ -64,11 +64,29 @@ class TaskShell(cmd.Cmd):
         else:
             self.prompt = "~> "
 
+    @staticmethod
+    def _return_total(total):
+        """Return representation of run time.
+
+        :param int total: run time (in seconds)
+
+        :returns: representation
+        :rtype: str
+        """
+        minutes, seconds = divmod(total, 60)
+        hours, minutes = divmod(minutes, 60)
+        return f"total: {hours}h{minutes}m"
+
     def do_start(self, args):
         """Start task."""
         try:
             task = TAG_PATTERN.sub("", args).strip()
-            tags = TAG_PATTERN.findall(args)
+            if not task:
+                task = self.task.name
+                tags = self.task.tags
+                print("restarting last task")
+            else:
+                tags = TAG_PATTERN.findall(args)
             self.timer.start(task, tags=tags)
         except Warning as warning:
             print(warning)
@@ -90,7 +108,11 @@ class TaskShell(cmd.Cmd):
 
     def do_list(self, args):
         """List tasks."""
-        period = PERIOD_PATTERN.match(args)
+        match = PERIOD_PATTERN.match(args)
+        if match:
+            period = match.group()
+        else:
+            period = "today"
         tasks = self.timer.list_tasks(period=period)
         if not tasks:
             print("no tasks")
@@ -108,19 +130,34 @@ class TaskShell(cmd.Cmd):
                     else:
                         end = datetime.strftime(end, "%H:%M")
                 tags = "".join(f"[{tag}]" for tag in task.tags)
-                print(f"{start}-{end} {task.name}{tag}")
+                total = self._return_total(task.total)
+                print(f"{start}-{end} ({total}) {task.name}{tag}")
 
     def do_sum(self, args):
-        """Sum up run times."""
+        """Sum up run times.
+
+        List comma-separated tasks (with tag(s) if any)
+        or tags (in brackets).
+        """
         if not args:
-            print("list tasks (comma-separated) or tags (in brackets)")
+            print("list comma-separated tasks or tags in brackets")
         else:
-            tasks = TAG_PATTERN.sub("", args).strip().split(",")
-            tags = TAG_PATTERN.findall(args)
-        total = self.timer.sum_run_times(tasks=tasks, tags=tags)
-        minutes, seconds = divmod(total, 60)
-        hours, minutes = divmod(minutes, 60)
-        print(f"total: {hours}h{minutes}m")
+            splits = args.split(",")
+            if len(splits) > 1:
+                tasks = []
+                for split in splits:
+                    tags = TAG_PATTERN.findall(split)
+                    task = TAG_PATTERN.sub("", split).strip()
+                    tasks.append((task, tags))
+                total = self.timer.sum_run_times(tasks=tasks)
+            else:
+                task = TAG_PATTERN.sub("", splits[0]).strip()
+                tags = TAG_PATTERN.findall(splits[0])
+                if not task:
+                    total = self.timer.sum_run_times(tags=tags)
+                else:
+                    total = self.timer.sum_run_times(tasks=[(task, tags)])
+            print(self._return_total(total))
 
     def do_bye(self, args):
         """Close task shell."""
