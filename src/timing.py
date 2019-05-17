@@ -45,7 +45,8 @@ class Timer():
         self.sqlite = src.sqlite.SQLite(database)
         connection = self.sqlite.connect()
         for table in src.sqlite.COLUMN_DEF:
-            src.sqlite.create_table(connection, table)
+            src.sqlite.create_table(connection, table, close=False)
+        connection.close()
         self._reset_task()
 
     def _reset_task(self, task=Task("", [], ())):
@@ -85,7 +86,8 @@ class Timer():
         sql = "UPDATE time_span SET end = ? WHERE start = ?"
         connection.execute(sql, (end, self.task.time_span[0]))
         connection.commit()
-        self._replace_task(end=end)
+        time_span = (self.task.time_span[0], end)
+        self._replace_task(time_span=time_span)
 
     def list_tasks(self, period="today"):
         """List tasks.
@@ -101,65 +103,30 @@ class Timer():
         LEFT JOIN tagged ON time_span.start = tagged.start
         """
         if period == "year":
-            sql += "WHERE start >= datetime('now','localtime','start of year')"
+            sql += """WHERE time_span.start >=
+            datetime('now','localtime','start of year')"""
         elif period == "month":
-            sql += """
-            WHERE start >= datetime('now','localtime','start of month')
-            """
+            sql += """WHERE time_span.start >=
+            datetime('now','localtime','start of month')"""
         elif period == "week":
-            sql += """
-            WHERE start >= datetime('now','localtime','weekday 0','-7 day')
-            """
+            sql += """WHERE time_span.start >=
+            datetime('now','localtime','weekday 1','-7 day')"""
         elif period == "yesterday":
-            sql += """
-            WHERE start >= datetime('now','localtime','-1 day')
-            """
+            sql += """WHERE time_span.start >=
+            datetime('now','localtime','start of day','-1 day')"""
         elif period == "today":
-            sql += """
-            WHERE start >= datetime('now','localtime','start of day')
-            """
+            sql += """WHERE time_span.start >=
+            datetime('now','localtime','start of day')"""
         connection = self.sqlite.connect()
-        rows = connection.execute(sql)
+        rows = connection.execute(sql).fetchall()
         agg = collections.defaultdict(list)
         for start, end, name, tag in rows:
             agg[(name, (start, end))].append(tag)
         tasks = []
         for (name, time_span), tags in agg.items():
+            if any(tags):
+                tags = [tag for tag in tags if tag]
+            else:
+                tags = []
             tasks.append(Task(name, tags, time_span))
         return tasks
-
-    def sum_run_times(self, tasks=[], tags=[]):
-        """Sum up run times.
-
-        :param list tasks: list of name-tag pairs
-        :param list tags: list of tags
-
-        :returns: sum of run times (in seconds)
-        :rtype: int
-        """
-        connection = self.sqlite.connect()
-        time_spans = []
-        if tasks:
-            for name, tag in tasks:
-                if tag:
-                    sql = """SELECT start,end FROM time_span
-                    JOIN running ON time_span.start = running.start
-                    JOIN tagged ON time_span.start = tagged.start
-                    WHERE name = ? AND tag = ?
-                    """
-                else:
-                    sql = """SELECT start,end FROM time_span
-                    JOIN running ON time_span.start = running.start
-                    WHERE name = ? AND start NOT IN (
-                        SELECT start FROM tagged
-                    )
-                    """
-                time_spans += connection.execute(sql, (name, tag)).fetchall()
-        else:
-            sql = """SELECT start,end FROM time_span JOIN tagged ON start
-            WHERE tag = ?"""
-            time_spans += connection.executemany(sql, tags).fetchall()
-        total = sum(
-            int((end - start).total_seconds()) for start, end in time_spans
-        )
-        return total

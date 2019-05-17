@@ -80,12 +80,12 @@ class TaskShell(cmd.Cmd):
     def do_start(self, args):
         """Start task."""
         try:
-            task = TAG_PATTERN.sub("", args).strip()
-            if not task:
+            if not args:
                 task = self.task.name
                 tags = self.task.tags
                 print("restarting last task")
             else:
+                task = TAG_PATTERN.sub("", args).strip()
                 tags = TAG_PATTERN.findall(args)
             self.timer.start(task, tags=tags)
         except Warning as warning:

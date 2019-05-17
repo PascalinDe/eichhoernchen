@@ -21,7 +21,6 @@
 
 
 # standard library imports
-import time
 import datetime
 import unittest
 import os
@@ -31,6 +30,7 @@ import os.path
 # library specific imports
 import src.sqlite
 import src.timing
+from src import Task
 
 
 class TestTiming(unittest.TestCase):
@@ -39,7 +39,6 @@ class TestTiming(unittest.TestCase):
     :cvar str DATABASE: Eichhörnchen SQLite3 database
     """
     DATABASE = "test.db"
-    SECONDS = datetime.timedelta(seconds=1)
 
     def tearDown(self):
         """Tear down test cases."""
@@ -50,52 +49,54 @@ class TestTiming(unittest.TestCase):
         """Test starting task.
 
         Trying: starting task
-        Expecting: task is initialized and 'task' table contains task
+        Expecting: task is initialized and 'time_span' contains start and
+        'running' table contains task name
         """
         timer = src.timing.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         name = "foo"
         timer.start(name)
-        actual = timer.task
-        now = datetime.datetime.now()
-        time_span = [(now, now)]
-        expected = src.timing.Task(name, "", time_span)
-        self.assertEqual(actual.name, expected.name)
-        self.assertEqual(actual.tag, expected.tag)
-        f = lambda x, y: (x[0] - y[0], x[1] - y[1])
-        self.assertTrue(
-            f(expected.time_span[0], actual.time_span[0])
-            < (self.SECONDS, self.SECONDS)
-        )
-        sql = "SELECT * FROM task WHERE name = ?"
-        actual = connection.execute(sql, (name,)).fetchall()
-        self.assertEqual(1, len(actual))
+        self.assertEqual(timer.task.name, name)
+        rows = connection.execute(
+            "SELECT start,end FROM time_span WHERE start = ?",
+            (timer.task.time_span[0],)
+        ).fetchall()
+        self.assertEqual(len(rows), 1)
+        time_span = rows[0]
+        rows = connection.execute(
+            "SELECT name FROM running WHERE start = ?",
+            (timer.task.time_span[0],)
+        ).fetchall()
+        self.assertEqual(len(rows), 1)
+        name = rows[0][0]
+        self.assertEqual(time_span, timer.task.time_span)
+        self.assertEqual(name, timer.task.name)
 
     def test_start_tagged(self):
-        """Test starting task with 1 tag.
+        """Test starting task.
 
-        Trying: starting task with 1 tag
-        Expecting: current task has 1 tag and table 'tag'
-        contains task
+        Trying: starting tagged task
+        Expecting: task is initialized and 'running' table contains
+        task name and 'tagged' table contains tag(s)
         """
         timer = src.timing.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         name = "foo"
-        tag = "bar"
-        timer.start(f"[{tag}]{name}")
-        actual = timer.task
-        self.assertEqual(actual.tag, tag)
-        sql = "SELECT * FROM tag WHERE name = ?"
-        actual = connection.execute(sql, (name,)).fetchall()
-        self.assertEqual(1, len(actual))
-        actual = actual[0]
-        self.assertEqual(actual[0], tag)
-        self.assertEqual(actual[1], name)
+        tags = ["bar"]
+        timer.start(name, tags=tags)
+        self.assertEqual(timer.task.tags, tags)
+        rows = connection.execute(
+            "SELECT tag FROM tagged WHERE start = ?",
+            (timer.task.time_span[0],)
+        ).fetchall()
+        self.assertEqual(len(rows), 1)
+        tags = rows[0]
+        self.assertEqual(list(tags), timer.task.tags)
 
-    def test_start_running_task(self):
-        """Test starting task when there is a running task.
+    def test_start_running(self):
+        """Test starting task.
 
-        Trying: starting task
+        Trying: starting task when there is a running task
         Expecting: Warning
         """
         timer = src.timing.Timer(self.DATABASE)
@@ -111,103 +112,169 @@ class TestTiming(unittest.TestCase):
         """
         timer = src.timing.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
-        name = "foo"
-        timer.start(name)
-        time.sleep(1)
+        timer.start("foo")
         timer.stop()
-        sql = "SELECT start,end FROM time_span WHERE name = ?"
-        actual = connection.execute(sql, (name,)).fetchall()
-        actual = actual.pop(0)
-        self.assertTrue(
-            self.SECONDS < actual[1] - actual[0] < 2 * self.SECONDS
-        )
+        rows = connection.execute(
+            "SELECT start,end FROM time_span WHERE end = ?",
+            (timer.task.time_span[1],)
+        ).fetchall()
+        self.assertEqual(len(rows), 1)
+        time_span = rows[0]
+        self.assertEqual(time_span, timer.task.time_span)
 
-    def test_sum(self):
-        """Test summing up tasks.
+    def test_list_tasks_today(self):
+        """Test listing today's tasks.
 
-        Trying: summing up tasks (no running task)
-        Expecting: sum of run times
+        Trying: listing today's tasks
+        Expecting: list of today's tasks
         """
         timer = src.timing.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
-        sql = (
-            "INSERT INTO time_span (start,end,name) "
-            "VALUES (datetime('now','-2 day'),datetime('now','-1 day'),'foo')"
-        )
-        connection.execute(sql)
+        now = datetime.datetime.now()
+        sql = "INSERT INTO time_span (start) VALUES (?)"
+        values = [(now,), (now - datetime.timedelta(days=1),)]
+        connection.executemany(sql, values)
         connection.commit()
-        timer.start("bar")
-        time.sleep(1)
-        timer.stop()
-        timer.start("baz")
-        time.sleep(1)
-        timer.stop()
-        self.assertEqual(2, timer.sum())
+        sql = "INSERT INTO running (name,start) VALUES (?,?)"
+        values = [v + w for (v, w) in zip([("foo",), ("bar",)], values)]
+        connection.executemany(sql, values)
+        connection.commit()
+        expected = [Task("foo", [], (now, None))]
+        self.assertEqual(timer.list_tasks(), expected)
 
-    def test_sum_running_task(self):
-        """Test summing up tasks.
+    def test_list_tasks_yesterday(self):
+        """Test listing all tasks since yesterday.
 
-        Trying: summing up tasks (running task)
-        Expecting: sum of run times
-        """
-        timer = src.timing.Timer(self.DATABASE)
-        timer.start("foo")
-        time.sleep(1)
-        timer.stop()
-        timer.start("bar")
-        time.sleep(1)
-        self.assertEqual(2, timer.sum())
-
-    def test_sum_tag(self):
-        """Test summing up tagged tasks.
-
-        Trying: summing up tagged tasks
-        Expecting: sum of run times of tagged tasks
-        """
-        timer = src.timing.Timer(self.DATABASE)
-        timer.start("foo")
-        time.sleep(1)
-        timer.stop()
-        timer.start("bar[foobar]")
-        time.sleep(1)
-        timer.stop()
-        timer.start("baz[foobar]")
-        time.sleep(1)
-        timer.stop()
-        self.assertEqual(2, timer.sum("[foobar]"))
-
-    def test_sum_tag_running_task(self):
-        """Test summing up tagged tasks.
-
-        Trying: summing up tagged tasks (running task)
-        Expecting: sum of run times of tagged tasks
-        """
-        timer = src.timing.Timer(self.DATABASE)
-        timer.start("foo[foobar]")
-        time.sleep(1)
-        timer.stop()
-        timer.start("bar[foobar]")
-        time.sleep(1)
-        self.assertEqual(2, timer.sum("[foobar]"))
-
-    def test_sum_today_off(self):
-        """Test summing up tasks (toggle listing today's tasks off).
-
-        Trying: summing up tasks
-        Expecting: sum of run times
+        Trying: listing all tasks since yesterday
+        Expecting: list of all tasks since yesterday
         """
         timer = src.timing.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
-        sql = (
-            "INSERT INTO time_span (start,end,name) "
-            "VALUES (datetime('now','-2 day'),datetime('now','-1 day'),'foo')"
-        )
-        connection.execute(sql)
+        now = datetime.datetime.now()
+        sql = "INSERT INTO time_span (start) VALUES (?)"
+        values = [
+            (now,),
+            (now - datetime.timedelta(days=1),),
+            (now - datetime.timedelta(days=2),)
+        ]
+        connection.executemany(sql, values)
         connection.commit()
-        timer.start("bar")
-        time.sleep(1)
-        timer.stop()
-        timer.start("baz")
-        time.sleep(1)
-        timer.stop()
-        self.assertEqual(24 * 60 * 60 + 2, timer.sum(today=False))
+        sql = "INSERT INTO running (name,start) VALUES (?,?)"
+        values = [
+            v + w for (v, w) in zip([("foo",), ("bar",), ("baz",)], values)
+        ]
+        connection.executemany(sql, values)
+        connection.commit()
+        expected = [
+            Task("foo", [], (now, None)),
+            Task("bar", [], (now - datetime.timedelta(days=1), None))
+        ]
+        self.assertEqual(timer.list_tasks(period="yesterday"), expected)
+
+    def test_list_tasks_week(self):
+        """Test listing all tasks since the beginning of the week.
+
+        Trying: listing all tasks since the beginning of the week
+        Expecting: list of all tasks since the beginning of the week
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        now = datetime.datetime.now()
+        sql = "INSERT INTO time_span (start) VALUES (?)"
+        values = [
+            (now,),
+            (now - datetime.timedelta(days=1),),
+            (now - datetime.timedelta(days=7),)
+        ]
+        connection.executemany(sql, values)
+        connection.commit()
+        sql = "INSERT INTO running (name,start) VALUES (?,?)"
+        values = [
+            v + w for (v, w) in zip([("foo",), ("bar",), ("baz",)], values)
+        ]
+        connection.executemany(sql, values)
+        connection.commit()
+        if now.weekday() >= 1:
+            expected = [Task(v, [], (w, None)) for (v, w) in values[:2]]
+        else:
+            v, w = values.pop(0)
+            expected = [Task(v, [], (w, None))]
+        self.assertEqual(timer.list_tasks(period="week"), expected)
+
+    def test_list_tasks_month(self):
+        """Test listing all tasks since the beginning of the month.
+
+        Trying: listing all tasks since the beginning of the month
+        Expecting: list of all tasks since the beginning of the month
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        now = datetime.datetime.now()
+        sql = "INSERT INTO time_span (start) VALUES (?)"
+        values = [
+            (now,),
+            (now.replace(day=1),),
+            (now.replace(day=1) - datetime.timedelta(days=1),)
+        ]
+        connection.executemany(sql, values)
+        connection.commit()
+        sql = "INSERT INTO running (name,start) VALUES (?,?)"
+        values = [
+            v + w for (v, w) in zip([("foo",), ("bar",), ("baz",)], values)
+        ]
+        connection.executemany(sql, values)
+        connection.commit()
+        expected = [Task(v, [], (w, None)) for (v, w) in values[:2]]
+        self.assertEqual(timer.list_tasks(period="month"), expected)
+
+    def test_list_tasks_year(self):
+        """Test listing all tasks since the beginning of the year.
+
+        Trying: listing all tasks since the beginning of the year
+        Expecting: list of all tasks since the beginning of the year
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        now = datetime.datetime.now()
+        sql = "INSERT INTO time_span (start) VALUES (?)"
+        values = [
+            (now,),
+            (now.replace(month=1, day=1),),
+            (now.replace(month=1, day=1) - datetime.timedelta(days=1),)
+        ]
+        connection.executemany(sql, values)
+        connection.commit()
+        sql = "INSERT INTO running (name,start) VALUES (?,?)"
+        values = [
+            v + w for (v, w) in zip([("foo",), ("bar",), ("baz",)], values)
+        ]
+        connection.executemany(sql, values)
+        connection.commit()
+        expected = [Task(v, [], (w, None)) for (v, w) in values[:2]]
+        self.assertEqual(timer.list_tasks(period="year"), expected)
+
+    def test_list_tasks_all(self):
+        """Test listing all tasks.
+
+        Trying: listing all tasks
+        Expecting: list of all tasks
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        now = datetime.datetime.now()
+        sql = "INSERT INTO time_span (start) VALUES (?)"
+        values = [
+            (now,),
+            (now.replace(day=1) - datetime.timedelta(days=1),),
+            (now.replace(month=1, day=1) - datetime.timedelta(days=1),)
+        ]
+        connection.executemany(sql, values)
+        connection.commit()
+        sql = "INSERT INTO running (name,start) VALUES (?,?)"
+        values = [
+            v + w for (v, w) in zip([("foo",), ("bar",), ("baz",)], values)
+        ]
+        connection.executemany(sql, values)
+        connection.commit()
+        expected = [Task(v, [], (w, None)) for (v, w) in values]
+        self.assertEqual(timer.list_tasks(period="all"), expected)
