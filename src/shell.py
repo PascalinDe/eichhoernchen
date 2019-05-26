@@ -133,32 +133,6 @@ class TaskShell(cmd.Cmd):
                 total = self._return_total(task.total)
                 print(f"{start}-{end} ({total}) {task.name}{tag}")
 
-    def do_sum(self, args):
-        """Sum up run times.
-
-        List comma-separated tasks (with tag(s) if any)
-        or tags (in brackets).
-        """
-        if not args:
-            print("list comma-separated tasks or tags in brackets")
-        else:
-            splits = args.split(",")
-            if len(splits) > 1:
-                tasks = []
-                for split in splits:
-                    tags = TAG_PATTERN.findall(split)
-                    task = TAG_PATTERN.sub("", split).strip()
-                    tasks.append((task, tags))
-                total = self.timer.sum_run_times(tasks=tasks)
-            else:
-                task = TAG_PATTERN.sub("", splits[0]).strip()
-                tags = TAG_PATTERN.findall(splits[0])
-                if not task:
-                    total = self.timer.sum_run_times(tags=tags)
-                else:
-                    total = self.timer.sum_run_times(tasks=[(task, tags)])
-            print(self._return_total(total))
-
     def do_bye(self, args):
         """Close task shell."""
         if self.timer.task.name:
