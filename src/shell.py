@@ -120,18 +120,18 @@ class TaskShell(cmd.Cmd):
             tasks.sort(key=lambda x: x.time_span[0])
             for task in tasks:
                 start, end = task.time_span
-                if period = "today":
+                if period == "today":
                     start = datetime.strftime(start, "%H:%M")
                     end = datetime.strftime(end, "%H:%M")
                 else:
-                    start = datetime.strftime(start, "%H:%M %Y-%m-%d")
                     if (end.month, end.day) != (start.month, start.day):
                         end = datetime.strftime(end, "%H:%M %Y-%m-%d")
                     else:
                         end = datetime.strftime(end, "%H:%M")
+                    start = datetime.strftime(start, "%H:%M %Y-%m-%d")
                 tags = "".join(f"[{tag}]" for tag in task.tags)
                 total = self._return_total(task.total)
-                print(f"{start}-{end} ({total}) {task.name}{tag}")
+                print(f"{start}-{end} ({total}) {task.name}{tags}")
 
     def do_bye(self, args):
         """Close task shell."""

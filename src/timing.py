@@ -86,8 +86,7 @@ class Timer():
         sql = "UPDATE time_span SET end = ? WHERE start = ?"
         connection.execute(sql, (end, self.task.time_span[0]))
         connection.commit()
-        time_span = (self.task.time_span[0], end)
-        self._replace_task(time_span=time_span)
+        self._reset_task()
 
     def list_tasks(self, period="today"):
         """List tasks.
@@ -121,6 +120,8 @@ class Timer():
         rows = connection.execute(sql).fetchall()
         agg = collections.defaultdict(list)
         for start, end, name, tag in rows:
+            if not end:
+                end = datetime.now()
             agg[(name, (start, end))].append(tag)
         tasks = []
         for (name, time_span), tags in agg.items():
