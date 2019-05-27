@@ -102,14 +102,14 @@ class Timer():
         LEFT JOIN tagged ON time_span.start = tagged.start
         """
         if period == "year":
-            sql += """WHERE time_span.start >=
-            datetime('now','localtime','start of year')"""
+            sql += """WHERE date(time_span.start) >=
+            date('now','localtime','start of year')"""
         elif period == "month":
-            sql += """WHERE time_span.start >=
-            datetime('now','localtime','start of month')"""
+            sql += """WHERE date(time_span.start) >=
+            date('now','localtime','start of month')"""
         elif period == "week":
-            sql += """WHERE time_span.start >=
-            datetime('now','localtime','weekday 1','-7 day')"""
+            sql += """WHERE date(time_span.start) >
+            date('now','localtime','weekday 0','-7 day')"""
         elif period == "yesterday":
             sql += """WHERE time_span.start >=
             datetime('now','localtime','start of day','-1 day')"""
