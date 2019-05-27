@@ -20,3 +20,4 @@ stages:
 branches:
         only:
                 - master
+                - dev
