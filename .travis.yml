@@ -16,3 +16,7 @@ jobs:
 stages:
         - test
         - code style
+
+branches:
+        only:
+                - master
