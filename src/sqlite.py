@@ -34,7 +34,7 @@ TIME_SPAN_COLUMN_DEF = (
 )
 TAGGED_COLUMN_DEF = (
     "tagged", (
-        "tag TEXT PRIMARY KEY",
+        "tag TEXT",
         "start TIMESTAMP",
         "FOREIGN KEY(start) REFERENCES time_span(start)"
     )
