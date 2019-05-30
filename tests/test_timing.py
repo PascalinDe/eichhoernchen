@@ -317,3 +317,123 @@ class TestTiming(unittest.TestCase):
             Task(name, [], (start, maxdatetime)) for (name, start) in values
         ]
         self.assertEqual(timer.list_tasks(period="all"), expected)
+
+    def test_sum_total_tasks(self):
+        """Test summing total time up.
+
+        Trying: summing total time up
+        Expecting: list of sums of total time (list of tasks)
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        now = datetime.datetime.now()
+        timedelta = datetime.timedelta(minutes=1)
+        values = [
+            ("foo", [], (now, now + timedelta)),
+            ("foo", [], (now + timedelta, now + 2*timedelta)),
+            ("foo", ["foobar"], (now + 2*timedelta, now + 3*timedelta))
+        ]
+        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
+        connection.executemany(
+            sql, [time_span for _, _, time_span in values]
+        )
+        connection.commit()
+        sql = "INSERT INTO running (name,start) VALUES (?,?)"
+        connection.executemany(
+            sql, [(name, start) for (name, _, (start, _)) in values]
+        )
+        connection.commit()
+        sql = "INSERT INTO tagged (tag,start) VALUES (?,?)"
+        _, tags, (start, _) = values[-1]
+        connection.execute(sql, (tags[0], start))
+        connection.commit()
+        expected = [
+            ("foo", [], int(2*timedelta.total_seconds())),
+            ("foo", ["foobar"], int(timedelta.total_seconds()))
+        ]
+        self.assertEqual(timer.sum_total(period="all"), expected)
+
+    def test_sum_total_tags(self):
+        """Test summing total time up.
+
+        Trying: summing total time up
+        Expecting: list of sums of total time (list of tags)
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        now = datetime.datetime.now()
+        timedelta = datetime.timedelta(minutes=1)
+        values = [
+            ("foo", ["bar"], (now, now + timedelta)),
+            ("foo", ["bar"], (now + timedelta, now + 2*timedelta)),
+            ("foo", ["baz"], (now + 2*timedelta, now + 3*timedelta))
+        ]
+        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
+        connection.executemany(
+            sql, [time_span for _, _, time_span in values]
+        )
+        connection.commit()
+        sql = "INSERT INTO running (name,start) VALUES (?,?)"
+        connection.executemany(
+            sql, [(name, start) for (name, _, (start, _)) in values]
+        )
+        sql = "INSERT INTO tagged (tag,start) VALUES (?,?)"
+        connection.executemany(
+            sql, [(tags[0], start) for (_, tags, (start, _)) in values]
+        )
+        connection.commit()
+        expected = [
+            ("", ["bar"], int(2*timedelta.total_seconds())),
+            ("", ["baz"], int(timedelta.total_seconds()))
+        ]
+        self.assertEqual(
+            timer.sum_total(tasks=False, tags=True, period="all"), expected
+        )
+
+    def test_sum_total_both(self):
+        """Test summing total time up.
+
+        Trying: summing total time up
+        Expecting: list of sums of total time (list of tasks and list of tags)
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        now = datetime.datetime.now()
+        timedelta = datetime.datetime.timedelta(minutes=1)
+        values = [
+            ("foo", ["bar"], (now, now + timedelta)),
+            ("foo", ["baz"], (now + timedelta, now + 2*timedelta)),
+            ("foobar", ["bar"], (now + 2*timedelta, now + 3*timedelta))
+        ]
+        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
+        connection.executemany(
+            sql, [time_span for _, _, time_span in values]
+        )
+        connection.commit()
+        sql = "INSERT INTO running (name,start) VALUES (?,?)"
+        connection.executemany(
+            sql, [(name, start) for (name, _, (start, _)) in values]
+        )
+        sql = "INSERT INTO tagged (tag,start) VALUES (?,?)"
+        connection.executemany(
+            sql, [(tags[0], start) for (_, tags, (start, _)) in values]
+        )
+        connection.commit()
+        expected = [
+            ("foo", ["bar"], int(timedelta.total_seconds())),
+            ("foo", ["baz"], int(timedelta.total_seconds())),
+            ("foobar", ["bar"], int(timedelta.total_seconds())),
+            ("", ["bar"], int(2*timedelta.total_seconds())),
+            ("", ["baz"], int(timedelta.total_seconds()))
+        ]
+        self.assertEqual(timer.sum_total(tags=True, period="all"), expected)
+
+    def test_sum_total_neither(self):
+        """Test summing total time up.
+
+        Trying: summing total time up
+        Expecting: ValueError
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        with self.assertRaises(ValueError):
+            timer.sum_total(tasks=False, tags=False, period="all")
