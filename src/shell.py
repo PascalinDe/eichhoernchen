@@ -36,6 +36,7 @@ import src.timing
 
 TAG_PATTERN = re.compile(r"\[(\w+)\]")
 PERIOD_PATTERN = re.compile(r"all|year|month|week|yesterday|today")
+KEY_WORD_PATTERN = re.compile(r"task|tag")
 
 
 class TaskShell(cmd.Cmd):
@@ -132,6 +133,41 @@ class TaskShell(cmd.Cmd):
                 tags = "".join(f"[{tag}]" for tag in task.tags)
                 total = self._return_total(task.total)
                 print(f"{start}-{end} ({total}) {task.name}{tags}")
+
+    def do_sum(self, args):
+        """Sum up total time."""
+        match = KEY_WORD_PATTERN.findall(args.lower())
+        tasks = "task" in match
+        tags = "tag" in match
+        match = PERIOD_PATTERN.match(args)
+        if match:
+            period = match.group()
+        else:
+            period = "today"
+        try:
+            sum_total = self.timer.sum_total(
+                tasks=tasks, tags=tags, period=period
+            )
+        except ValueError as exception:
+            print(exception)
+            return
+        sum_total.sort(key=lambda x: len(x[0][0]), reverse=True)
+        try:
+            i = [name for (name, _), _ in sum_total].index("")
+        except ValueError:
+            i = len(sum_total)
+        sorted_sublist = sorted(sum_total[:i], key=lambda x: (x[1], x[0][0]))
+        for ((name, tags), total) in sorted_sublist:
+            tags = "".join(f"[{tag}]" for tag in tags)
+            total = self._return_total(total)
+            print(f"{name}{tags} {total}")
+        sorted_sublist = sorted(
+            sum_total[i:], key=lambda x: (x[1], x[0][1])
+        )
+        for ((_, tags), total) in sorted_sublist:
+            tags = f"[{tags[0]}]"
+            total = self._return_total(total)
+            print(f"{tags} {total}")
 
     def do_bye(self, args):
         """Close task shell."""
