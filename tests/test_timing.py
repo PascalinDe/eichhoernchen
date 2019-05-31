@@ -348,10 +348,10 @@ class TestTiming(unittest.TestCase):
         connection.execute(sql, (tags[0], start))
         connection.commit()
         expected = [
-            ("foo", [], int(2*timedelta.total_seconds())),
-            ("foo", ["foobar"], int(timedelta.total_seconds()))
+            (("foo", ()), int(2*timedelta.total_seconds())),
+            (("foo", ("foobar",)), int(timedelta.total_seconds()))
         ]
-        self.assertEqual(timer.sum_total(period="all"), expected)
+        self.assertCountEqual(timer.sum_total(period="all"), expected)
 
     def test_sum_total_tags(self):
         """Test summing total time up.
@@ -383,10 +383,10 @@ class TestTiming(unittest.TestCase):
         )
         connection.commit()
         expected = [
-            ("", ["bar"], int(2*timedelta.total_seconds())),
-            ("", ["baz"], int(timedelta.total_seconds()))
+            (("", ("bar",)), int(2*timedelta.total_seconds())),
+            (("", ("baz",)), int(timedelta.total_seconds()))
         ]
-        self.assertEqual(
+        self.assertCountEqual(
             timer.sum_total(tasks=False, tags=True, period="all"), expected
         )
 
@@ -399,7 +399,7 @@ class TestTiming(unittest.TestCase):
         timer = src.timing.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
-        timedelta = datetime.datetime.timedelta(minutes=1)
+        timedelta = datetime.timedelta(minutes=1)
         values = [
             ("foo", ["bar"], (now, now + timedelta)),
             ("foo", ["baz"], (now + timedelta, now + 2*timedelta)),
@@ -420,13 +420,15 @@ class TestTiming(unittest.TestCase):
         )
         connection.commit()
         expected = [
-            ("foo", ["bar"], int(timedelta.total_seconds())),
-            ("foo", ["baz"], int(timedelta.total_seconds())),
-            ("foobar", ["bar"], int(timedelta.total_seconds())),
-            ("", ["bar"], int(2*timedelta.total_seconds())),
-            ("", ["baz"], int(timedelta.total_seconds()))
+            (("foo", ("bar",)), int(timedelta.total_seconds())),
+            (("foo", ("baz",)), int(timedelta.total_seconds())),
+            (("foobar", ("bar",)), int(timedelta.total_seconds())),
+            (("", ("bar",)), int(2*timedelta.total_seconds())),
+            (("", ("baz",)), int(timedelta.total_seconds()))
         ]
-        self.assertEqual(timer.sum_total(tags=True, period="all"), expected)
+        self.assertCountEqual(
+            timer.sum_total(tags=True, period="all"), expected
+        )
 
     def test_sum_total_neither(self):
         """Test summing total time up.
