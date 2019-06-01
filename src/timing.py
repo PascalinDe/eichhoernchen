@@ -120,16 +120,16 @@ class Timer():
         rows = connection.execute(sql).fetchall()
         agg = collections.defaultdict(list)
         for start, end, name, tag in rows:
-            if not end:
-                end = datetime.now()
             agg[(name, (start, end))].append(tag)
         tasks = []
-        for (name, time_span), tags in agg.items():
+        for (name, (start, end)), tags in agg.items():
             if any(tags):
                 tags = [tag for tag in tags if tag]
             else:
                 tags = []
-            tasks.append(Task(name, tags, time_span))
+            if not end:
+                end = datetime.now()
+            tasks.append(Task(name, tags, (start, end)))
         return tasks
 
     def sum_total(self, tasks=True, tags=False, period="today"):
