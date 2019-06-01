@@ -135,23 +135,24 @@ class TestTiming(unittest.TestCase):
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         maxdatetime = datetime.datetime(datetime.MAXYEAR, 12, 31)
-        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
         values = [
-            (now, maxdatetime),
-            (now - datetime.timedelta(days=1), maxdatetime)
+            ("foo", (now, maxdatetime)),
+            ("bar", (now - datetime.timedelta(days=1), maxdatetime))
         ]
-        connection.executemany(sql, values)
+        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
+        connection.executemany(
+            sql, [(start, end) for _, (start, end) in values]
+        )
         connection.commit()
         sql = "INSERT INTO running (name,start) VALUES (?,?)"
-        values = [(start,) for start, _ in values]
-        values = [
-            name + start
-            for (name, start) in zip([("foo",), ("bar",)], values)
-        ]
-        connection.executemany(sql, values)
+        connection.executemany(
+            sql, [(name, start) for name, (start, _) in values]
+        )
         connection.commit()
-        expected = [Task("foo", [], (now, maxdatetime))]
-        self.assertEqual(timer.list_tasks(), expected)
+        expected = [
+            Task(name, [], (start, end)) for name, (start, end) in values[:1]
+        ]
+        self.assertCountEqual(timer.list_tasks(), expected)
 
     def test_list_tasks_yesterday(self):
         """Test listing all tasks since yesterday.
@@ -163,27 +164,25 @@ class TestTiming(unittest.TestCase):
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         maxdatetime = datetime.datetime(datetime.MAXYEAR, 12, 31)
-        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
         values = [
-            (now, maxdatetime),
-            (now - datetime.timedelta(days=1), maxdatetime),
-            (now - datetime.timedelta(days=2), maxdatetime)
+            ("foo", (now, maxdatetime)),
+            ("bar", (now - datetime.timedelta(days=1), maxdatetime)),
+            ("baz", (now - datetime.timedelta(days=2), maxdatetime))
         ]
-        connection.executemany(sql, values)
+        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
+        connection.executemany(
+            sql, [(start, end) for _, (start, end) in values]
+        )
         connection.commit()
         sql = "INSERT INTO running (name,start) VALUES (?,?)"
-        values = [(start,) for start, _ in values]
-        values = [
-            name + start
-            for (name, start) in zip([("foo",), ("bar",), ("baz",)], values)
-        ]
-        connection.executemany(sql, values)
+        connection.executemany(
+            sql, [(name, start) for name, (start, _) in values]
+        )
         connection.commit()
         expected = [
-            Task("foo", [], (now, maxdatetime)),
-            Task("bar", [], (now - datetime.timedelta(days=1), maxdatetime))
+            Task(name, [], (start, end)) for name, (start, end) in values[:2]
         ]
-        self.assertEqual(timer.list_tasks(period="yesterday"), expected)
+        self.assertCountEqual(timer.list_tasks(period="yesterday"), expected)
 
     def test_list_tasks_week(self):
         """Test listing all tasks since the beginning of the week.
@@ -195,30 +194,28 @@ class TestTiming(unittest.TestCase):
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         maxdatetime = datetime.datetime(datetime.MAXYEAR, 12, 31)
-        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
         values = [
-            (now, maxdatetime),
-            (now - datetime.timedelta(days=1), maxdatetime),
-            (now - datetime.timedelta(days=7), maxdatetime)
+            ("foo", (now, maxdatetime)),
+            ("bar", (now - datetime.timedelta(days=1), maxdatetime)),
+            ("baz", (now - datetime.timedelta(days=7), maxdatetime))
         ]
-        connection.executemany(sql, values)
+        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
+        connection.executemany(
+            sql, [(start, end) for _, (start, end) in values]
+        )
         connection.commit()
         sql = "INSERT INTO running (name,start) VALUES (?,?)"
-        values = [(start,) for start, _ in values]
-        values = [
-            name + start
-            for name, start in zip([("foo",), ("bar",), ("baz",)], values)
-        ]
-        connection.executemany(sql, values)
+        connection.executemany(
+            sql, [(name, start) for name, (start, _) in values]
+        )
         connection.commit()
-        if now.weekday() >= 1:
-            expected = [
-                Task(name, [], (start, maxdatetime))
-                for (name, start) in values[:2]
-            ]
+        if now.weekday() == 0:
+            i = 1
         else:
-            name, start = values.pop(0)
-            expected = [Task(name, [], (start, maxdatetime))]
+            i = 2
+        expected = [
+            Task(name, [], (start, end)) for name, (start, end) in values[:i]
+        ]
         self.assertEqual(timer.list_tasks(period="week"), expected)
 
     def test_list_tasks_month(self):
@@ -230,26 +227,29 @@ class TestTiming(unittest.TestCase):
         timer = src.timing.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
+        start_of_month = now.replace(day=1)
         maxdatetime = datetime.datetime(datetime.MAXYEAR, 12, 31)
-        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
         values = [
-            (now, maxdatetime),
-            (now.replace(day=1), maxdatetime),
-            (now.replace(day=1) - datetime.timedelta(days=1), maxdatetime)
+            ("foo", (now, maxdatetime)),
+            ("bar", (now - datetime.timedelta(days=1), maxdatetime)),
+            ("baz", (start_of_month - datetime.timedelta(days=2), maxdatetime))
         ]
-        connection.executemany(sql, values)
+        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
+        connection.executemany(
+            sql, [(start, end) for _, (start, end) in values]
+        )
         connection.commit()
         sql = "INSERT INTO running (name,start) VALUES (?,?)"
-        values = [(start,) for start, _ in values]
-        values = [
-            name + start
-            for (name, start) in zip([("foo",), ("bar",), ("baz",)], values)
-        ]
-        connection.executemany(sql, values)
+        connection.executemany(
+            sql, [(name, start) for name, (start, _) in values]
+        )
         connection.commit()
+        if now == start_of_month:
+            i = 1
+        else:
+            i = 2
         expected = [
-            Task(name, [], (start, maxdatetime))
-            for (name, start) in values[:2]
+            Task(name, [], (start, end)) for name, (start, end) in values[:i]
         ]
         self.assertEqual(timer.list_tasks(period="month"), expected)
 
@@ -262,27 +262,29 @@ class TestTiming(unittest.TestCase):
         timer = src.timing.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
+        start_of_year = now.replace(month=1, day=1)
         maxdatetime = datetime.datetime(datetime.MAXYEAR, 12, 31)
-        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
         values = [
-            (now, maxdatetime),
-            (now.replace(month=1, day=1), maxdatetime),
-            (now.replace(month=1, day=1) - datetime.timedelta(days=1),
-             maxdatetime)
+            ("foo", (now, maxdatetime)),
+            ("bar", (now - datetime.timedelta(days=1), maxdatetime)),
+            ("baz", (start_of_year - datetime.timedelta(days=2), maxdatetime))
         ]
-        connection.executemany(sql, values)
+        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
+        connection.executemany(
+            sql, [(start, end) for _, (start, end) in values]
+        )
         connection.commit()
         sql = "INSERT INTO running (name,start) VALUES (?,?)"
-        values = [(start,) for start, _ in values]
-        values = [
-            name + start
-            for (name, start) in zip([("foo",), ("bar",), ("baz",)], values)
-        ]
-        connection.executemany(sql, values)
+        connection.executemany(
+            sql, [(name, start) for name, (start, _) in values]
+        )
         connection.commit()
+        if now == start_of_year:
+            i = 1
+        else:
+            i = 2
         expected = [
-            Task(name, [], (start, maxdatetime))
-            for (name, start) in values[:2]
+            Task(name, [], (start, end)) for name, (start, end) in values[:i]
         ]
         self.assertEqual(timer.list_tasks(period="year"), expected)
 
@@ -295,26 +297,27 @@ class TestTiming(unittest.TestCase):
         timer = src.timing.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
+        start_of_month = now.replace(day=1)
+        start_of_year = now.replace(month=1, day=1)
         maxdatetime = datetime.datetime(datetime.MAXYEAR, 12, 31)
-        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
         values = [
-            (now, maxdatetime),
-            (now.replace(day=1) - datetime.timedelta(days=1), maxdatetime),
-            (now.replace(month=1, day=1) - datetime.timedelta(days=1),
-             maxdatetime)
+            ("foo", (now, maxdatetime)),
+            ("bar",
+             (start_of_month - datetime.timedelta(days=1), maxdatetime)),
+            ("baz", (start_of_year - datetime.timedelta(days=2), maxdatetime))
         ]
-        connection.executemany(sql, values)
+        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
+        connection.executemany(
+            sql, [(start, end) for _, (start, end) in values]
+        )
         connection.commit()
         sql = "INSERT INTO running (name,start) VALUES (?,?)"
-        values = [(start,) for start, _ in values]
-        values = [
-            name + start
-            for (name, start) in zip([("foo",), ("bar",), ("baz",)], values)
-        ]
-        connection.executemany(sql, values)
+        connection.executemany(
+            sql, [(name, start) for name, (start, _) in values]
+        )
         connection.commit()
         expected = [
-            Task(name, [], (start, maxdatetime)) for (name, start) in values
+            Task(name, [], (start, end)) for name, (start, end) in values
         ]
         self.assertEqual(timer.list_tasks(period="all"), expected)
 
