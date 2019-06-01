@@ -22,7 +22,6 @@
 
 # standard library imports
 import collections
-from datetime import datetime
 
 # third party imports
 # library specific imports

@@ -23,10 +23,9 @@
 # standard library imports
 import re
 import cmd
-import collections
 import os.path
 import pathlib
-import readline
+import readline                 # noqa
 from datetime import datetime
 
 # third party imports

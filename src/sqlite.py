@@ -22,7 +22,6 @@
 
 # standard library imports
 import sqlite3
-import datetime
 import collections
 
 # third party imports
@@ -67,7 +66,7 @@ def create_table(connection, table, close=True):
         raise SQLiteError(
             "create table statement failed", sql=sql
         ) from exception
-    except KeyError as exception:
+    except KeyError:
         raise ValueError(f"'{table}' is not defined")
     finally:
         if close:
