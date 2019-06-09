@@ -21,21 +21,16 @@
 
 
 # standard library imports
-import re
 import cmd
 import os.path
 import pathlib
-import readline                 # noqa
+import readline  # noqa
 from datetime import datetime
 
 # third party imports
 # library specific imports
 import src.timing
-
-
-TAG_PATTERN = re.compile(r"\[(\w+)\]")
-PERIOD_PATTERN = re.compile(r"all|year|month|week|yesterday|today")
-KEY_WORD_PATTERN = re.compile(r"task|tag")
+import src.io_utils
 
 
 class TaskShell(cmd.Cmd):
@@ -78,28 +73,31 @@ class TaskShell(cmd.Cmd):
         return f"total: {hours}h{minutes}m"
 
     def do_start(self, args):
-        """Start task."""
+        """Start task.
+
+        usage: start FULL_NAME
+        """
         try:
             if not args:
-                task = self.task.name
-                tags = self.task.tags
-                print("restarting last task")
-            else:
-                task = TAG_PATTERN.sub("", args).strip()
-                tags = TAG_PATTERN.findall(args)
-            self.timer.start(task, tags=tags)
+                print("usage: start FULL_NAME")
+                return False
+            args = src.io_utils.parse_args(args)
+            self.timer.start(args.full_name.name, tags=args.full_name.tags)
         except Warning as warning:
             print(warning)
             stop = ""
-            while stop not in ["y", "n"]:
-                stop = input("replace running task [yn]? ").lower()
+            while stop not in ("y", "n"):
+                stop = input("replace running task [yn]?").lower()
             if stop == "y":
                 self.timer.stop()
-                self.timer.start(args)
+                self.timer.start(args.full_name.name, tags=args.full_name.tags)
         self._reset_prompt()
 
     def do_stop(self, args):
-        """Stop task."""
+        """Stop running task.
+
+        usage: stop
+        """
         if self.timer.task.name:
             self.timer.stop()
             self._reset_prompt()
@@ -107,66 +105,48 @@ class TaskShell(cmd.Cmd):
             print("no running task")
 
     def do_list(self, args):
-        """List tasks."""
-        match = PERIOD_PATTERN.match(args)
-        if match:
-            period = match.group()
-        else:
-            period = "today"
-        tasks = self.timer.list_tasks(period=period)
+        """List tasks.
+
+        usage: list [PERIOD]
+        """
+        args = src.io_utils.parse_args(args, key_word=True)
+        tasks = self.timer.list_tasks(period=args.period)
         if not tasks:
             print("no tasks")
-        else:
-            tasks.sort(key=lambda x: x.time_span[0])
-            for task in tasks:
-                start, end = task.time_span
-                if period == "today":
-                    start = datetime.strftime(start, "%H:%M")
-                    end = datetime.strftime(end, "%H:%M")
-                else:
-                    if (end.month, end.day) != (start.month, start.day):
-                        end = datetime.strftime(end, "%H:%M %Y-%m-%d")
-                    else:
-                        end = datetime.strftime(end, "%H:%M")
-                    start = datetime.strftime(start, "%H:%M %Y-%m-%d")
-                tags = "".join(f"[{tag}]" for tag in task.tags)
-                total = self._return_total(task.total)
-                print(f"{start}-{end} ({total}) {task.name}{tags}")
+            return False
+        tasks.sort(key=lambda x: x.time_span[0])
+        for task in tasks:
+            start, end = task.time_span
+            if args.period == "today":
+                start = datetime.strftime(start, "%H:%M")
+                end = datetime.strftime(end, "%H:%M")
+            else:
+                start = datetime.strftime(start, "%H:%M %Y-%m-%d")
+                end = datetime.strftime(end, "%H:%M %Y-%m-%d")
+            tags = "".join(f"[{tag}]" for tag in task.tags)
+            total = self._return_total(task.total)
+            print(f"{start}-{end} ({total}) {task.name}{tags}")
 
     def do_sum(self, args):
-        """Sum up total time."""
-        match = KEY_WORD_PATTERN.findall(args.lower())
-        tasks = "task" in match
-        tags = "tag" in match
-        match = PERIOD_PATTERN.match(args)
-        if match:
-            period = match.group()
-        else:
-            period = "today"
+        """Sum up total time.
+
+        usage: sum [LISTING] [PERIOD]
+        """
+        args = src.io_utils.parse_args(args, key_word=True)
+        tasks = args.listing == "name"
+        tags = not tasks
         try:
             sum_total = self.timer.sum_total(
-                tasks=tasks, tags=tags, period=period
+                tasks=tasks, tags=tags, period=args.period
             )
         except ValueError as exception:
             print(exception)
-            return
-        sum_total.sort(key=lambda x: len(x[0][0]), reverse=True)
-        try:
-            i = [name for (name, _), _ in sum_total].index("")
-        except ValueError:
-            i = len(sum_total)
-        sorted_sublist = sorted(sum_total[:i], key=lambda x: (x[1], x[0][0]))
-        for ((name, tags), total) in sorted_sublist:
+            return False
+        sum_total.sort(key=lambda x: (x[1], x[0][0]))
+        for ((name, tags), total) in sum_total:
             tags = "".join(f"[{tag}]" for tag in tags)
             total = self._return_total(total)
             print(f"{name}{tags} {total}")
-        sorted_sublist = sorted(
-            sum_total[i:], key=lambda x: (x[1], x[0][1])
-        )
-        for ((_, tags), total) in sorted_sublist:
-            tags = f"[{tags[0]}]"
-            total = self._return_total(total)
-            print(f"{tags} {total}")
 
     def do_bye(self, args):
         """Close task shell."""
