@@ -47,10 +47,12 @@ class TestIOUtils(unittest.TestCase):
         """Test command-line arguments parsing.
 
         Trying: parsing command-line arguments (searching for key words on)
-        Expecting: args is list of key words
+        Expecting: args contains non-default key word values
         """
-        args = "all"
-        expected = src.io_utils.Args(all="all")
+        period = "all"
+        listing = "tag"
+        args = f"{period} {listing}"
+        expected = src.io_utils.Args(period=period, listing=listing)
         self.assertEqual(
             src.io_utils.parse_args(args, key_word=True), expected
         )

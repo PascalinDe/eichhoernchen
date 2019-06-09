@@ -28,22 +28,19 @@ import collections
 # library specific imports
 
 
-KEY_WORD_LIST = (
-    "all", "year", "month", "week", "yesterday", "today",   # time period
-    "task", "tag"                                           # listing
-)
-
-
-KEY_WORD_PATTERN = re.compile(fr"{'|'.join(KEY_WORD_LIST)}")
 TAG_PATTERN = re.compile(r"\[(\w+)\]")
+PERIOD = ("all", "year", "month", "week", "yesterday", "today")
+PERIOD_PATTERN = re.compile(fr"{'|'.join(PERIOD)}")
+LISTING = ("name", "tag")
+LISTING_PATTERN = re.compile(fr"{'|'.join(LISTING)}")
 
 
 FullName = collections.namedtuple(
     "FullName", ("name", "tags"), defaults=("", [])
 )
 Args = collections.namedtuple(
-    "Args", ("full_name",) + KEY_WORD_LIST,
-    defaults=(FullName(),) + tuple("" for _ in range(len(KEY_WORD_LIST)))
+    "Args", ("full_name", "period", "listing"),
+    defaults=(FullName(), "today", "name")
 )
 
 
@@ -72,7 +69,13 @@ def parse_args(args, key_word=False):
     if not key_word:
         args = Args(full_name=_parse_full_name(args))
     else:
-        args = Args(
-            **{match: match for match in KEY_WORD_PATTERN.findall(args)}
-        )
+        period_match = PERIOD_PATTERN.search(args)
+        listing_match = LISTING_PATTERN.search(args)
+        args = Args()
+        if period_match:
+            period = period_match.group(0)
+            args = args._replace(period=period)
+        if listing_match:
+            listing = listing_match.group(0)
+            args = args._replace(listing=listing)
     return args
