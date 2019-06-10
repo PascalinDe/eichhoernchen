@@ -79,3 +79,52 @@ def parse_args(args, key_word=False):
             listing = listing_match.group(0)
             args = args._replace(listing=listing)
     return args
+
+
+def pprint_task(task, date=False):
+    """Pretty-print representation of task.
+
+    :param Task task: task
+    :param bool date: toggle displaying task on/off
+
+    :returns: representation
+    :rtype: str
+    """
+    start, end = task.time_span
+    if date:
+        if (end - start).days >= 1:
+            start = start.strftime("%Y-%m-%d %H:%M")
+        else:
+            start = start.strftime("%H:%M")
+        end = end.strftime("%H:%M %Y-%m-%d")
+    else:
+        start = start.strftime("%H:%M")
+        end = end.strftime("%H:%M")
+    tags = "".join(f"[{tag}]" for tag in task.tags)
+    total = pprint_total(task.total)
+    return f"{start}-{end} ({total}) {task.name}{tags}"
+
+
+def pprint_total(total):
+    """Pretty-print representation of total runtime.
+
+    :param int total: runtime (in seconds)
+
+    :returns: representation
+    :rtype: str
+    """
+    minutes, seconds = divmod(total, 60)
+    hours, minutes = divmod(minutes, 60)
+    return f"total: {hours}h{minutes}m"
+
+
+def pprint_sum(full_name, total):
+    """Pretty-print sum of total runtime.
+
+    :param tuple full_name: full name
+    :param int total: runtime (in seconds)
+    """
+    name, tags = full_name
+    tags = "".join(f"[{tag}]" for tag in tags)
+    total = pprint_total(total)
+    return f"{name}{tags} {total}"

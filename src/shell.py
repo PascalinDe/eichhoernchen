@@ -59,19 +59,6 @@ class TaskShell(cmd.Cmd):
         else:
             self.prompt = "~> "
 
-    @staticmethod
-    def _return_total(total):
-        """Return representation of run time.
-
-        :param int total: run time (in seconds)
-
-        :returns: representation
-        :rtype: str
-        """
-        minutes, seconds = divmod(total, 60)
-        hours, minutes = divmod(minutes, 60)
-        return f"total: {hours}h{minutes}m"
-
     def do_start(self, args):
         """Start task.
 
@@ -116,16 +103,8 @@ class TaskShell(cmd.Cmd):
             return False
         tasks.sort(key=lambda x: x.time_span[0])
         for task in tasks:
-            start, end = task.time_span
-            if args.period == "today":
-                start = datetime.strftime(start, "%H:%M")
-                end = datetime.strftime(end, "%H:%M")
-            else:
-                start = datetime.strftime(start, "%H:%M %Y-%m-%d")
-                end = datetime.strftime(end, "%H:%M %Y-%m-%d")
-            tags = "".join(f"[{tag}]" for tag in task.tags)
-            total = self._return_total(task.total)
-            print(f"{start}-{end} ({total}) {task.name}{tags}")
+            date = args.period != "today"
+            print(src.io_utils.pprint_task(task, date=date))
 
     def do_sum(self, args):
         """Sum up total time.
@@ -143,10 +122,8 @@ class TaskShell(cmd.Cmd):
             print(exception)
             return False
         sum_total.sort(key=lambda x: (x[1], x[0][0]))
-        for ((name, tags), total) in sum_total:
-            tags = "".join(f"[{tag}]" for tag in tags)
-            total = self._return_total(total)
-            print(f"{name}{tags} {total}")
+        for (full_name, total) in sum_total:
+            print(src.io_utils.pprint_sum(full_name, total))
 
     def do_bye(self, args):
         """Close task shell."""
