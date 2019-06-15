@@ -35,13 +35,13 @@ LISTING = ("name", "tag")
 LISTING_PATTERN = re.compile(fr"{'|'.join(LISTING)}")
 
 
-FullName = collections.namedtuple(
-    "FullName", ("name", "tags"), defaults=("", [])
-)
+FullName = collections.namedtuple("FullName", ("name", "tags"))
+FullName.__new__.__defaults__ = ("", [])
 Args = collections.namedtuple(
     "Args", ("full_name", "period", "listing"),
     defaults=(FullName(), "today", "name")
 )
+Args.__new__.__defaults__ = (FullName(), "today", "name")
 
 
 def _parse_full_name(args):
