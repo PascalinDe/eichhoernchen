@@ -321,6 +321,80 @@ class TestTiming(unittest.TestCase):
         ]
         self.assertEqual(timer.list_tasks(period="all"), expected)
 
+    def test_list_tasks_at_date(self):
+        """Test listing tasks at date.
+
+        Trying: listing tasks at date
+        Expecting: list of tasks at date
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        now = datetime.datetime.now()
+        yesterday = now - datetime.timedelta(days=1)
+        day_before_yesterday = now - datetime.timedelta(days=2)
+        maxdatetime = datetime.datetime(datetime.MAXYEAR, 12, 31)
+        values = [
+            ("foo", (now, maxdatetime)),
+            ("bar", (yesterday, maxdatetime)),
+            ("baz", (day_before_yesterday, maxdatetime))
+        ]
+        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
+        connection.executemany(
+            sql, [(start, end) for _, (start, end) in values]
+        )
+        connection.commit()
+        sql = "INSERT INTO running (name,start) VALUES (?,?)"
+        connection.executemany(
+            sql, [(name, start) for name, (start, _) in values]
+        )
+        connection.commit()
+        name, start, end = values.pop(1)
+        expected = [Task(name, [], (start, end))]
+        self.assertEqual(
+            timer.list_tasks_at(yesterday.strftime("%Y-%m-%d")), expected
+        )
+
+    def test_list_tasks_at_date_yesterday(self):
+        """Test listing tasks at date.
+
+        Trying: listing yesterday's tasks
+        Expecting: list of yesterday's tasks
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        now = datetime.datetime.now()
+        yesterday = now - datetime.timedelta(days=1)
+        day_before_yesterday = now - datetime.timedelta(days=2)
+        maxdatetime = datetime.datetime(datetime.MAXYEAR, 12, 31)
+        values = [
+            ("foo", (now, maxdatetime)),
+            ("bar", (yesterday, maxdatetime)),
+            ("baz", (day_before_yesterday, maxdatetime))
+        ]
+        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
+        connection.executemany(
+            sql, [(start, end) for _, (start, end) in values]
+        )
+        connection.commit()
+        sql = "INSERT INTO running (name,start) VALUES (?,?)"
+        connection.executemany(
+            sql, [(name, start) for name, (start, _) in values]
+        )
+        connection.commit()
+        name, start, end = values.pop(1)
+        expected = [Task(name, [], (start, end))]
+        self.assertEqual(timer.list_tasks_at("yesterday"), expected)
+
+    def test_list_tasks_at_date_invalid(self):
+        """Test listing tasks at date.
+
+        Trying: invalid input
+        Expecting: ValueError
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        with self.assertRaises(ValueError):
+            timer.list_tasks_at("foo")
+
     def test_sum_total_tasks(self):
         """Test summing total time up.
 
