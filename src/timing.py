@@ -97,11 +97,7 @@ class Timer():
         :returns: time period
         :rtype: str
         """
-        if to == "yesterday":
-            to = (
-                datetime.datetime.now() - datetime.timedelta(days=1)
-            ).strftime("%Y-%m-%d")
-        elif to != "now":
+        if to != "now":
             to = datetime.datetime.strptime(to, "%Y-%m-%d")
         if period == "all":
             if to != "now":

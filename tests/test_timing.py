@@ -359,42 +359,6 @@ class TestTiming(unittest.TestCase):
             expected
         )
 
-    def test_list_tasks_at_date_yesterday(self):
-        """Test listing tasks at date.
-
-        Trying: listing yesterday's tasks
-        Expecting: list of yesterday's tasks
-        """
-        timer = src.timing.Timer(self.DATABASE)
-        connection = timer.sqlite.connect()
-        now = datetime.datetime.now()
-        yesterday = now - datetime.timedelta(days=1)
-        day_before_yesterday = now - datetime.timedelta(days=2)
-        maxdatetime = datetime.datetime(datetime.MAXYEAR, 12, 31)
-        values = [
-            ("foo", (now, maxdatetime)),
-            ("bar", (yesterday, maxdatetime)),
-            ("baz", (day_before_yesterday, maxdatetime))
-        ]
-        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
-        connection.executemany(
-            sql, [(start, end) for _, (start, end) in values]
-        )
-        connection.commit()
-        sql = "INSERT INTO running (name,start) VALUES (?,?)"
-        connection.executemany(
-            sql, [(name, start) for name, (start, _) in values]
-        )
-        connection.commit()
-        name, (start, end) = values.pop(1)
-        expected = [Task(name, [], (start, end))]
-        self.assertEqual(
-            timer.list_tasks(
-                period="yesterday", to="yesterday"
-            ),
-            expected
-        )
-
     def test_list_tasks_at_date_invalid(self):
         """Test listing tasks at date.
 
