@@ -44,6 +44,18 @@ Args = collections.namedtuple(
 Args.__new__.__defaults__ = (FullName(), "today", "name")
 
 
+class FGColours():
+    """Foreground colours."""
+    RED = "\033[31m"
+    GREEN = "\033[32m"
+    YELLOW = "\033[33m"
+    BLUE = "\033[34m"
+    MAGENTA = "\033[35m"
+    CYAN = "\033[36m"
+    WHITE = "\033[37m"
+    DEFAULT = "\033[0m"
+
+
 def _parse_full_name(args):
     """Parse full name.
 
@@ -81,16 +93,70 @@ def parse_args(args, key_word=False):
     return args
 
 
-def pprint_task(task, date=False):
-    """Pretty-print representation of task.
+def pprint_name(name, colour=False):
+    """Pretty-print name.
 
-    :param Task task: task
-    :param bool date: toggle displaying task on/off
+    :param str name: name
+    :param bool colour: toggle coloured display on/off
 
-    :returns: representation
+    :returns: name
     :rtype: str
     """
-    start, end = task.time_span
+    if colour:
+        colour0 = FGColours.DEFAULT
+        colour1 = FGColours.GREEN
+    else:
+        colour0 = colour1 = FGColours.DEFAULT
+    name = f"{colour1}{name}{colour0}"
+    return name
+
+
+def pprint_tags(tags, colour=False):
+    """Pretty-print tags.
+
+    :param list tags: tags
+    :param bool colour: toggle coloured display on/off
+
+    :returns: tags
+    :rtype: str
+    """
+    if colour:
+        colour0 = FGColours.DEFAULT
+        colour1 = FGColours.GREEN
+    else:
+        colour0 = colour1 = FGColours.DEFAULT
+    tags = "".join(f"{colour0}[{colour1}{tag}{colour0}]" for tag in tags)
+    return tags
+
+
+def pprint_full_name(name, tags, colour=False):
+    """Pretty-print full name.
+
+    :param str name: name
+    :param list tags: tags
+    :param bool colour: toggle coloured display on/off
+    """
+    name = pprint_name(name, colour=colour)
+    tags = pprint_tags(tags, colour=colour)
+    return f"{name}{tags}"
+
+
+def pprint_time_span(time_span, date=False, colour=False):
+    """Pretty-print time span.
+
+    :param tuple time_span: time span
+    :param bool date: toggle displaying date on/off
+    :param bool colour: toggle coloured display on/off
+
+    :returns: time span
+    :rtype: str
+    """
+    if colour:
+        colour0 = FGColours.DEFAULT
+        colour1 = FGColours.MAGENTA
+    else:
+        colour0 = colour1 = FGColours.DEFAULT
+    start, end = time_span
     if date:
         if (end - start).days >= 1:
             start = start.strftime("%Y-%m-%d %H:%M")
@@ -100,22 +166,42 @@ def pprint_task(task, date=False):
     else:
         start = start.strftime("%H:%M")
         end = end.strftime("%H:%M")
-    tags = "".join(f"[{tag}]" for tag in task.tags)
-    total = pprint_total(task.total)
-    return f"{start}-{end} ({total}) {task.name}{tags}"
+    time_span = f"{colour1}{start}{colour0}-{colour1}{end}{colour0}"
+    return time_span
 
 
-def pprint_total(total):
+def pprint_total(total, colour=False):
     """Pretty-print representation of total runtime.
 
     :param int total: runtime (in seconds)
 
-    :returns: representation
+    :returns: representation of total runtime
     :rtype: str
     """
+    if colour:
+        colour0 = FGColours.DEFAULT
+        colour1 = FGColours.YELLOW
+    else:
+        colour0 = colour1 = FGColours.DEFAULT
     minutes, seconds = divmod(total, 60)
     hours, minutes = divmod(minutes, 60)
-    return f"total: {hours}h{minutes}m"
+    return f"total: {colour1}{hours}h{minutes}m{colour0}"
+
+
+def pprint_task(task, date=False, colour=False):
+    """Pretty-print representation of task.
+
+    :param Task task: task
+    :param bool date: toggle displaying task on/off
+    :param bool colour: toggle coloured display on/off
+
+    :returns: representation of task
+    :rtype: str
+    """
+    full_name = pprint_full_name(task.name, task.tags, colour=colour)
+    time_span = pprint_time_span(task.time_span, date=date, colour=colour)
+    total = pprint_total(task.total, colour=colour)
+    return f"{time_span} ({total}) {full_name}"
 
 
 def pprint_sum(full_name, total):
@@ -125,6 +211,26 @@ def pprint_sum(full_name, total):
     :param int total: runtime (in seconds)
     """
     name, tags = full_name
-    tags = "".join(f"[{tag}]" for tag in tags)
-    total = pprint_total(total)
-    return f"{name}{tags} {total}"
+    full_name = pprint_full_name(name, tags, colour=True)
+    total = pprint_total(total, colour=True)
+    return f"{full_name} {total}"
+
+
+def pprint_prompt(task):
+    """Pretty-print prompt.
+
+    :param Task task: task
+
+    :returns: prompt
+    :rtype: str
+    """
+    if task.name:
+        full_name = pprint_full_name(task.name, task.tags, colour=True)
+        colour0 = FGColours.DEFAULT
+        colour1 = FGColours.MAGENTA
+        start, _ = task.time_span
+        start = start.strftime("%H:%M")
+        prompt = f"{full_name}({colour1}{start}{colour0}-) ~>"
+    else:
+        prompt = "~> "
+    return prompt

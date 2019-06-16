@@ -51,13 +51,7 @@ class TaskShell(cmd.Cmd):
 
     def _reset_prompt(self):
         """Reset prompt."""
-        if self.timer.task.name:
-            tags = "".join(f"[{tag}]" for tag in self.timer.task.tags)
-            start, _ = self.timer.task.time_span
-            start = datetime.strftime(start, "%H:%M")
-            self.prompt = f"{self.timer.task.name}{tags} ({start}-) ~> "
-        else:
-            self.prompt = "~> "
+        self.prompt = src.io_utils.pprint_prompt(self.timer.task)
 
     def do_start(self, args):
         """Start task.
@@ -104,7 +98,9 @@ class TaskShell(cmd.Cmd):
         tasks.sort(key=lambda x: x.time_span[0])
         for task in tasks:
             date = args.period != "today"
-            print(src.io_utils.pprint_task(task, date=date))
+            start_of_day = datetime.now().replace(hour=0, minute=0)
+            colour = task.time_span[0] >= start_of_day
+            print(src.io_utils.pprint_task(task, date=date, colour=colour))
 
     def do_sum(self, args):
         """Sum up total time.
