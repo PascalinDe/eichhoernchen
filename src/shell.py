@@ -91,7 +91,7 @@ class TaskShell(cmd.Cmd):
         usage: list [PERIOD]
         """
         args = src.io_utils.parse_args(args, key_word=True)
-        tasks = self.timer.list_tasks(period=args.period)
+        tasks = self.timer.list_tasks(period=args.period, to=args.to)
         if not tasks:
             print("no tasks")
             return False

@@ -31,14 +31,15 @@ import collections
 TAG_PATTERN = re.compile(r"\[(\w+)\]")
 PERIOD = ("all", "year", "month", "week", "yesterday", "today")
 PERIOD_PATTERN = re.compile(fr"{'|'.join(PERIOD)}")
+TO_PATTERN = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 LISTING = ("name", "tag")
 LISTING_PATTERN = re.compile(fr"{'|'.join(LISTING)}")
 
 
 FullName = collections.namedtuple("FullName", ("name", "tags"))
 FullName.__new__.__defaults__ = ("", [])
-Args = collections.namedtuple("Args", ("full_name", "period", "listing"))
-Args.__new__.__defaults__ = (FullName(), "today", "name")
+Args = collections.namedtuple("Args", ("full_name", "period", "to", "listing"))
+Args.__new__.__defaults__ = (FullName(), "today", "now", "name")
 
 
 class FGColours():
@@ -79,11 +80,15 @@ def parse_args(args, key_word=False):
         args = Args(full_name=_parse_full_name(args))
     else:
         period_match = PERIOD_PATTERN.search(args)
+        to_match = TO_PATTERN.search(args)
         listing_match = LISTING_PATTERN.search(args)
         args = Args()
         if period_match:
             period = period_match.group(0)
             args = args._replace(period=period)
+        if to_match:
+            to = to_match.group(0)
+            args = args._replace(to=to)
         if listing_match:
             listing = listing_match.group(0)
             args = args._replace(listing=listing)
