@@ -348,10 +348,15 @@ class TestTiming(unittest.TestCase):
             sql, [(name, start) for name, (start, _) in values]
         )
         connection.commit()
-        name, start, end = values.pop(1)
-        expected = [Task(name, [], (start, end))]
-        self.assertEqual(
-            timer.list_tasks_at(yesterday.strftime("%Y-%m-%d")), expected
+        expected = [
+            Task(name, [], (start, end))
+            for name, (start, end) in values[1:]
+        ]
+        self.assertCountEqual(
+            timer.list_tasks(
+                period="all", to=yesterday.strftime("%Y-%m-%d")
+            ),
+            expected
         )
 
     def test_list_tasks_at_date_yesterday(self):
@@ -381,9 +386,14 @@ class TestTiming(unittest.TestCase):
             sql, [(name, start) for name, (start, _) in values]
         )
         connection.commit()
-        name, start, end = values.pop(1)
+        name, (start, end) = values.pop(1)
         expected = [Task(name, [], (start, end))]
-        self.assertEqual(timer.list_tasks_at("yesterday"), expected)
+        self.assertEqual(
+            timer.list_tasks(
+                period="yesterday", to="yesterday"
+            ),
+            expected
+        )
 
     def test_list_tasks_at_date_invalid(self):
         """Test listing tasks at date.
@@ -393,7 +403,7 @@ class TestTiming(unittest.TestCase):
         """
         timer = src.timing.Timer(self.DATABASE)
         with self.assertRaises(ValueError):
-            timer.list_tasks_at("foo")
+            timer.list_tasks(period="all", to="foo")
 
     def test_sum_total_tasks(self):
         """Test summing total time up.
