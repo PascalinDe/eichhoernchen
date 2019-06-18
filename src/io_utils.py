@@ -54,6 +54,17 @@ class FGColours():
     DEFAULT = "\033[0m"
 
 
+class BGColours():
+    """Background colours."""
+    RED = "\033[41m"
+    GREEN = "\033[42m"
+    YELLOW = "\033[43m"
+    BLUE = "\033[44m"
+    MAGENTA = "\033[45m"
+    CYAN = "\033[46m"
+    WHITE = "\033[47m"
+
+
 def _parse_full_name(args):
     """Parse full name.
 
@@ -124,10 +135,13 @@ def pprint_tags(tags, colour=False):
     """
     if colour:
         colour0 = FGColours.DEFAULT
-        colour1 = FGColours.GREEN
+        colour1 = BGColours.GREEN
+        colour2 = FGColours.WHITE
     else:
         colour0 = colour1 = FGColours.DEFAULT
-    tags = "".join(f"{colour0}[{colour1}{tag}{colour0}]" for tag in tags)
+    tags = "".join(
+        f"{colour0}[{colour1}{colour2}{tag}{colour0}]" for tag in tags
+    )
     return tags
 
 
