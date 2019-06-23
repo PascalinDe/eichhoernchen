@@ -31,6 +31,7 @@ from datetime import datetime
 # library specific imports
 import src.timing
 import src.io_utils
+import src.argument_parser
 
 
 class TaskShell(cmd.Cmd):
@@ -62,7 +63,9 @@ class TaskShell(cmd.Cmd):
             if not args:
                 print("usage: start FULL_NAME")
                 return False
-            args = src.io_utils.parse_args(args)
+            key_word = src.argument_parser.KeyWord()
+            argument_parser = src.argument_parser.ArgumentParser()
+            args = argument_parser.parse_args(args, key_word)
             self.timer.start(args.full_name.name, tags=args.full_name.tags)
         except Warning as warning:
             print(warning)
@@ -88,10 +91,14 @@ class TaskShell(cmd.Cmd):
     def do_list(self, args):
         """List tasks.
 
-        usage: list [PERIOD]
+        usage: list [FROM [TO]]
         """
-        args = src.io_utils.parse_args(args, key_word=True)
-        tasks = self.timer.list_tasks(period=args.period, to=args.to)
+        key_word = src.argument_parser.KeyWord(
+            full_name=False, from_=True, to=True
+        )
+        argument_parser = src.argument_parser.ArgumentParser()
+        args = argument_parser.parse_args(args, key_word)
+        tasks = self.timer.list_tasks(period=args.from_, to=args.to)
         if not tasks:
             print("no tasks")
             return False
@@ -107,12 +114,16 @@ class TaskShell(cmd.Cmd):
 
         usage: sum [LISTING] [PERIOD]
         """
-        args = src.io_utils.parse_args(args, key_word=True)
-        tasks = args.listing == "name"
+        key_word = src.argument_parser.KeyWord(
+            full_name=False, from_=True, summand=True
+        )
+        argument_parser = src.argument_parser.ArgumentParser()
+        args = argument_parser.parse_args(args, key_word)
+        tasks = args.summand == "name" or args.summand == "full name"
         tags = not tasks
         try:
             sum_total = self.timer.sum_total(
-                tasks=tasks, tags=tags, period=args.period
+                tasks=tasks, tags=tags, period=args.from_
             )
         except ValueError as exception:
             print(exception)

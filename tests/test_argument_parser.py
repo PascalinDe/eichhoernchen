@@ -16,20 +16,19 @@
 
 
 """
-:synopsis: Input parser and output formatter test cases.
+:synopsis: Argument parser test cases.
 """
 
 
 # standard library imports
 import unittest
-
 # third party imports
 # library specific imports
-import src.io_utils
+import src.argument_parser
 
 
-class TestIOUtils(unittest.TestCase):
-    """Input parser and output formatter test cases."""
+class TestArgumentParser(unittest.TestCase):
+    """Argument parser test cases."""
 
     def test_parse_args(self):
         """Test command-line arguments parsing.
@@ -38,10 +37,12 @@ class TestIOUtils(unittest.TestCase):
         Expecting: args is full name
         """
         args = "foo[bar]"
-        expected = src.io_utils.Args(
-            full_name=src.io_utils.FullName(name="foo", tags=["bar"])
+        key_word = src.argument_parser.KeyWord()
+        argument_parser = src.argument_parser.ArgumentParser()
+        expected = src.argument_parser.Args(
+            full_name=src.argument_parser.FullName(name="foo", tags=["bar"])
         )
-        self.assertEqual(src.io_utils.parse_args(args), expected)
+        self.assertEqual(argument_parser.parse_args(args, key_word), expected)
 
     def test_parse_args_key_word(self):
         """Test command-line arguments parsing.
@@ -49,10 +50,15 @@ class TestIOUtils(unittest.TestCase):
         Trying: parsing command-line arguments (searching for key words on)
         Expecting: args contains non-default key word values
         """
-        period = "all"
-        listing = "tag"
-        args = f"{period} {listing}"
-        expected = src.io_utils.Args(period=period, listing=listing)
-        self.assertEqual(
-            src.io_utils.parse_args(args, key_word=True), expected
+        from_ = "all"
+        to = "year"
+        summand = "name"
+        args = f"{from_} {to} {summand}"
+        key_word = src.argument_parser.KeyWord(
+            full_name=False, from_=True, to=True, summand=True
         )
+        argument_parser = src.argument_parser.ArgumentParser()
+        expected = src.argument_parser.Args(
+            from_=from_, to=to, summand=summand
+        )
+        self.assertEqual(argument_parser.parse_args(args, key_word), expected)

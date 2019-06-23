@@ -21,25 +21,8 @@
 
 
 # standard library imports
-import re
-import collections
-
 # third party imports
 # library specific imports
-
-
-TAG_PATTERN = re.compile(r"\[(\w+)\]")
-PERIOD = ("all", "year", "month", "week", "yesterday", "today")
-PERIOD_PATTERN = re.compile(fr"{'|'.join(PERIOD)}")
-TO_PATTERN = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
-LISTING = ("name", "tag")
-LISTING_PATTERN = re.compile(fr"{'|'.join(LISTING)}")
-
-
-FullName = collections.namedtuple("FullName", ("name", "tags"))
-FullName.__new__.__defaults__ = ("", [])
-Args = collections.namedtuple("Args", ("full_name", "period", "to", "listing"))
-Args.__new__.__defaults__ = (FullName(), "today", "now", "name")
 
 
 class FGColours():
@@ -63,47 +46,6 @@ class BGColours():
     MAGENTA = "\033[45m"
     CYAN = "\033[46m"
     WHITE = "\033[47m"
-
-
-def _parse_full_name(args):
-    """Parse full name.
-
-    :param str args: command-line arguments
-
-    :returns: full name
-    :rtype: FullName
-    """
-    name = TAG_PATTERN.sub("", args)
-    tags = TAG_PATTERN.findall(args)
-    return FullName(name=name, tags=tags)
-
-
-def parse_args(args, key_word=False):
-    """Parse command-line arguments.
-
-    :param str args: command-line arguments
-    :param bool key_word: toggle searching for key words on/off
-
-    :returns: command-line arguments
-    :rtype: Args
-    """
-    if not key_word:
-        args = Args(full_name=_parse_full_name(args))
-    else:
-        period_match = PERIOD_PATTERN.search(args)
-        to_match = TO_PATTERN.search(args)
-        listing_match = LISTING_PATTERN.search(args)
-        args = Args()
-        if period_match:
-            period = period_match.group(0)
-            args = args._replace(period=period)
-        if to_match:
-            to = to_match.group(0)
-            args = args._replace(to=to)
-        if listing_match:
-            listing = listing_match.group(0)
-            args = args._replace(listing=listing)
-    return args
 
 
 def pprint_name(name, colour=False):
