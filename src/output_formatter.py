@@ -133,6 +133,9 @@ class OutputFormatter():
             else:
                 start = start.strftime("%H:%M")
             end = end.strftime("%H:%M %Y-%m-%d")
+        else:
+            start = start.strftime("%H:%M")
+            end = end.strftime("%H:%M")
         if colour:
             return (
                 f"{FGColours.PURPLE}{start}{self.DEFAULT}-"
