@@ -117,18 +117,20 @@ class TaskShell(cmd.Cmd):
     def do_sum(self, args):
         """Sum up total time.
 
-        usage: sum [LISTING] [PERIOD]
+        usage: sum [LISTING] [FROM [TO]]
         """
         key_word = src.argument_parser.KeyWord(
-            full_name=False, from_=True, summand=True
+            full_name=False, from_=True, to=True, summand=True
         )
         argument_parser = src.argument_parser.ArgumentParser()
         args = argument_parser.parse_args(args, key_word)
-        tasks = args.summand == "name" or args.summand == "full name"
-        tags = not tasks
+        full_name = args.summand == "full_name"
+        name = args.summand == "name"
+        tag = args.summand == "tag"
         try:
             sum_total = self.timer.sum_total(
-                tasks=tasks, tags=tags, period=args.from_
+                full_name=full_name, name=name, tag=tag,
+                from_=args.from_, to=args.to
             )
         except ValueError as exception:
             print(exception)
