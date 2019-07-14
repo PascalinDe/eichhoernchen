@@ -95,7 +95,9 @@ class OutputFormatter():
         :returns: pretty-printed tags
         :rtype: str
         """
-        if colour:
+        if not any(tags):
+            return ""
+        elif colour:
             return "".join(
                 f"{self.DEFAULT}{FGColours.DARK_GRAY}[{tag}]{self.DEFAULT}"
                 for tag in tags
