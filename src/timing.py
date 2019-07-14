@@ -97,7 +97,7 @@ class Timer():
         :returns: time period
         :rtype: str
         """
-        if to != "now":
+        if to not in ("now", "today"):
             to = datetime.datetime.strptime(to, "%Y-%m-%d")
         if period == "all":
             if to != "now":

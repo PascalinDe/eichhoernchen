@@ -30,8 +30,8 @@ from datetime import datetime
 # third party imports
 # library specific imports
 import src.timing
-import src.io_utils
 import src.argument_parser
+import src.output_formatter
 
 
 class TaskShell(cmd.Cmd):
@@ -48,11 +48,12 @@ class TaskShell(cmd.Cmd):
             pathlib.Path.home(), ".local/share/eichhoernchen.db"
         )
         self.timer = src.timing.Timer(database)
+        self.output_formatter = src.output_formatter.OutputFormatter()
         self._reset_prompt()
 
     def _reset_prompt(self):
         """Reset prompt."""
-        self.prompt = src.io_utils.pprint_prompt(self.timer.task)
+        self.prompt = self.output_formatter.pprint_prompt(self.timer.task)
 
     def do_start(self, args):
         """Start task.
@@ -107,7 +108,11 @@ class TaskShell(cmd.Cmd):
             date = args.period != "today"
             start_of_day = datetime.now().replace(hour=0, minute=0)
             colour = task.time_span[0] >= start_of_day
-            print(src.io_utils.pprint_task(task, date=date, colour=colour))
+            print(
+                self.output_formatter.pprint_task(
+                    task, date=date, colour=colour
+                )
+            )
 
     def do_sum(self, args):
         """Sum up total time.
@@ -130,7 +135,11 @@ class TaskShell(cmd.Cmd):
             return False
         sum_total.sort(key=lambda x: (x[1], x[0][0]))
         for (full_name, total) in sum_total:
-            print(src.io_utils.pprint_sum(full_name, total))
+            print(
+                self.output_formatter.pprint_sum(
+                    full_name, total, colour=True
+                )
+            )
 
     def do_bye(self, args):
         """Close task shell."""
