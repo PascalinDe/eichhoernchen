@@ -1,4 +1,4 @@
-#    This file is part of Eichhörnchen 1.0.
+#    This file is part of Eichhörnchen 1.1.
 #    Copyright (C) 2019  Carine Dengler
 #
 #    Eichhörnchen is free software: you can redistribute it and/or modify
@@ -36,9 +36,7 @@ class FGColours():
     Brown       0;33     Yellow        1;33
     Light Gray  0;37     White         1;37
 
-    Refer to
-    `Colours<http://www.tldp.org/HOWTO/Bash-Prompt-HOWTO/x329.html>`_ for
-    additional information.
+    .. _Source: http://www.tldp.org/HOWTO/Bash-Prompt-HOWTO/x329.html
     """
     BLACK = "\033[0;31m"
     BLUE = "\033[0;34m"

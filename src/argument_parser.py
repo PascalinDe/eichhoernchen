@@ -1,7 +1,7 @@
-#    This file is part of Eichhörnchen 1.0.
+#    This file is part of Eichhörnchen 1.1.
 #    Copyright (C) 2019  Carine Dengler
 #
-#    Eichhörnchen 1.0 is free software: you can redistribute it and/or modify
+#    Eichhörnchen is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
