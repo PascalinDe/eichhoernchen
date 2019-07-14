@@ -99,7 +99,7 @@ class OutputFormatter():
         """
         if colour:
             return "".join(
-                f"{self.DEFAULT}[{FGColours.DARK_GRAY}{tag}{self.DEFAULT}]"
+                f"{self.DEFAULT}{FGColours.DARK_GRAY}[{tag}]{self.DEFAULT}"
                 for tag in tags
             )
         else:
