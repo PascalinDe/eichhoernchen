@@ -365,11 +365,11 @@ class TestTiming(unittest.TestCase):
             expected
         )
 
-    def test_sum_total_tasks(self):
+    def test_sum_total_full_name(self):
         """Test summing total time up.
 
         Trying: summing total time up
-        Expecting: list of sums of total time (list of tasks)
+        Expecting: list of sums of total time (full name)
         """
         timer = src.timing.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
@@ -398,13 +398,48 @@ class TestTiming(unittest.TestCase):
             (("foo", ()), int(2*timedelta.total_seconds())),
             (("foo", ("foobar",)), int(timedelta.total_seconds()))
         ]
-        self.assertCountEqual(timer.sum_total(period="all"), expected)
+        self.assertCountEqual(timer.sum_total(from_="all"), expected)
 
-    def test_sum_total_tags(self):
+    def test_sum_total_name(self):
         """Test summing total time up.
 
         Trying: summing total time up
-        Expecting: list of sums of total time (list of tags)
+        Expecting: list of sums of total time (name)
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        now = datetime.datetime.now()
+        timedelta = datetime.timedelta(minutes=1)
+        values = [
+            ("foo", ["bar"], (now, now + timedelta)),
+            ("foo", ["baz"], (now + timedelta, now + 2*timedelta)),
+            ("foo", ["foobar"], (now + 2*timedelta, now + 3*timedelta))
+        ]
+        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
+        connection.executemany(
+            sql, [time_span for _, _, time_span in values]
+        )
+        connection.commit()
+        sql = "INSERT INTO running (name,start) VALUES (?,?)"
+        connection.executemany(
+            sql, [(name, start) for (name, _, (start, _)) in values]
+        )
+        sql = "INSERT INTO tagged (tag,start) VALUES (?,?)"
+        connection.executemany(
+            sql, [(tags[0], start) for (_, tags, (start, _)) in values]
+        )
+        connection.commit()
+        expected = [(("foo", ("",)), int(3*timedelta.total_seconds()))]
+        self.assertCountEqual(
+            timer.sum_total(full_name=False, name=True, from_="all"),
+            expected
+        )
+
+    def test_sum_total_tag(self):
+        """Test summing total time up.
+
+        Trying: summing total time up
+        Expecting: list of sums of total time (tag)
         """
         timer = src.timing.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
@@ -434,14 +469,14 @@ class TestTiming(unittest.TestCase):
             (("", ("baz",)), int(timedelta.total_seconds()))
         ]
         self.assertCountEqual(
-            timer.sum_total(tasks=False, tags=True, period="all"), expected
+            timer.sum_total(full_name=False, tag=True, from_="all"), expected
         )
 
-    def test_sum_total_both(self):
+    def test_sum_total(self):
         """Test summing total time up.
 
         Trying: summing total time up
-        Expecting: list of sums of total time (list of tasks and list of tags)
+        Expecting: list of sums of total time (full name, name and tag)
         """
         timer = src.timing.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
@@ -470,11 +505,13 @@ class TestTiming(unittest.TestCase):
             (("foo", ("bar",)), int(timedelta.total_seconds())),
             (("foo", ("baz",)), int(timedelta.total_seconds())),
             (("foobar", ("bar",)), int(timedelta.total_seconds())),
+            (("foo", ("",)), int(2*timedelta.total_seconds())),
+            (("foobar", ("",)), int(timedelta.total_seconds())),
             (("", ("bar",)), int(2*timedelta.total_seconds())),
             (("", ("baz",)), int(timedelta.total_seconds()))
         ]
         self.assertCountEqual(
-            timer.sum_total(tags=True, period="all"), expected
+            timer.sum_total(name=True, tag=True, from_="all"), expected
         )
 
     def test_sum_total_neither(self):
@@ -485,4 +522,6 @@ class TestTiming(unittest.TestCase):
         """
         timer = src.timing.Timer(self.DATABASE)
         with self.assertRaises(ValueError):
-            timer.sum_total(tasks=False, tags=False, period="all")
+            timer.sum_total(
+                full_name=False, name=False, tag=False, from_="all"
+            )
