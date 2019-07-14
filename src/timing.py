@@ -88,59 +88,61 @@ class Timer():
         connection.commit()
         self._reset_task()
 
-    def _define_time_period(self, period, to):
+    @staticmethod
+    def _get_date(endpoint):
+        """Get date.
+
+        :param str endpoint: endpoint
+
+        :returns: date
+        :rtype: str
+        """
+        if endpoint == "year":
+            return "date('now','localtime','start of year')"
+        elif endpoint == "month":
+            return "date('now','localtime','start of month')"
+        elif endpoint == "week":
+            return "date('now','weekday 0','-7 day')"
+        elif endpoint == "yesterday":
+            return "date('now','start of day','-1 day')"
+        elif endpoint == "today":
+            return "date('now','localtime','start of day')"
+        else:
+            return f"date('{endpoint}','localtime','start of day')"
+
+    def _define_time_period(self, from_, to):
         """Define time period.
 
-        :param str period: time period
+        :param str from_: start of time period
         :param str to: end of time period
 
         :returns: time period
         :rtype: str
         """
-        if to not in ("now", "today"):
-            to = datetime.datetime.strptime(to, "%Y-%m-%d")
-        if period == "all":
-            if to != "now":
-                return f"""WHERE date(time_span.start) <=
-                date('{to}','start of day')"""
-            else:
-                return ""
-        elif period == "year":
-            sql = """WHERE date(time_span.start) >=
-            date('now','localtime','start of year')"""
-        elif period == "month":
-            sql = """WHERE date(time_span.start) >=
-            date('now','localtime','start of month')"""
-        elif period == "week":
-            sql = """WHERE date(time_span.start) >
-            date('now','weekday 0','-7 day')"""
-        elif period == "yesterday":
-            sql = """WHERE date(time_span.start) >=
-            date('now','start of day','-1 day')"""
-        elif period == "today":
-            sql = """WHERE date(time_span.start) >=
-            date('now','start of day')"""
-        if to != "now":
-            return sql + f"""AND date(time_span.start) <=
-            date('{to}','start of day')"""
+        if from_ == "week":
+            sql = f"""WHERE date(time_span.start)>
+            {self._get_date(from_)} AND """
+        elif from_ != "all":
+            sql = f"""WHERE date(time_span.start)>=
+            {self._get_date(from_)} AND """
         else:
-            return sql
+            sql = "WHERE "
+        sql += f"date(time_span.start)<={self._get_date(to)}"
+        return sql
 
-    def list_tasks(self, period="today", to="now"):
+    def list_tasks(self, from_="today", to="today"):
         """List tasks.
 
-        :param str period: time period
+        :param str from_: start of time period
         :param str to: end of time period
 
         :returns: list of tasks
         :rtype: list
         """
-        sql = """
-        SELECT time_span.start,end,name,tag FROM time_span
-        JOIN running ON time_span.start = running.start
-        LEFT JOIN tagged ON time_span.start = tagged.start
-        """
-        sql += self._define_time_period(period, to)
+        sql = """SELECT time_span.start,end,name,tag FROM time_span
+        JOIN running ON time_span.start=running.start
+        LEFT JOIN tagged ON time_span.start=tagged.start """
+        sql += self._define_time_period(from_, to)
         connection = self.sqlite.connect()
         rows = connection.execute(sql).fetchall()
         agg = collections.defaultdict(list)

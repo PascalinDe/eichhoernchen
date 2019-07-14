@@ -99,13 +99,13 @@ class TaskShell(cmd.Cmd):
         )
         argument_parser = src.argument_parser.ArgumentParser()
         args = argument_parser.parse_args(args, key_word)
-        tasks = self.timer.list_tasks(period=args.from_, to=args.to)
+        tasks = self.timer.list_tasks(from_=args.from_, to=args.to)
         if not tasks:
             print("no tasks")
             return False
         tasks.sort(key=lambda x: x.time_span[0])
         for task in tasks:
-            date = args.period != "today"
+            date = args.from_ != "today"
             start_of_day = datetime.now().replace(hour=0, minute=0)
             colour = task.time_span[0] >= start_of_day
             print(
