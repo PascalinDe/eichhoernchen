@@ -60,13 +60,17 @@ class TaskShell(cmd.Cmd):
 
         usage: start FULL_NAME
         """
+        if not args:
+            print("usage: start FULL_NAME")
+            return False
+        key_word = src.argument_parser.KeyWord()
+        argument_parser = src.argument_parser.ArgumentParser()
         try:
-            if not args:
-                print("usage: start FULL_NAME")
-                return False
-            key_word = src.argument_parser.KeyWord()
-            argument_parser = src.argument_parser.ArgumentParser()
             args = argument_parser.parse_args(args, key_word)
+        except ValueError as exception:
+            print(exception)
+            return
+        try:
             self.timer.start(args.full_name.name, tags=args.full_name.tags)
         except Warning as warning:
             print(warning)
