@@ -62,7 +62,7 @@ class TaskShell(cmd.Cmd):
         """
         if not args:
             print("usage: start FULL_NAME")
-            return False
+            return
         key_word = src.argument_parser.KeyWord()
         argument_parser = src.argument_parser.ArgumentParser()
         try:
@@ -106,7 +106,7 @@ class TaskShell(cmd.Cmd):
         tasks = self.timer.list_tasks(from_=args.from_, to=args.to)
         if not tasks:
             print("no tasks")
-            return False
+            return
         tasks.sort(key=lambda x: x.time_span[0])
         for task in tasks:
             date = args.from_ != "today"
@@ -138,7 +138,7 @@ class TaskShell(cmd.Cmd):
             )
         except ValueError as exception:
             print(exception)
-            return False
+            return
         sum_total.sort(key=lambda x: (x[1], x[0][0]))
         for (full_name, total) in sum_total:
             print(
