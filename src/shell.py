@@ -121,7 +121,7 @@ class TaskShell(cmd.Cmd):
     def do_sum(self, args):
         """Sum up total time.
 
-        usage: sum [LISTING] [FROM [TO]]
+        usage: sum [FROM [TO]] [SUMMAND]
         """
         key_word = src.argument_parser.KeyWord(
             full_name=False, from_=True, to=True, summand=True
