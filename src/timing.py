@@ -28,6 +28,7 @@ import datetime
 # library specific imports
 import src.sqlite
 from src import Task
+from src.argument_parser import FullName
 
 
 class Timer():
@@ -130,7 +131,9 @@ class Timer():
         sql += f"date(time_span.start)<={self._get_date(to)}"
         return sql
 
-    def list_tasks(self, from_="today", to="today"):
+    def list_tasks(
+            self, full_name=FullName("", ()), from_="today", to="today"
+    ):
         """List tasks.
 
         :param str from_: start of time period
@@ -154,6 +157,9 @@ class Timer():
                 tags = [tag for tag in tags if tag]
             else:
                 tags = []
+            if full_name.name:
+                if (name, tags) != tuple(full_name):
+                    continue
             if not end:
                 end = datetime.datetime.now()
             tasks.append(Task(name, tags, (start, end)))

@@ -404,7 +404,9 @@ class TestTiming(unittest.TestCase):
             for name, tags, (start, end) in values[:-1]
         ]
         self.assertCountEqual(
-            timer.list_tasks(full_name=FullName("foo", ["bar"])),
+            timer.list_tasks(
+                full_name=FullName("foo", ["bar"]), from_="all"
+            ),
             expected
         )
 
