@@ -31,6 +31,7 @@ import os.path
 import src.sqlite
 import src.timing
 from src import Task
+from src.argument_parser import FullName
 
 
 class TestTiming(unittest.TestCase):
@@ -362,6 +363,48 @@ class TestTiming(unittest.TestCase):
             timer.list_tasks(
                 from_="all", to=yesterday.strftime("%Y-%m-%d")
             ),
+            expected
+        )
+
+    def test_list_full_name(self):
+        """Test listing tasks having given full name.
+
+        Trying: listing tasks having given full name
+        Expecting: list of tasks having given full name
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        now = datetime.datetime.now()
+        maxdatetime = datetime.datetime(datetime.MAXYEAR, 12, 31)
+        yesterday = now - datetime.timedelta(days=1)
+        day_before_yesterday = now - datetime.timedelta(days=2)
+        values = [
+            ("foo", ["bar"], (now, maxdatetime)),
+            ("foo", ["bar"], (yesterday, maxdatetime)),
+            ("foo", ["bar"], (day_before_yesterday, maxdatetime)),
+            ("baz", ["bar"], (now - datetime.timedelta(days=3), maxdatetime)),
+        ]
+        sql = "INSERT INTO time_span (start,end) VALUES (?,?)"
+        connection.executemany(
+            sql, [(start, end) for _, _, (start, end) in values]
+        )
+        connection.commit()
+        sql = "INSERT INTO running (name,start) VALUES (?,?)"
+        connection.executemany(
+            sql, [(name, start) for name, _, (start, _) in values]
+        )
+        connection.commit()
+        sql = "INSERT INTO tagged (tag,start) VALUES (?,?)"
+        connection.executemany(
+            sql, [(tags[0], start) for _, tags, (start, _) in values]
+        )
+        connection.commit()
+        expected = [
+            Task(name, tags, (start, end))
+            for name, tags, (start, end) in values[:-1]
+        ]
+        self.assertCountEqual(
+            timer.list_tasks(full_name=FullName("foo", ["bar"])),
             expected
         )
 
