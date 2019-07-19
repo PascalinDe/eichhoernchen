@@ -96,14 +96,14 @@ class TaskShell(cmd.Cmd):
     def do_list(self, args):
         """List tasks.
 
-        usage: list [FROM [TO]]
+        usage: list [FULL_NAME] [FROM [TO]]
         """
-        key_word = src.argument_parser.KeyWord(
-            full_name=False, from_=True, to=True
-        )
+        key_word = src.argument_parser.KeyWord(from_=True, to=True)
         argument_parser = src.argument_parser.ArgumentParser()
         args = argument_parser.parse_args(args, key_word)
-        tasks = self.timer.list_tasks(from_=args.from_, to=args.to)
+        tasks = self.timer.list_tasks(
+            full_name=args.full_name, from_=args.from_, to=args.to
+        )
         if not tasks:
             print("no tasks")
             return
