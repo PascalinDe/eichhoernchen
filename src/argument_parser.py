@@ -26,12 +26,9 @@ import collections
 
 # third party imports
 # library specific imports
+from src import FullName
 
 
-FullName = collections.namedtuple(
-    "FullName", ("name", "tags")
-)
-FullName.__new__.__defaults__ = ("", [])
 KeyWord = collections.namedtuple(
     "KeyWord", ("full_name", "from_", "to", "summand")
 )

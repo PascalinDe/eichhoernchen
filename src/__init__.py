@@ -27,6 +27,12 @@ import collections
 # library specific imports
 
 
+FullName = collections.namedtuple(
+    "FullName", ("name", "tags")
+)
+FullName.__new__.__defaults__ = ("", [])
+
+
 _Task = collections.namedtuple("Task", ["name", "tags", "time_span"])
 
 

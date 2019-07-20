@@ -30,8 +30,7 @@ import os.path
 # library specific imports
 import src.sqlite
 import src.timing
-from src import Task
-from src.argument_parser import FullName
+from src import FullName, Task
 
 
 class TestTiming(unittest.TestCase):

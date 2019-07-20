@@ -25,6 +25,7 @@ import unittest
 # third party imports
 # library specific imports
 import src.argument_parser
+from src import FullName
 
 
 class TestArgumentParser(unittest.TestCase):
@@ -40,7 +41,7 @@ class TestArgumentParser(unittest.TestCase):
         key_word = src.argument_parser.KeyWord()
         argument_parser = src.argument_parser.ArgumentParser()
         expected = src.argument_parser.Args(
-            full_name=src.argument_parser.FullName(name="foo", tags=["bar"])
+            full_name=FullName(name="foo", tags=["bar"])
         )
         self.assertEqual(argument_parser.parse_args(args, key_word), expected)
 

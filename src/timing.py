@@ -21,14 +21,13 @@
 
 
 # standard library imports
-import collections
 import datetime
+import collections
 
 # third party imports
 # library specific imports
 import src.sqlite
-from src import Task
-from src.argument_parser import FullName
+from src import FullName, Task
 
 
 class Timer():
