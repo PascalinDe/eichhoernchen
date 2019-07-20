@@ -38,6 +38,8 @@ class TaskShell(cmd.Cmd):
     """Task shell.
 
     :ivar Timer timer: timer
+    :ivar OutputFormatter output_formatter: output formatter
+    :ivar ArgumentParser argument_parser: argument parser
     """
 
     def __init__(self):
@@ -49,6 +51,7 @@ class TaskShell(cmd.Cmd):
         )
         self.timer = src.timing.Timer(database)
         self.output_formatter = src.output_formatter.OutputFormatter()
+        self.argument_parser = src.argument_parser.ArgumentParser()
         self._reset_prompt()
 
     def _reset_prompt(self):
@@ -63,27 +66,23 @@ class TaskShell(cmd.Cmd):
         if not args:
             print("usage: start FULL_NAME")
             return
-        key_word = src.argument_parser.KeyWord()
-        argument_parser = src.argument_parser.ArgumentParser()
-        try:
-            args = argument_parser.parse_args(args, key_word)
-        except ValueError as exception:
-            print(exception)
-            return
-        try:
-            self.timer.start(args.full_name.name, tags=args.full_name.tags)
-        except Warning as warning:
-            print(warning)
-            stop = ""
-            while stop not in ("y", "n"):
-                stop = input("replace running task [yn]?").lower()
-            if stop == "y":
-                self.timer.stop()
-                self.timer.start(args.full_name.name, tags=args.full_name.tags)
-        self._reset_prompt()
+        full_name, _ = self.argument_parser.find_full_name(args)
+        if full_name:
+            try:
+                self.timer.start(full_name.name, tags=full_name.tags)
+            except Warning as warning:
+                print(warning)
+                stop = ""
+                while stop not in ("y", "n"):
+                    stop = input("replace running task [yn]?").lower()
+                if stop == "y":
+                    self.timer.stop()
+                    self.timer.start(full_name.name, tags=full_name.tags)
+            self._reset_prompt()
+        print("invalid FULL_NAME")
 
     def do_stop(self, args):
-        """Stop running task.
+        """Stop task.
 
         usage: stop
         """
@@ -98,54 +97,53 @@ class TaskShell(cmd.Cmd):
 
         usage: list [FULL_NAME] [FROM [TO]]
         """
-        key_word = src.argument_parser.KeyWord(from_=True, to=True)
-        argument_parser = src.argument_parser.ArgumentParser()
-        args = argument_parser.parse_args(args, key_word)
-        tasks = self.timer.list_tasks(
-            full_name=args.full_name, from_=args.from_, to=args.to
-        )
+        full_name, args = self.argument_parser.find_full_name(args)
+        from_, args = self.argument_parser.find_from(args)
+        from_ = from_ or "today"
+        to, _ = self.argument_parser.find_to(args)
+        to = to or "today"
+        tasks = self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
         if not tasks:
             print("no tasks")
             return
         tasks.sort(key=lambda x: x.time_span[0])
         for task in tasks:
-            date = args.from_ != "today"
+            date = from_ != "today"
             start_of_day = datetime.now().replace(hour=0, minute=0)
             colour = task.time_span[0] >= start_of_day
-            print(
-                self.output_formatter.pprint_task(
-                    task, date=date, colour=colour
-                )
+            pprint = self.output_formatter.pprint_task(
+                task, date=date, colour=colour
             )
+            print(pprint)
 
     def do_sum(self, args):
         """Sum up total time.
 
         usage: sum [FROM [TO]] [SUMMAND]
         """
-        key_word = src.argument_parser.KeyWord(
-            full_name=False, from_=True, to=True, summand=True
-        )
-        argument_parser = src.argument_parser.ArgumentParser()
-        args = argument_parser.parse_args(args, key_word)
-        full_name = args.summand == "full_name"
-        name = args.summand == "name"
-        tag = args.summand == "tag"
+        from_, args = self.argument_parser.find_from(args)
+        from_ = from_ or "today"
+        to, args = self.argument_parser.find_to(args)
+        to = to or "today"
+        summand, _ = self.argument_parser.find_summand(args)
+        summand = summand or "full_name"
+        full_name = summand == "full_name"
+        name = summand == "name"
+        tag = summand == "tag"
         try:
             sum_total = self.timer.sum_total(
                 full_name=full_name, name=name, tag=tag,
-                from_=args.from_, to=args.to
+                from_=from_, to=to
             )
         except ValueError as exception:
             print(exception)
             return
         sum_total.sort(key=lambda x: (x[1], x[0][0]))
         for (full_name, total) in sum_total:
-            print(
-                self.output_formatter.pprint_sum(
-                    full_name, total, colour=True
-                )
+            pprint = self.output_formatter.pprint_sum(
+                full_name, total, colour=True
             )
+            print(pprint)
 
     def do_bye(self, args):
         """Close task shell."""
