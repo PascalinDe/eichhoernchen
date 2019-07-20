@@ -29,16 +29,6 @@ import collections
 from src import FullName
 
 
-KeyWord = collections.namedtuple(
-    "KeyWord", ("full_name", "from_", "to", "summand")
-)
-KeyWord.__new__.__defaults__ = (True, False, False, False)
-Args = collections.namedtuple(
-    "Args", ("full_name", "from_", "to", "summand")
-)
-Args.__new__.__defaults__ = (FullName(), "today", "today", "full_name")
-
-
 class ArgumentParser():
     """Argument parser.
 
@@ -46,8 +36,6 @@ class ArgumentParser():
     :cvar Pattern TAG_PATTERN: regular expression matching tag
     :cvar Pattern FULL_NAME_PATTERN: regular expression matching full name
     :cvar Pattern ISODATE_PATTERN: regular expression matching ISO 8601 date
-    :cvar list TIME_PERIOD: list of time periods
-    :cvar Pattern TIME_PERIOD_PATTERN: regular expression matching time period
     :cvar Pattern FROM_PATTERN: regular expression matching from ...
     :cvar Pattern TO_PATTERN: regular expression matching ... to
     :cvar Pattern SUMMAND_PATTERN: regular expression matching summand
@@ -69,45 +57,60 @@ class ArgumentParser():
     )
     SUMMAND_PATTERN = re.compile(r"full name|name|tag")
 
-    def parse_args(self, args, key_word):
-        """Parse command-line arguments.
+    def find_full_name(self, args):
+        """Find full name.
 
         :param str args: command-line arguments
-        :param KeyWord key_word: list of key words
 
-        :returns: command-line arguments
-        :rtype: Args
+        :returns: full name and remaining command-line arguments
+        :rtype: tuple
         """
-        if key_word.full_name:
-            full_name_match = self.FULL_NAME_PATTERN.match(args)
-            if full_name_match:
-                name = self.TAG_PATTERN.sub("", args)
-                tags = self.TAG_PATTERN.findall(args)
-                parsed_args = Args(full_name=FullName(name=name, tags=tags))
-            else:
-                raise ValueError("required argument 'full_name' is missing")
-        elif any((key_word.from_, key_word.to, key_word.summand)):
-            parsed_args = Args()
-            if key_word.from_:
-                from_match = self.FROM_PATTERN.match(args)
-                if from_match:
-                    parsed_args = parsed_args._replace(
-                        from_=from_match.group(0)
-                    )
-                    args = self.FROM_PATTERN.sub("", args, count=1).strip()
-                    if key_word.to:
-                        to_match = self.TO_PATTERN.match(args)
-                        if to_match:
-                            parsed_args = parsed_args._replace(
-                                to=to_match.group(0)
-                            )
-                            args = self.TO_PATTERN.sub(
-                                "", args, count=1
-                            ).strip()
-            if key_word.summand:
-                summand_match = self.SUMMAND_PATTERN.match(args)
-                if summand_match:
-                    parsed_args = parsed_args._replace(
-                        summand=summand_match.group(0)
-                    )
-        return parsed_args
+        full_name_match = self.FULL_NAME_PATTERN.match(args)
+        if full_name_match:
+            name = self.TAG_PATTERN.sub("", args)
+            tags = self.TAG_PATTERN.findall(args)
+            args = self.FULL_NAME_PATTERN.sub("", args).strip()
+            return FullName(name=name, tags=tags), args
+        return None, args
+
+    def find_from(self, args):
+        """Find from ... .
+
+        :param str args: command-line arguments
+
+        :returns: from ... and remaining command-line arguments
+        :rtype: tuple
+        """
+        from_match = self.FROM_PATTERN.match(args)
+        if from_match:
+            args = self.FROM_PATTERN.sub("", args, count=1).strip()
+            return from_match.group(0), args
+        return "", args
+
+    def find_to(self, args):
+        """Find ... to.
+
+        :param str args: command-line arguments
+
+        :returns: ... to and remaining command-line arguments
+        :rtype: tuple
+        """
+        to_match = self.TO_PATTERN.match(args)
+        if to_match:
+            args = self.TO_PATTERN.sub("", args).strip()
+            return to_match.group(0), args
+        return "", args
+
+    def find_summand(self, args):
+        """Find summand.
+
+        :param str args: command-line arguments
+
+        :returns: summand and remaining command-line arguments
+        :rtype: tuple
+        """
+        summand_match = self.SUMMAND_PATTERN.match(args)
+        if summand_match:
+            args = self.SUMMAND_PATTERN.sub("", args).strip()
+            return summand_match.group(0), args
+        return "", args
