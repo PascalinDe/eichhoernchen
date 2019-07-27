@@ -168,6 +168,9 @@ class TaskShell(cmd.Cmd):
         except ValueError as exception:
             print(exception)
             return
+        if not sum_total:
+            print("no tasks")
+            return
         sum_total.sort(key=lambda x: (x[1], x[0][0]))
         for (full_name, total) in sum_total:
             pprint = self.output_formatter.pprint_sum(
