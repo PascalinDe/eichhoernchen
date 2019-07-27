@@ -67,7 +67,7 @@ class TaskShell(cmd.Cmd):
             print("usage: start FULL_NAME")
             return
         full_name, _ = self.argument_parser.find_full_name(args)
-        if full_name:
+        if full_name.name:
             try:
                 self.timer.start(full_name.name, tags=full_name.tags)
             except Warning as warning:

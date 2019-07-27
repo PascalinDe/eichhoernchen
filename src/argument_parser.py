@@ -69,7 +69,7 @@ class ArgumentParser():
             tags = self.TAG_PATTERN.findall(args)
             args = self.FULL_NAME_PATTERN.sub("", args, count=1).strip()
             return FullName(name=name, tags=tags), args
-        return None, args
+        return FullName("", ()), args
 
     def find_from(self, args):
         """Find from ... .
