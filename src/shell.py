@@ -79,7 +79,8 @@ class TaskShell(cmd.Cmd):
                     self.timer.stop()
                     self.timer.start(full_name.name, tags=full_name.tags)
             self._reset_prompt()
-        print("invalid FULL_NAME")
+        else:
+            print(f"{args} is not valid FULL_NAME")
 
     def do_stop(self, args):
         """Stop task.
