@@ -22,7 +22,6 @@
 
 # standard library imports
 import re
-import collections
 
 # third party imports
 # library specific imports
@@ -43,8 +42,7 @@ class ArgumentParser():
     NAME_PATTERN = re.compile(r"(?:\w|\s)+")
     TAG_PATTERN = re.compile(r"\[((?:\w|\s)+)\]")
     FULL_NAME_PATTERN = re.compile(
-        fr"(?:{TAG_PATTERN.pattern})*(?:{NAME_PATTERN.pattern})"
-        fr"(?:{TAG_PATTERN.pattern})*"
+        fr"({NAME_PATTERN.pattern})(?:{TAG_PATTERN.pattern})*"
     )
     ISODATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
     TIME_PERIOD = ("all", "year", "month", "week", "yesterday", "today")
@@ -67,9 +65,9 @@ class ArgumentParser():
         """
         full_name_match = self.FULL_NAME_PATTERN.match(args)
         if full_name_match:
-            name = self.TAG_PATTERN.sub("", args)
+            name = full_name_match.group(1).strip()
             tags = self.TAG_PATTERN.findall(args)
-            args = self.FULL_NAME_PATTERN.sub("", args).strip()
+            args = self.FULL_NAME_PATTERN.sub("", args, count=1).strip()
             return FullName(name=name, tags=tags), args
         return None, args
 
@@ -84,7 +82,7 @@ class ArgumentParser():
         from_match = self.FROM_PATTERN.match(args)
         if from_match:
             args = self.FROM_PATTERN.sub("", args, count=1).strip()
-            return from_match.group(0), args
+            return from_match.group(0).strip(), args
         return "", args
 
     def find_to(self, args):

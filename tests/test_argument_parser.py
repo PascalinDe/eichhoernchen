@@ -22,7 +22,10 @@
 
 # standard library imports
 import unittest
+import datetime
+
 # third party imports
+
 # library specific imports
 import src.argument_parser
 from src import FullName
@@ -31,35 +34,61 @@ from src import FullName
 class TestArgumentParser(unittest.TestCase):
     """Argument parser test cases."""
 
-    def test_parse_args(self):
-        """Test command-line arguments parsing.
+    def setUp(self):
+        """Set test cases up."""
+        self.argument_parser = src.argument_parser.ArgumentParser()
 
-        Trying: parsing command-line arguments (searching for key words off)
-        Expecting: args is full name
+    def test_find_full_name(self):
+        """Test finding full name.
+
+        Trying: finding full name
+        Expecting: full name and remaining command-line arguments
         """
-        args = "foo[bar]"
-        key_word = src.argument_parser.KeyWord()
-        argument_parser = src.argument_parser.ArgumentParser()
-        expected = src.argument_parser.Args(
-            full_name=FullName(name="foo", tags=["bar"])
-        )
-        self.assertEqual(argument_parser.parse_args(args, key_word), expected)
+        name = "foo"
+        tags = ["bar", "baz"]
+        remaining = "all"
+        args = f"{name}{''.join(f'[{tag}]' for tag in tags)}{remaining}"
+        full_name, args = self.argument_parser.find_full_name(args)
+        self.assertEqual(full_name, FullName(name, tags))
+        self.assertEqual(args, remaining)
 
-    def test_parse_args_key_word(self):
-        """Test command-line arguments parsing.
+    def test_find_from(self):
+        """Test finding from ... .
 
-        Trying: parsing command-line arguments (searching for key words on)
-        Expecting: args contains non-default key word values
+        Trying: finding from ...
+        Expecting: from ... and remaining command-line arguments
         """
-        from_ = "all"
-        to = "year"
-        summand = "name"
-        args = f"{from_} {to} {summand}"
-        key_word = src.argument_parser.KeyWord(
-            full_name=False, from_=True, to=True, summand=True
-        )
-        argument_parser = src.argument_parser.ArgumentParser()
-        expected = src.argument_parser.Args(
-            from_=from_, to=to, summand=summand
-        )
-        self.assertEqual(argument_parser.parse_args(args, key_word), expected)
+        now = datetime.datetime.now()
+        yesterday = (now - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+        remaining = now.strftime("%Y-%m-%d")
+        args = f"{yesterday}{remaining}"
+        from_, args = self.argument_parser.find_from(args)
+        self.assertEqual(from_, yesterday)
+        self.assertEqual(args, remaining)
+
+    def test_find_to(self):
+        """Test finding ... to.
+
+        Trying: finding ... to
+        Expecting: ... to and remaining command-line arguments
+        """
+        now = datetime.datetime.now()
+        today = now.strftime("%Y-%m-%d")
+        remaining = f"foo[bar][baz]"
+        args = f"{today}{remaining}"
+        to, args = self.argument_parser.find_to(args)
+        self.assertEqual(to, today)
+        self.assertEqual(args, remaining)
+
+    def test_find_summand(self):
+        """Test finding summand.
+
+        Trying: finding summand
+        Expecting: summand and remaining command-line arguments
+        """
+        full_name = "full name"
+        remaining = "all"
+        args = f"{full_name}{remaining}"
+        summand, args = self.argument_parser.find_summand(args)
+        self.assertEqual(summand, full_name)
+        self.assertEqual(args, remaining)
