@@ -62,6 +62,11 @@ class TaskShell(cmd.Cmd):
         """Start task.
 
         usage: start FULL_NAME
+
+        FULL_NAME is name of task followed by 0 or more tags
+        enclosed in brackets
+
+        example: start 'foo[bar]' to start task 'foo[bar]'
         """
         if not args:
             print("usage: start FULL_NAME")
@@ -97,6 +102,18 @@ class TaskShell(cmd.Cmd):
         """List tasks.
 
         usage: list [FULL_NAME] [FROM [TO]]
+
+        FULL_NAME is name of task followed by 0 or more tags
+        enclosed in brackets
+
+        FROM and TO are either ISO 8601 date (e.g. '2019-07-27')
+        or any of the key words 'year', 'month', 'week', 'yesterday'
+        and 'today'
+        in addition to the key words above, FROM can also be 'all'
+        FROM and TO default to 'today'
+
+        example: 'list foo[bar] year' to list all occurrences of the
+        task 'foo[bar]' in the current year
         """
         full_name, args = self.argument_parser.find_full_name(args)
         from_, args = self.argument_parser.find_from(args)
@@ -121,6 +138,18 @@ class TaskShell(cmd.Cmd):
         """Sum up total time.
 
         usage: sum [FROM [TO]] [SUMMAND]
+
+        FROM and TO are either ISO 8601 date (e.g. '2019-07-27')
+        or any of the key words 'year', 'month', 'week', 'yesterday'
+        and 'today'
+        in addition to the key words above, FROM can also be 'all'
+        FROM and TO default to 'today'
+
+        SUMMAND is any of the key words 'full name', 'name' and 'tag'
+        SUMMAND defaults to 'full name'
+
+        example: 'sum yesterday tag' to sum up total time of the individual
+        tags since yesterday
         """
         from_, args = self.argument_parser.find_from(args)
         from_ = from_ or "today"
