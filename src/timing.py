@@ -192,3 +192,6 @@ class Timer():
                 for tag in task.tags:
                     sum_total[("", (tag,))] += total
         return list(sum_total.items())
+
+    def edit(self, task, action):
+        raise NotImplementedError

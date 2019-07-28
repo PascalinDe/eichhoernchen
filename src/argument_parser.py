@@ -45,6 +45,10 @@ class ArgumentParser():
         fr"({NAME_PATTERN.pattern})(?:{TAG_PATTERN.pattern})*"
     )
     ISODATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
+    ISOTIME_PATTERN = re.compile(r"\d{2}:\d{2}")
+    ISO_PATTERN = re.compile(
+        fr"(?:{ISODATE_PATTERN.pattern})?\s*(?:{ISOTIME_PATTERN.pattern})"
+    )
     TIME_PERIOD = ("all", "year", "month", "week", "yesterday", "today")
     TIME_PERIOD_PATTERN = re.compile(fr"{'|'.join(TIME_PERIOD)}")
     FROM_PATTERN = re.compile(
