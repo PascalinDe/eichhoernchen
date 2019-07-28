@@ -61,7 +61,7 @@ class TestArgumentParser(unittest.TestCase):
         now = datetime.datetime.now()
         yesterday = (now - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
         remaining = now.strftime("%Y-%m-%d")
-        args = f"{yesterday}{remaining}"
+        args = f"@{yesterday}{remaining}"
         from_, args = self.argument_parser.find_from(args)
         self.assertEqual(from_, yesterday)
         self.assertEqual(args, remaining)
@@ -75,7 +75,7 @@ class TestArgumentParser(unittest.TestCase):
         now = datetime.datetime.now()
         today = now.strftime("%Y-%m-%d")
         remaining = f"foo[bar][baz]"
-        args = f"{today}{remaining}"
+        args = f"@{today}{remaining}"
         to, args = self.argument_parser.find_to(args)
         self.assertEqual(to, today)
         self.assertEqual(args, remaining)

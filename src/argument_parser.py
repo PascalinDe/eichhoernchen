@@ -48,10 +48,10 @@ class ArgumentParser():
     TIME_PERIOD = ("all", "year", "month", "week", "yesterday", "today")
     TIME_PERIOD_PATTERN = re.compile(fr"{'|'.join(TIME_PERIOD)}")
     FROM_PATTERN = re.compile(
-        fr"{ISODATE_PATTERN.pattern}|{TIME_PERIOD_PATTERN.pattern}"
+        fr"@({ISODATE_PATTERN.pattern}|{TIME_PERIOD_PATTERN.pattern})"
     )
     TO_PATTERN = re.compile(
-        fr"{ISODATE_PATTERN.pattern}|{'|'.join(TIME_PERIOD[1:])}"
+        fr"@({ISODATE_PATTERN.pattern}|{'|'.join(TIME_PERIOD[1:])})"
     )
     SUMMAND_PATTERN = re.compile(r"full name|name|tag")
 
@@ -82,7 +82,7 @@ class ArgumentParser():
         from_match = self.FROM_PATTERN.match(args)
         if from_match:
             args = self.FROM_PATTERN.sub("", args, count=1).strip()
-            return from_match.group(0).strip(), args
+            return from_match.group(1).strip(), args
         return "", args
 
     def find_to(self, args):
@@ -96,7 +96,7 @@ class ArgumentParser():
         to_match = self.TO_PATTERN.match(args)
         if to_match:
             args = self.TO_PATTERN.sub("", args).strip()
-            return to_match.group(0), args
+            return to_match.group(1), args
         return "", args
 
     def find_summand(self, args):
