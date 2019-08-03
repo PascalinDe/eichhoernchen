@@ -156,8 +156,8 @@ class TaskShell(cmd.Cmd):
         to, args = self.argument_parser.find_to(args)
         to = to or "today"
         summand, _ = self.argument_parser.find_summand(args)
-        summand = summand or "full_name"
-        full_name = summand == "full_name"
+        summand = summand or "full name"
+        full_name = summand == "full name"
         name = summand == "name"
         tag = summand == "tag"
         try:
