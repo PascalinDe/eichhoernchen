@@ -193,5 +193,48 @@ class Timer():
                     sum_total[("", (tag,))] += total
         return list(sum_total.items())
 
-    def edit(self, task, action):
-        raise NotImplementedError
+    def edit(self, task, action, *args):
+        """Edit task.
+
+        :param Task task: task to edit
+        :param str action: action
+        :param str args: arguments
+        """
+        connection = self.sqlite.connect()
+        name = task.name
+        tags = task.tags
+        start, end = task.time_span
+        if action == "name":
+            name, = args
+            sql = "UPDATE running SET name=? WHERE start=?"
+            connection.execute(sql, (name, start))
+        elif action == "tags":
+            tags, = args
+            sql = "DELETE FROM tagged WHERE start=?"
+            connection.execute(sql, (start,))
+            sql = "INSERT INTO tagged (tag,start) VALUES (?,?)"
+            connection.executemany(
+                sql, [(tag, start) for tag in tags]
+            )
+        elif action == "end":
+            end, = args
+            sql = "UPDATE time_span SET end=? WHERE start=?"
+            connection.execute(sql, (end, start))
+        elif action == "start":
+            start, = args
+            sql = "SELECT start FROM running WHERE start=?"
+            row = connection.execute(sql, (start,)).fetchone()
+            if row:
+                raise ValueError(f"task started at {start} already exists")
+            sql = "UPDATE time_span SET start=? WHERE start=?"
+            connection.execute(sql, (start, task.time_span[0]))
+            sql = "UPDATE running SET start=? WHERE start=?"
+            connection.execute(sql, (start, task.time_span[0]))
+            sql = "UPDATE tagged SET start=? WHERE start=?"
+            connection.execute(sql, (start, task.time_span[0]))
+        connection.commit()
+        tasks = self.list_tasks(
+            full_name=FullName(name, tags), from_=start, to=end
+        )
+        assert len(tasks) == 1, "more than one task"
+        return tasks[0]

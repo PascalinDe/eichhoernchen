@@ -22,6 +22,7 @@
 
 # standard library imports
 import re
+import datetime
 
 # third party imports
 # library specific imports
@@ -47,7 +48,7 @@ class ArgumentParser():
     ISODATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
     ISOTIME_PATTERN = re.compile(r"\d{2}:\d{2}")
     ISO_PATTERN = re.compile(
-        fr"(?:{ISODATE_PATTERN.pattern})?\s*(?:{ISOTIME_PATTERN.pattern})"
+        fr"({ISODATE_PATTERN.pattern})?\s*({ISOTIME_PATTERN.pattern})"
     )
     TIME_PERIOD = ("all", "year", "month", "week", "yesterday", "today")
     TIME_PERIOD_PATTERN = re.compile(fr"{'|'.join(TIME_PERIOD)}")
@@ -58,6 +59,22 @@ class ArgumentParser():
         fr"@({ISODATE_PATTERN.pattern}|{'|'.join(TIME_PERIOD[1:])})"
     )
     SUMMAND_PATTERN = re.compile(r"full name|name|tag")
+
+    def cast_to_datetime(self, args):
+        """Cast command-line arguments to datetime object.
+
+        :param str args: command-line arguments
+
+        :returns: datetime object
+        :rtype: datetime
+        """
+        iso_match = self.ISO_PATTERN.match(args)
+        if not iso_match:
+            raise ValueError(f"{args} is not YYYY-MM-DD hh:mm format")
+        if not iso_match.group(1):
+            now = datetime.datetime.now().strftime("%Y-%m-%d")
+            args = f"{now} {args}"
+        return datetime.datetime.strptime(args, "%Y-%m-%d %H:%M")
 
     def find_full_name(self, args):
         """Find full name.
