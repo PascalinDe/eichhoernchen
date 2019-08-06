@@ -211,10 +211,10 @@ class TaskShell(cmd.Cmd):
         edit = ""
         options = [str(i) for i in range(1, len(tasks)+1)] + ["q"]
         while edit not in options:
-            edit = input("edit task [#q]?")
+            edit = input("edit task [#q]? ~> ")
         if edit == "q":
             return
-        edit = int(edit)
+        edit = int(edit) - 1
         actions = {
             "n": "name",
             "t": "tags",
@@ -231,13 +231,14 @@ class TaskShell(cmd.Cmd):
                 f"{key}: {value}" for key, value in actions.items()
             )
             action = input(
-                f"{pprint_actions}\nedit {pprint}'s ...?"
+                f"{pprint_actions}\nedit {pprint}'s ...? ~> "
             )
         if action == "q":
             return
+        action = actions[action]
         args = ""
         while not(args):
-            args = input(f"enter new {action}")
+            args = input(f"enter new {action} ~> ")
         if action == "name":
             if not self.argument_parser.NAME_PATTERN.fullmatch(args):
                 print(f"{args} is not valid name")
@@ -248,13 +249,17 @@ class TaskShell(cmd.Cmd):
                 return
             args = self.argument_parser.TAG_PATTERN.findall(args)
         elif action == "start" or action == "end":
-            if self.argument_parser.ISO_PATTERN.fullmatch(args):
+            if not self.argument_parser.ISO_PATTERN.fullmatch(args):
                 print(f"{args} is not YYYY-MM-DD hh:mm format")
                 return
+            args = self.argument_parser.cast_to_datetime(args)
         try:
             task = self.timer.edit(tasks[edit], action, args)
-        except RuntimeError as exception:
-            print(f"failed to edit task {exception}")
+        except ValueError as exception:
+            pprint = self.output_formatter.pprint_full_name(
+                task.name, task.tags
+            )
+            print(f"failed to edit task {pprint}: {exception}")
             return
         print(self.output_formatter.pprint_task(task, date=True, colour=True))
 
