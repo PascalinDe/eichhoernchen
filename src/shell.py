@@ -34,6 +34,11 @@ import src.argument_parser
 import src.output_formatter
 
 
+class UserQuit(Exception):
+    """Raised when user quits menu."""
+    pass
+
+
 class TaskShell(cmd.Cmd):
     """Task shell.
 
@@ -178,6 +183,60 @@ class TaskShell(cmd.Cmd):
             )
             print(pprint)
 
+    def _edit_prompt(self, tasks):
+        """Provide editing menu.
+
+        :param list tasks: list of tasks
+
+        :returns: task to edit, action to take and its arguments
+        :rtype: tuple
+        """
+        tasks.sort(key=lambda x: x.time_span[0])
+        for i, task in enumerate(tasks, start=1):
+            pprint_task = self.output_formatter.pprint_task(task, date=True)
+            print(f"{i}: {pprint_task}")
+        nums = tuple(str(i) for i in range(1, len(tasks)+1))
+        num = ""
+        while num not in nums and num != "q":
+            num = input(
+                f"edit task [1 ... {len(tasks) if len(tasks) > 1 else ''}q]"
+            )
+        if num == "q":
+            raise UserQuit
+        task = tasks[int(num)-1]
+        actions = {
+            "n": "name", "t": "tags", "s": "start", "e": "end", "q": "quit"
+        }
+        action = ""
+        while action not in actions.keys() and action not in actions.values():
+            pprint_full_name = self.output_formatter.pprint_full_name(
+                task.name, task.tags
+            )
+            print("\n".join(f"{k}: {v}" for k, v in actions.items()))
+            action = input(f"edit {pprint_full_name}'s ... ? ~> ")
+        if action in actions.keys():
+            action = actions[action]
+        if action == "quit":
+            raise UserQuit
+        args = ""
+        while not args:
+            args = input(f"enter new {action} ~> ")
+        if action == "name":
+            if not self.argument_parser.NAME_PATTERN.fullmatch(args):
+                print(f"{args} is not a valid name")
+                raise UserQuit
+        elif action == "tags":
+            if self.argument_parser.TAG_PATTERN.sub(args, ""):
+                print(f"{args} is not a valid list of tags")
+                raise UserQuit
+        elif action in ("start", "end"):
+            try:
+                args = self.argument_parser.cast_to_datetime(args)
+            except ValueError as exception:
+                print(exception)
+                raise UserQuit
+        return task, action, args
+
     def do_edit(self, args):
         """Edit task.
 
@@ -196,72 +255,35 @@ class TaskShell(cmd.Cmd):
         one of yesterday's 'foo[bar]' tasks
         """
         full_name, args = self.argument_parser.find_full_name(args)
+        if not full_name.name:
+            print("usage: edit FULL_NAME [FROM [TO]]")
+            return
         from_, args = self.argument_parser.find_from(args)
         from_ = from_ or "today"
         to, _ = self.argument_parser.find_to(args)
         to = to or "today"
-        tasks = self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
+        tasks = self.timer.list_tasks(
+            full_name=full_name, from_=from_, to=to
+        )
         if not tasks:
             print("no tasks")
             return
-        tasks.sort(key=lambda x: x.time_span[0])
-        for i, task in enumerate(tasks, start=1):
-            pprint = self.output_formatter.pprint_task(task, date=True)
-            print(f"{i}: {pprint}")
-        edit = ""
-        options = [str(i) for i in range(1, len(tasks)+1)] + ["q"]
-        while edit not in options:
-            edit = input("edit task [#q]? ~> ")
-        if edit == "q":
-            return
-        edit = int(edit) - 1
-        actions = {
-            "n": "name",
-            "t": "tags",
-            "s": "start",
-            "e": "end",
-            "q": "quit"
-        }
-        action = ""
-        while action not in actions.keys():
-            pprint = self.output_formatter.pprint_full_name(
-                task.name, task.tags
-            )
-            pprint_actions = "\n".join(
-                f"{key}: {value}" for key, value in actions.items()
-            )
-            action = input(
-                f"{pprint_actions}\nedit {pprint}'s ...? ~> "
-            )
-        if action == "q":
-            return
-        action = actions[action]
-        args = ""
-        while not(args):
-            args = input(f"enter new {action} ~> ")
-        if action == "name":
-            if not self.argument_parser.NAME_PATTERN.fullmatch(args):
-                print(f"{args} is not valid name")
-                return
-        elif action == "tags":
-            if self.argument_parser.TAG_PATTERN.sub(args, ""):
-                print(f"{args} is not valid list of tags")
-                return
-            args = self.argument_parser.TAG_PATTERN.findall(args)
-        elif action == "start" or action == "end":
-            if not self.argument_parser.ISO_PATTERN.fullmatch(args):
-                print(f"{args} is not YYYY-MM-DD hh:mm format")
-                return
-            args = self.argument_parser.cast_to_datetime(args)
         try:
-            task = self.timer.edit(tasks[edit], action, args)
+            task, action, args = self._edit_prompt(tasks)
+        except UserQuit:
+            return
+        try:
+            task = self.timer.edit(task, action, args)
         except ValueError as exception:
-            pprint = self.output_formatter.pprint_full_name(
+            pprint_full_name = self.output_formatter.pprint_full_name(
                 task.name, task.tags
             )
-            print(f"failed to edit task {pprint}: {exception}")
+            print(f"failed to edit task {pprint_full_name}: {exception}")
             return
-        print(self.output_formatter.pprint_task(task, date=True, colour=True))
+        self._reset_prompt()
+        print(
+            self.output_formatter.pprint_task(task, date=True, colour=True)
+        )
 
     def do_bye(self, args):
         """Close task shell."""
