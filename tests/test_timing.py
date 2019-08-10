@@ -569,3 +569,147 @@ class TestTiming(unittest.TestCase):
             timer.sum_total(
                 full_name=False, name=False, tag=False, from_="all"
             )
+
+    def test_edit_name(self):
+        """Test editing task.
+
+        Trying: editing name
+        Expecting: updated name
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        now = datetime.datetime.now()
+        task = Task("foo", [], (now, now + datetime.timedelta(minutes=1)))
+        connection.execute(
+            "INSERT INTO time_span (start,end) VALUES (?,?)",
+            task.time_span
+        )
+        connection.execute(
+            "INSERT INTO running (name,start) VALUES (?,?)",
+            (task.name, task.time_span[0])
+        )
+        connection.commit()
+        name = "foobar"
+        timer.edit(task, "name", name)
+        row = connection.execute(
+            "SELECT name FROM running WHERE start=?",
+            (task.time_span[0],)
+        ).fetchone()
+        actual, = row
+        self.assertEqual(actual, name)
+
+    def test_edit_tags(self):
+        """Test editing task.
+
+        Trying: editing tags
+        Expecting: updated tags
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        now = datetime.datetime.now()
+        task = Task("foo", ["bar"], (now, now + datetime.timedelta(minutes=1)))
+        connection.execute(
+            "INSERT INTO time_span (start,end) VALUES (?,?)",
+            task.time_span
+        )
+        connection.execute(
+            "INSERT INTO running (name,start) VALUES (?,?)",
+            (task.name, task.time_span[0])
+        )
+        connection.execute(
+            "INSERT INTO tagged (tag,start) VALUES (?,?)",
+            (task.tags[0], task.time_span[0])
+        )
+        connection.commit()
+        tags = ["baz"]
+        timer.edit(task, "tags", tags)
+        rows = connection.execute(
+            "SELECT tag FROM tagged WHERE start=?",
+            (task.time_span[0],)
+        ).fetchall()
+        self.assertEqual(len(rows), 1)
+        actual = list(rows[0])
+        self.assertEqual(actual, tags)
+
+    def test_edit_start(self):
+        """Test editing task.
+
+        Trying: editing start
+        Expecting: updated start
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        now = datetime.datetime.now()
+        task = Task("foo", [], (now, now + datetime.timedelta(minutes=1)))
+        connection.execute(
+            "INSERT INTO time_span (start,end) VALUES (?,?)",
+            task.time_span
+        )
+        connection.execute(
+            "INSERT INTO running (name,start) VALUES (?,?)",
+            (task.name, task.time_span[0])
+        )
+        connection.commit()
+        start = now - datetime.timedelta(minutes=1)
+        timer.edit(task, "start", start)
+        rows = connection.execute(
+            "SELECT start FROM time_span WHERE start=?",
+            (task.time_span[0],)
+        ).fetchall()
+        self.assertEqual(len(rows), 0)
+        rows = connection.execute(
+            "SELECT name FROM running WHERE start=?",
+            (task.time_span[0],)
+        ).fetchall()
+        self.assertEqual(len(rows), 0)
+        rows = connection.execute(
+            "SELECT start FROM time_span WHERE start=?",
+            (start,)
+        ).fetchall()
+        self.assertEqual(len(rows), 1)
+        rows = connection.execute(
+            "SELECT name FROM running WHERE start=?",
+            (start,)
+        ).fetchall()
+        self.assertEqual(len(rows), 1)
+
+    def test_edit_end(self):
+        """Test editing task.
+
+        Trying: editing end
+        Expecting: updated end
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        now = datetime.datetime.now()
+        task = Task("foo", [], (now, now + datetime.timedelta(minutes=1)))
+        connection.execute(
+            "INSERT INTO time_span (start,end) VALUES (?,?)",
+            task.time_span
+        )
+        connection.execute(
+            "INSERT INTO running (name,start) VALUES (?,?)",
+            (task.name, task.time_span[0])
+        )
+        connection.commit()
+        end = now + datetime.timedelta(minutes=2)
+        timer.edit(task, "end", end)
+        rows = connection.execute(
+            "SELECT end FROM time_span WHERE start=?",
+            (task.time_span[0],)
+        ).fetchall()
+        self.assertEqual(len(rows), 1)
+        actual, = rows[0]
+        self.assertEqual(actual, end)
+
+    def test_edit_start_running(self):
+        """Test editing task.
+
+        Trying: editing start of a running task
+        Expecting: ValueError
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        timer.start("foo")
+        now = datetime.datetime.now()
+        with self.assertRaises(ValueError):
+            timer.edit(timer.task, "start", now)
