@@ -229,6 +229,7 @@ class TaskShell(cmd.Cmd):
             if self.argument_parser.TAG_PATTERN.sub(args, ""):
                 print(f"{args} is not a valid list of tags")
                 raise UserQuit
+            args = self.argument_parser.TAG_PATTERN.findall(args)
         elif action in ("start", "end"):
             try:
                 args = self.argument_parser.cast_to_datetime(args)

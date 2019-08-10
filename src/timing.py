@@ -204,6 +204,9 @@ class Timer():
         name = task.name
         tags = task.tags
         start, end = task.time_span
+        is_running = self.task == Task(name, task.tags, (start, None))
+        if is_running and action in ("start", "end"):
+            raise ValueError(f"cannot edit {action} of a running task")
         if action == "name":
             name, = args
             sql = "UPDATE running SET name=? WHERE start=?"
@@ -237,4 +240,6 @@ class Timer():
             full_name=FullName(name, tags), from_=start, to=end
         )
         assert len(tasks) == 1, "more than one task"
+        if is_running:
+            self._reset_task(task=tasks[0])
         return tasks[0]
