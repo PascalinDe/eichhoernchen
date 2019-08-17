@@ -40,8 +40,8 @@ class ArgumentParser():
     :cvar Pattern TO_PATTERN: regular expression matching ... to
     :cvar Pattern SUMMAND_PATTERN: regular expression matching summand
     """
-    NAME_PATTERN = re.compile(r"(?:\w|\s)+")
-    TAG_PATTERN = re.compile(r"\[((?:\w|\s)+)\]")
+    NAME_PATTERN = re.compile(r"(?:\w|\s|[!#+-?])+")
+    TAG_PATTERN = re.compile(r"\[((?:\w|\s|[!#+-?])+)\]")
     FULL_NAME_PATTERN = re.compile(
         fr"({NAME_PATTERN.pattern})(?:{TAG_PATTERN.pattern})*"
     )
