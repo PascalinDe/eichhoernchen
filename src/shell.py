@@ -22,13 +22,14 @@
 
 # standard library imports
 import cmd
+import os
 import os.path
-import pathlib
 import readline  # noqa
 from datetime import datetime
 
 # third party imports
 # library specific imports
+import src.config
 import src.timing
 import src.argument_parser
 import src.output_formatter
@@ -51,10 +52,21 @@ class TaskShell(cmd.Cmd):
         """Initialize task shell."""
         super().__init__()
         self.intro = "Task shell.\tType help or ? to list commands.\n"
-        database = os.path.join(
-            pathlib.Path.home(), ".local/share/eichhoernchen.db"
+        try:
+            src.config.create_config()
+        except src.config.ConfigFound as exception:
+            print(exception)
+            create = ""
+            while create not in ("y", "n"):
+                create = input("replace configuration file [yn]?").lower()
+            if create == "y":
+                src.config.create_config(force=True)
+        config = src.config.read_config(
+            os.path.join(os.environ["HOME"], ".config/eichhoernchen.ini")
         )
-        self.timer = src.timing.Timer(database)
+        self.timer = src.timing.Timer(
+            os.path.join(config["path"], config["database"])
+        )
         self.output_formatter = src.output_formatter.OutputFormatter()
         self.argument_parser = src.argument_parser.ArgumentParser()
         self._reset_prompt()
