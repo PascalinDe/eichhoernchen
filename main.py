@@ -21,15 +21,30 @@
 
 
 # standard library imports
+import argparse
+
 # third party imports
+
 # library specific imports
 import src.shell
 
 
 def main():
     """Main function."""
-    shell = src.shell.TaskShell()
-    shell.cmdloop()
+    parser = argparse.ArgumentParser(
+        prog="Eichhörnchen",
+        description="Command-line time tracking."
+    )
+    parser.add_argument("-c", "--config", help="use this configuration file")
+    parser.add_argument(
+        "--version", action="version", version="%(prog)s 1.2"
+    )
+    args = parser.parse_args()
+    try:
+        shell = src.shell.TaskShell(path=args.config)
+        shell.cmdloop()
+    except src.config.ConfigNotFound as exception:
+        print(exception)
 
 
 if __name__ == "__main__":

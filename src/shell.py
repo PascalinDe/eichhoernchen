@@ -48,22 +48,27 @@ class TaskShell(cmd.Cmd):
     :ivar ArgumentParser argument_parser: argument parser
     """
 
-    def __init__(self):
+    def __init__(self, path=None):
         """Initialize task shell."""
         super().__init__()
         self.intro = "Task shell.\tType help or ? to list commands.\n"
-        try:
-            src.config.create_config()
-        except src.config.ConfigFound as exception:
-            print(exception)
-            create = ""
-            while create not in ("y", "n"):
-                create = input("replace configuration file [yn]?").lower()
-            if create == "y":
-                src.config.create_config(force=True)
-        config = src.config.read_config(
-            os.path.join(os.environ["HOME"], ".config/eichhoernchen.ini")
-        )
+        if not path:
+            try:
+                src.config.create_config()
+            except src.config.ConfigFound as exception:
+                print(exception)
+                create = ""
+                while create not in ("y", "n"):
+                    create = input(
+                        "replace configuration file [yn]?"
+                    ).lower()
+                    if create == "y":
+                        src.config.create_config(force=True)
+            config = src.config.read_config(
+                os.path.join(os.environ["HOME"], ".config/eichhoernchen.ini")
+            )
+        else:
+            config = src.config.read_config(path)
         self.timer = src.timing.Timer(
             os.path.join(config["path"], config["database"])
         )
