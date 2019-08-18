@@ -55,15 +55,8 @@ class TaskShell(cmd.Cmd):
         if not path:
             try:
                 src.config.create_config()
-            except src.config.ConfigFound as exception:
-                print(exception)
-                create = ""
-                while create not in ("y", "n"):
-                    create = input(
-                        "replace configuration file [yn]?"
-                    ).lower()
-                    if create == "y":
-                        src.config.create_config(force=True)
+            except src.config.ConfigFound:
+                pass
             config = src.config.read_config(
                 os.path.join(os.environ["HOME"], ".config/eichhoernchen.ini")
             )
@@ -302,6 +295,28 @@ class TaskShell(cmd.Cmd):
         print(
             self.output_formatter.pprint_task(task, date=True, colour=True)
         )
+
+    def do_generate(self, args):
+        """Generate default configuration file.
+
+        Discards configuration file at $HOME/.config/eichhoernchen.ini.
+        Any changes will be lost.
+        """
+        try:
+            src.config.create_config()
+        except src.config.ConfigFound as exception:
+            print(exception)
+            create = ""
+            while create not in ("y", "n"):
+                create = input(
+                    "replace configuration file [yn]? ~> "
+                ).lower()
+            if create == "y":
+                src.config.create_config(force=True)
+                print("generated default configuration file")
+            else:
+                print("aborted generating default configuration file")
+                print("no changes have been made")
 
     def do_bye(self, args):
         """Close task shell."""
