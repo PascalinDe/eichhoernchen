@@ -27,6 +27,8 @@
 
 class FGColours():
     """
+    Foreground colours.
+
     Black       0;30     Dark Gray     1;30
     Blue        0;34     Light Blue    1;34
     Green       0;32     Light Green   1;32
@@ -57,7 +59,19 @@ class FGColours():
 
 
 class BGColours():
-    """Background colours."""
+    """Background colours.
+
+    Black       40
+    Blue        44
+    Green       42
+    Cyan        46
+    Red         41
+    Purple      45
+    Brown       43
+    Light Gray  47
+
+    .. _Source: http://www.tldp.org/HOWTO/Bash-Prompt-HOWTO/x329.html
+    """
     BLACK = "\033[41m"
     BLUE = "\033[44m"
     GREEN = "\033[42m"
