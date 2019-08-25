@@ -80,3 +80,47 @@ class BGColours():
     PURPLE = "\033[45m"
     BROWN = "\033[43m"
     LIGHT_GRAY = "\033[47m"
+
+
+class MonochromeColourScheme():
+    """Monochrome colour scheme."""
+
+    @property
+    def default(self):
+        return "\033[0m"
+
+    @property
+    def name(self):
+        return self.default
+
+    @property
+    def tag(self):
+        return self.default
+
+    @property
+    def time_span(self):
+        return self.default
+
+    @property
+    def total(self):
+        return self.default
+
+
+class GrmlVCSLikeColourScheme(MonochromeColourScheme):
+    """Grml version control system like colour scheme."""
+
+    @property
+    def name(self):
+        return FGColours.GREEN
+
+    @property
+    def tag(self):
+        return FGColours.DARK_GRAY
+
+    @property
+    def time_span(self):
+        return FGColours.PURPLE
+
+    @property
+    def total(self):
+        return FGColours.YELLOW

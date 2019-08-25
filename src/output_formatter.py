@@ -23,12 +23,18 @@
 # standard library imports
 # third party imports
 # library specific imports
-from src.colour import FGColours
+from src.colour import GrmlVCSLikeColourScheme
 
 
 class OutputFormatter():
-    """Output formatter."""
-    DEFAULT = "\033[0m"
+    """Output formatter.
+
+    :ivar MonochromeColourScheme scheme: colour scheme
+    """
+
+    def __init__(self):
+        """Initialize output formatter."""
+        self.scheme = GrmlVCSLikeColourScheme()
 
     def pprint_name(self, name, colour=False):
         """Pretty-print name.
@@ -40,7 +46,7 @@ class OutputFormatter():
         :rtype: str
         """
         if colour:
-            return f"{FGColours.GREEN}{name}{self.DEFAULT}"
+            return f"{self.scheme.name}{name}{self.scheme.default}"
         else:
             return name
 
@@ -57,7 +63,10 @@ class OutputFormatter():
             return ""
         elif colour:
             return "".join(
-                f"{self.DEFAULT}{FGColours.DARK_GRAY}[{tag}]{self.DEFAULT}"
+                (
+                    f"{self.scheme.default}{self.scheme.tag}[{tag}]"
+                    f"{self.scheme.default}"
+                )
                 for tag in tags
             )
         else:
@@ -96,8 +105,8 @@ class OutputFormatter():
             end = end.strftime("%H:%M")
         if colour:
             return (
-                f"{FGColours.PURPLE}{start}{self.DEFAULT}-"
-                f"{FGColours.PURPLE}{end}{self.DEFAULT}"
+                f"{self.scheme.time_span}{start}{self.scheme.default}-"
+                f"{self.scheme.time_span}{end}{self.scheme.default}"
             )
         else:
             return f"{start}-{end}"
@@ -113,7 +122,10 @@ class OutputFormatter():
         minutes, seconds = divmod(total, 60)
         hours, minutes = divmod(minutes, 60)
         if colour:
-            return f"{FGColours.YELLOW}{hours}h{minutes}m{self.DEFAULT}"
+            return (
+                f"{self.scheme.total}{hours}h{minutes}m"
+                f"{self.scheme.default}"
+            )
         else:
             return f"{hours}h{minutes}m"
 
@@ -165,7 +177,8 @@ class OutputFormatter():
             start, _ = task.time_span
             start = start.strftime("%H:%M")
             return (
-                f"{full_name}({FGColours.PURPLE}{start}{self.DEFAULT}-) ~> "
+                f"{full_name}({self.scheme.time_span}{start}"
+                f"{self.scheme.default}-) ~> "
             )
         else:
             return "~> "
