@@ -23,18 +23,21 @@
 # standard library imports
 # third party imports
 # library specific imports
-from src.colour import GrmlVCSLikeColourScheme
+from src.colour import GrmlVCSLikeColourScheme, MonochromeColourScheme
+from src.template import Template
 
 
 class OutputFormatter():
     """Output formatter.
 
-    :ivar MonochromeColourScheme scheme: colour scheme
+    :ivar MonochromeColourScheme monochrome_scheme: monochrome colour scheme
+    :ivar MonochromeColourScheme polychrome_scheme: polychrome colour scheme
     """
 
     def __init__(self):
         """Initialize output formatter."""
-        self.scheme = GrmlVCSLikeColourScheme()
+        self.monochrome_template = Template(MonochromeColourScheme())
+        self.polychrome_template = Template(GrmlVCSLikeColourScheme())
 
     def pprint_name(self, name, colour=False):
         """Pretty-print name.
@@ -46,9 +49,9 @@ class OutputFormatter():
         :rtype: str
         """
         if colour:
-            return f"{self.scheme.name}{name}{self.scheme.default}"
+            return self.polychrome_template.name.format(name=name)
         else:
-            return name
+            return self.monochrome_template.name.format(name=name)
 
     def pprint_tags(self, tags, colour=False):
         """Pretty-print tags.
@@ -59,18 +62,14 @@ class OutputFormatter():
         :returns: pretty-printed tags
         :rtype: str
         """
-        if not any(tags):
-            return ""
-        elif colour:
+        if colour:
             return "".join(
-                (
-                    f"{self.scheme.default}{self.scheme.tag}[{tag}]"
-                    f"{self.scheme.default}"
-                )
-                for tag in tags
+                self.polychrome_template.tag.format(tag=tag) for tag in tags
             )
         else:
-            return "".join(f"[{tag}]" for tag in tags)
+            return "".join(
+                self.monochrome_template.tag.format(tag=tag) for tag in tags
+            )
 
     def pprint_full_name(self, name, tags, colour=False):
         """Pretty-print full name.
@@ -78,10 +77,13 @@ class OutputFormatter():
         :param str name: name
         :param list tags: tags
         :param bool colour: toggle coloured display on/off
+
+        :returns: pretty-printed full name
+        :rtype: str
         """
         name = self.pprint_name(name, colour=colour)
         tags = self.pprint_tags(tags, colour=colour)
-        return f"{name}{tags}"
+        return self.monochrome_template.full_name.format(name=name, tags=tags)
 
     def pprint_time_span(self, time_span, date=False, colour=False):
         """Pretty-print time span.
@@ -104,12 +106,13 @@ class OutputFormatter():
             start = start.strftime("%H:%M")
             end = end.strftime("%H:%M")
         if colour:
-            return (
-                f"{self.scheme.time_span}{start}{self.scheme.default}-"
-                f"{self.scheme.time_span}{end}{self.scheme.default}"
+            return self.polychrome_template.time_span.format(
+                start=start, end=end
             )
         else:
-            return f"{start}-{end}"
+            return self.monochrome_template.time_span.format(
+                start=start, end=end
+            )
 
     def pprint_total(self, total, colour=False):
         """Pretty-print representation of total runtime.
@@ -122,12 +125,13 @@ class OutputFormatter():
         minutes, seconds = divmod(total, 60)
         hours, minutes = divmod(minutes, 60)
         if colour:
-            return (
-                f"{self.scheme.total}{hours}h{minutes}m"
-                f"{self.scheme.default}"
+            return self.polychrome_template.total.format(
+                hours=hours, minutes=minutes
             )
         else:
-            return f"{hours}h{minutes}m"
+            return self.monochrome_template.total.format(
+                hours=hours, minutes=minutes
+            )
 
     def pprint_task(self, task, date=False, colour=False):
         """Pretty-print representation of task.
@@ -146,7 +150,9 @@ class OutputFormatter():
             task.time_span, date=date, colour=colour
         )
         total = self.pprint_total(task.total, colour=colour)
-        return f"{time_span} ({total}) {full_name}"
+        return self.monochrome_template.task.format(
+            time_span=time_span, total=total, full_name=full_name
+        )
 
     def pprint_sum(self, full_name, total, colour=False):
         """Pretty-print sum of total runtime.
@@ -160,7 +166,9 @@ class OutputFormatter():
         """
         full_name = self.pprint_full_name(*full_name, colour=colour)
         total = self.pprint_total(total, colour=colour)
-        return f"{full_name} {total}"
+        return self.monochrome_template.sum.format(
+            full_name=full_name, total=total
+        )
 
     def pprint_prompt(self, task):
         """Pretty-print prompt.
@@ -176,9 +184,9 @@ class OutputFormatter():
             )
             start, _ = task.time_span
             start = start.strftime("%H:%M")
-            return (
-                f"{full_name}({self.scheme.time_span}{start}"
-                f"{self.scheme.default}-) ~> "
+            running = self.polychrome_template.running.format(
+                full_name=full_name, start=start
             )
         else:
-            return "~> "
+            running = ""
+        return self.monochrome_template.prompt.format(running=running)
