@@ -23,7 +23,7 @@
 # standard library imports
 # third party imports
 # library specific imports
-from src.colour import GrmlVCSLikeColourScheme, MonochromeColourScheme
+from src.colour import MonochromeColourScheme
 from src.template import Template
 
 
@@ -34,10 +34,10 @@ class OutputFormatter():
     :ivar MonochromeColourScheme polychrome_scheme: polychrome colour scheme
     """
 
-    def __init__(self):
+    def __init__(self, colour_scheme):
         """Initialize output formatter."""
         self.monochrome_template = Template(MonochromeColourScheme())
-        self.polychrome_template = Template(GrmlVCSLikeColourScheme())
+        self.polychrome_template = Template(colour_scheme())
 
     def pprint_name(self, name, colour=False):
         """Pretty-print name.

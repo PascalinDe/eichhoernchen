@@ -57,15 +57,19 @@ class TaskShell(cmd.Cmd):
                 src.config.create_config()
             except src.config.ConfigFound:
                 pass
-            config = src.config.read_config(
-                os.path.join(os.environ["HOME"], ".config/eichhoernchen.ini")
+            path = os.path.join(
+                os.environ["HOME"], ".config/eichhoernchen.ini"
             )
-        else:
+        try:
             config = src.config.read_config(path)
+        except src.config.BadConfig as exception:
+            raise Exception(f"configuration file contains errors: {exception}")
         self.timer = src.timing.Timer(
             os.path.join(config["path"], config["database"])
         )
-        self.output_formatter = src.output_formatter.OutputFormatter()
+        self.output_formatter = src.output_formatter.OutputFormatter(
+            config["colour_scheme"]
+        )
         self.argument_parser = src.argument_parser.ArgumentParser()
         self._reset_prompt()
 

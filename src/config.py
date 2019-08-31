@@ -27,10 +27,21 @@ import os.path
 
 # third party imports
 # library specific imports
+import src.colour
+
+
+COLOUR_SCHEMES = {
+    "GrmlVCSLike": src.colour.GrmlVCSLikeColourScheme
+}
 
 
 class ConfigFound(Exception):
     """Raised when configuration file exists."""
+    pass
+
+
+class BadConfig(Exception):
+    """Raised when configuration file contains errors."""
     pass
 
 
@@ -50,7 +61,8 @@ def create_config(force=False):
         config = configparser.ConfigParser()
         config["DEFAULT"] = {
             "database": "eichhoernchen.db",
-            "path": os.path.join(os.environ["HOME"], ".local/share")
+            "path": os.path.join(os.environ["HOME"], ".local/share"),
+            "colour_scheme": "GrmlVCSLike"
         }
         config["CUSTOM"] = {}
         with open(path, "w") as fp:
@@ -70,4 +82,10 @@ def read_config(path):
     else:
         config = configparser.ConfigParser()
         config.read(path)
-    return dict(config["CUSTOM"])
+    config = dict(config["CUSTOM"])
+    try:
+        colour_scheme = COLOUR_SCHEMES[config["colour_scheme"]]
+    except KeyError:
+        raise BadConfig(f"unknown colour scheme {config['colour_scheme']}")
+    config["colour_scheme"] = colour_scheme
+    return config

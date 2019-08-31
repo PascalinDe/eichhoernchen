@@ -43,7 +43,7 @@ def main():
     try:
         shell = src.shell.TaskShell(path=args.config)
         shell.cmdloop()
-    except src.config.ConfigNotFound as exception:
+    except Exception as exception:
         print(exception)
 
 
