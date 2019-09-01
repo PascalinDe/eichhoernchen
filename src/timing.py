@@ -49,7 +49,7 @@ class Timer():
         connection.close()
         self._reset_task()
 
-    def _reset_task(self, task=Task("", [], ())):
+    def _reset_task(self, task=Task("", set(), ())):
         """Reset current task."""
         self.task = task
 
@@ -57,7 +57,7 @@ class Timer():
         """Replace current task."""
         self._reset_task(task=self.task._replace(**kwargs))
 
-    def start(self, task, tags=[]):
+    def start(self, task, tags=set()):
         """Start task.
 
         :param str task: task
@@ -131,7 +131,7 @@ class Timer():
         return sql
 
     def list_tasks(
-            self, full_name=FullName("", ()), from_="today", to="today"
+            self, full_name=FullName("", set()), from_="today", to="today"
     ):
         """List tasks.
 
@@ -153,9 +153,9 @@ class Timer():
         tasks = []
         for (name, (start, end)), tags in agg.items():
             if any(tags):
-                tags = [tag for tag in tags if tag]
+                tags = {tag for tag in tags if tag}
             else:
-                tags = []
+                tags = set()
             if full_name.name:
                 if (name, tags) != tuple(full_name):
                     continue
@@ -213,6 +213,7 @@ class Timer():
             connection.execute(sql, (name, start))
         elif action == "tags":
             tags, = args
+            tags = set(tags)
             sql = "DELETE FROM tagged WHERE start=?"
             connection.execute(sql, (start,))
             sql = "INSERT INTO tagged (tag,start) VALUES (?,?)"
@@ -239,7 +240,6 @@ class Timer():
         tasks = self.list_tasks(
             full_name=FullName(name, tags), from_=start.date(), to=end.date()
         )
-        import pdb; pdb.set_trace()
         task = [task for task in tasks if task.time_span == (start, end)][0]
         if is_running:
             self._reset_task(task=task)

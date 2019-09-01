@@ -45,7 +45,7 @@ class TestArgumentParser(unittest.TestCase):
         Expecting: full name and remaining command-line arguments
         """
         name = "foo"
-        tags = ["bar", "baz"]
+        tags = {"bar", "baz"}
         remaining = "all"
         args = f"{name}{''.join(f'[{tag}]' for tag in tags)}{remaining}"
         full_name, args = self.argument_parser.find_full_name(args)

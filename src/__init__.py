@@ -30,7 +30,7 @@ import collections
 FullName = collections.namedtuple(
     "FullName", ("name", "tags")
 )
-FullName.__new__.__defaults__ = ("", [])
+FullName.__new__.__defaults__ = ("", set())
 
 
 _Task = collections.namedtuple("Task", ["name", "tags", "time_span"])

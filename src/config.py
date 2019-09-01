@@ -69,6 +69,24 @@ def create_config(force=False):
             config.write(fp)
 
 
+def validate_config(config):
+    """Validate configuration file.
+
+    :param dict config: configuration
+
+    :raises: BadConfig when required keys are missing
+    """
+    required = {"database", "path", "colour_scheme"}
+    missing = required.difference(set(config.keys()))
+    if missing:
+        missing = ", ".join(f"'{key}'" for key in missing)
+        raise BadConfig(f"required keys {missing} are missing")
+    try:
+        COLOUR_SCHEMES[config["colour_scheme"]]
+    except KeyError:
+        raise BadConfig(f"unknown colour scheme '{config['colour_scheme']}'")
+
+
 def read_config(path):
     """Read configuration file.
 
@@ -83,9 +101,6 @@ def read_config(path):
         config = configparser.ConfigParser()
         config.read(path)
     config = dict(config["CUSTOM"])
-    try:
-        colour_scheme = COLOUR_SCHEMES[config["colour_scheme"]]
-    except KeyError:
-        raise BadConfig(f"unknown colour scheme {config['colour_scheme']}")
-    config["colour_scheme"] = colour_scheme
+    validate_config(config)
+    config["colour_scheme"] = COLOUR_SCHEMES[config["colour_scheme"]]
     return config

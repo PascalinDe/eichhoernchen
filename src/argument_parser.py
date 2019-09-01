@@ -87,7 +87,7 @@ class ArgumentParser():
         full_name_match = self.FULL_NAME_PATTERN.match(args)
         if full_name_match:
             name = full_name_match.group(1).strip()
-            tags = self.TAG_PATTERN.findall(args)
+            tags = set(self.TAG_PATTERN.findall(args))
             args = self.FULL_NAME_PATTERN.sub("", args, count=1).strip()
             return FullName(name=name, tags=tags), args
         return FullName("", ()), args

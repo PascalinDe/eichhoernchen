@@ -62,6 +62,7 @@ class OutputFormatter():
         :returns: pretty-printed tags
         :rtype: str
         """
+        tags = sorted(list(tags))
         if colour:
             return "".join(
                 self.polychrome_template.tag.format(tag=tag) for tag in tags
