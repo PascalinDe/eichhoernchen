@@ -237,9 +237,10 @@ class Timer():
             connection.execute(sql, (start, task.time_span[0]))
         connection.commit()
         tasks = self.list_tasks(
-            full_name=FullName(name, tags), from_=start, to=end
+            full_name=FullName(name, tags), from_=start.date(), to=end.date()
         )
-        assert len(tasks) == 1, "more than one task"
+        import pdb; pdb.set_trace()
+        task = [task for task in tasks if task.time_span == (start, end)][0]
         if is_running:
-            self._reset_task(task=tasks[0])
-        return tasks[0]
+            self._reset_task(task=task)
+        return task
