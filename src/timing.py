@@ -244,3 +244,18 @@ class Timer():
         if is_running:
             self._reset_task(task=task)
         return task
+
+    def remove(self, task):
+        """Remove task.
+
+        :param Task task: task to remove
+        """
+        connection = self.sqlite.connect()
+        start, _ = task.time_span
+        is_running = self.task == Task(task.name, task.tags, (start, None))
+        if is_running:
+            raise ValueError("cannot remove a running task")
+        connection.execute("DELETE FROM running WHERE start=?", (start,))
+        connection.execute("DELETE FROM tagged WHERE start=?", (start,))
+        connection.execute("DELETE FROM time_span WHERE start=?", (start,))
+        connection.commit()

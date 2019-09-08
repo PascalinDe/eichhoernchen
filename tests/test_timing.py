@@ -718,3 +718,36 @@ class TestTiming(unittest.TestCase):
         now = datetime.datetime.now()
         with self.assertRaises(ValueError):
             timer.edit(timer.task, "start", now)
+
+    def test_remove(self):
+        """Test removing task.
+
+        Trying: removing task
+        Expecting: task is removed
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        timer.start("foo")
+        task = timer.task
+        start, _ = task.time_span
+        timer.stop()
+        timer.remove(task)
+        connection = timer.sqlite.connect()
+        rows = connection.execute(
+            "SELECT start,end FROM time_span WHERE start=?", (start,)
+        ).fetchall()
+        self.assertEqual(len(rows), 0)
+        rows = connection.execute(
+            "SELECT name FROM running WHERE start=?", (start,)
+        ).fetchall()
+        self.assertEqual(len(rows), 0)
+
+    def test_remove_running(self):
+        """Test removing task.
+
+        Trying: removing running task
+        Expecting: ValueError
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        timer.start("foo")
+        with self.assertRaises(ValueError):
+            timer.remove(timer.task)
