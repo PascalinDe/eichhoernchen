@@ -45,5 +45,8 @@ class Task(_Task):
     def total(self):
         """Run time (in seconds) attribute."""
         start, end = self.time_span
-        seconds = (end - start).seconds
+        delta = end - start
+        seconds = delta.seconds
+        if delta.days >= 1:
+            seconds += delta.days * (24 * 60 * 60)
         return seconds
