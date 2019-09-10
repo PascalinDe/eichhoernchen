@@ -259,3 +259,29 @@ class Timer():
         connection.execute("DELETE FROM tagged WHERE start=?", (start,))
         connection.execute("DELETE FROM time_span WHERE start=?", (start,))
         connection.commit()
+
+    def add(self, task):
+        """Add task.
+
+        :param Task task: task to add
+        """
+        connection = self.sqlite.connect()
+        start, end = task.time_span
+        row = connection.execute(
+            "SELECT start FROM running WHERE start=?", (start,)
+        ).fetchone()
+        if row:
+            raise ValueError(f"task started at {start} already exists")
+        connection.execute(
+            "INSERT INTO running (start,name) VALUES (?,?)",
+            (start, task.name)
+        )
+        connection.executemany(
+            "INSERT INTO tagged (tag,start) VALUES (?,?)",
+            [(tag, start) for tag in task.tags]
+        )
+        connection.execute(
+            "INSERT INTO time_span (start,end) VALUES (?,?)",
+            (start, end)
+        )
+        connection.commit()

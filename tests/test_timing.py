@@ -751,3 +751,38 @@ class TestTiming(unittest.TestCase):
         timer.start("foo")
         with self.assertRaises(ValueError):
             timer.remove(timer.task)
+
+    def test_add(self):
+        """Test adding task.
+
+        Trying: adding task
+        Expecting: task is added
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        start = datetime.datetime.now()
+        end = start + datetime.timedelta(days=1)
+        task = Task("foo", set(), (start, end))
+        timer.add(task)
+        rows = connection.execute(
+            "SELECT 1 FROM time_span WHERE start=?", (start,)
+        ).fetchall()
+        self.assertTrue(rows)
+        rows = connection.execute(
+            "SELECT 1 FROM running WHERE start=?", (start,)
+        ).fetchall()
+        self.assertTrue(rows)
+
+    def test_add_existing(self):
+        """Test adding task.
+
+        Trying: add task started at same time as existing task
+        Expecting: ValueError
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        timer.start("foo")
+        start, _ = timer.task.time_span
+        end = datetime.timedelta(days=1)
+        task = Task("bar", set(), (start, end))
+        with self.assertRaises(ValueError):
+            timer.add(task)
