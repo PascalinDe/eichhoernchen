@@ -33,6 +33,7 @@ import src.config
 import src.timing
 import src.argument_parser
 import src.output_formatter
+from src import Task
 
 
 class UserQuit(Exception):
@@ -310,6 +311,32 @@ class TaskShell(cmd.Cmd):
         print(
             self.output_formatter.pprint_task(task, date=True, colour=True)
         )
+
+    def do_add(self, args):
+        """Add task.
+
+        usage: FULL_NAME FROM TO
+
+        FULL_NAME is name of task followed by 0 or more tags
+        enclosed in brackets
+
+        FROM and TO are ISO 8601 date
+        (e.g. '2019-07-27 15:38')
+        FROM and TO's day defaults to today
+
+        example: 'add foo[bar] @10:00 @11:00' to add task 'foo[bar]'
+        running from 10:00 to 11:00
+        """
+        full_name, args = self.argument_parser.find_full_name(args)
+        if not full_name.name:
+            print("usage: FULL_NAME FROM TO")
+            return
+        try:
+            from_, to = self.argument_parser.cast_to_datetime(args)
+        except ValueError as exception:
+            print(exception)
+            return
+        self.timer.add(Task(full_name.name, full_name.tags, (from_, to)))
 
     def do_generate(self, args):
         """Generate default configuration file.
