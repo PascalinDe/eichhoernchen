@@ -61,20 +61,25 @@ class ArgumentParser():
     SUMMAND_PATTERN = re.compile(r"full name|name|tag")
 
     def cast_to_datetime(self, args):
-        """Cast command-line arguments to datetime object.
+        """Cast command-line arguments to datetime objects.
 
         :param str args: command-line arguments
 
-        :returns: datetime object
+        :returns: list of datetime objects
         :rtype: datetime
         """
-        iso_match = self.ISO_PATTERN.match(args)
-        if not iso_match:
+        iso_matches = self.ISO_PATTERN.findall(args)
+        if not iso_matches:
             raise ValueError(f"{args} is not YYYY-MM-DD hh:mm format")
-        if not iso_match.group(1):
-            now = datetime.datetime.now().strftime("%Y-%m-%d")
-            args = f"{now} {args}"
-        return datetime.datetime.strptime(args, "%Y-%m-%d %H:%M")
+        datetimes = []
+        for iso_match in iso_matches:
+            now = iso_match[0] or datetime.datetime.now().strftime("%Y-%m-%d")
+            datetimes.append(
+                datetime.datetime.strptime(
+                    f"{now} {iso_match[1]}", "%Y-%m-%d %H:%M"
+                )
+            )
+        return datetimes
 
     def find_full_name(self, args):
         """Find full name.

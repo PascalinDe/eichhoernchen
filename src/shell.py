@@ -257,7 +257,7 @@ class TaskShell(cmd.Cmd):
             args = self.argument_parser.TAG_PATTERN.findall(args)
         elif action in ("start", "end"):
             try:
-                args = self.argument_parser.cast_to_datetime(args)
+                args = self.argument_parser.cast_to_datetime(args)[0]
             except ValueError as exception:
                 print(exception)
                 raise UserQuit
