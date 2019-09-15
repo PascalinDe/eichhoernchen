@@ -197,6 +197,29 @@ class TaskShell(cmd.Cmd):
             )
             print(pprint)
 
+    def _select_prompt(self, tasks):
+        """Provide select menu.
+
+        :param list tasks: list of tasks
+
+        :returns: selected task
+        :rtype: task
+        """
+        tasks.sort(key=lambda x: x.time_span[0])
+        for i, task in enumerate(tasks, start=1):
+            print(
+                f"{i}: {self.output_formatter.pprint_task(task, date=True)}"
+            )
+        nums = tuple(str(i) for i in range(1, len(tasks)+1))
+        num = ""
+        while num not in nums and num != "q":
+            num = input(
+                f"select task [1 ... {len(tasks) if len(tasks) > 1 else ''}q]"
+            )
+        if num == "q":
+            raise UserQuit
+        return tasks[int(num)-1]
+
     def _edit_prompt(self, tasks):
         """Provide editing menu.
 
@@ -205,19 +228,7 @@ class TaskShell(cmd.Cmd):
         :returns: task to edit, action to take and its arguments
         :rtype: tuple
         """
-        tasks.sort(key=lambda x: x.time_span[0])
-        for i, task in enumerate(tasks, start=1):
-            pprint_task = self.output_formatter.pprint_task(task, date=True)
-            print(f"{i}: {pprint_task}")
-        nums = tuple(str(i) for i in range(1, len(tasks)+1))
-        num = ""
-        while num not in nums and num != "q":
-            num = input(
-                f"edit task [1 ... {len(tasks) if len(tasks) > 1 else ''}q]"
-            )
-        if num == "q":
-            raise UserQuit
-        task = tasks[int(num)-1]
+        task = self._select_prompt(tasks)
         actions = {
             "n": "name", "t": "tags", "s": "start", "e": "end", "q": "quit"
         }
