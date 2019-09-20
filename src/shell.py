@@ -338,6 +338,55 @@ class TaskShell(cmd.Cmd):
             return
         self.timer.add(Task(full_name.name, full_name.tags, (from_, to)))
 
+    def do_remove(self, args):
+        """Remove task.
+
+        usage: remove FULL_NAME [FROM [TO]]
+
+        FULL_NAME is name of task followed by 0 or more tags
+        enclosed in brackets
+
+        FROM and TO are at sign followed by either ISO 8601 date
+        (e.g. '2019-07-27') or any of the key words 'year', 'month',
+        'week', 'yesterday' and 'today'
+        in addition to the key words above FROM can also be 'all'
+        FROM and TO default to 'today'
+
+        example: 'remove foo[bar] @yesterday @yesterday' to remove
+        one of yesterday's 'foo[bar]' tasks
+        """
+        full_name, args = self.argument_parser.find_full_name(args)
+        if not full_name.name:
+            print("usage: add FULL_NAME [FROM [TO]]")
+            return
+        from_, args = self.argument_parser.find_from(args)
+        from_ = from_ or "today"
+        to, _ = self.argument_parser.find_to(args)
+        to = to or "today"
+        tasks = self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
+        if not tasks:
+            print("no tasks")
+            return
+        try:
+            task = self._select_prompt(tasks)
+        except UserQuit:
+            return
+        pprint_task = self.output_formatter.pprint_task(
+            task, date=True, colour=True
+        )
+        remove = ""
+        while remove not in ("y", "n"):
+            remove = input(f"remove {pprint_task} [yn]?").lower()
+        if remove == "y":
+            try:
+                self.timer.remove(task)
+                print(f"removed task {pprint_task}")
+            except ValueError as exception:
+                print(f"failed to remove task {pprint_task}: {exception}")
+                return
+        else:
+            return
+
     def do_generate(self, args):
         """Generate default configuration file.
 
