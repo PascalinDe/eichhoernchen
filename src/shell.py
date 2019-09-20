@@ -27,13 +27,13 @@ import os.path
 import readline  # noqa
 from datetime import datetime
 
+
 # third party imports
 # library specific imports
 import src.config
 import src.timing
-import src.argument_parser
 import src.output_formatter
-from src import Task
+from src import argument_parser, Task
 
 
 class UserQuit(Exception):
@@ -46,7 +46,6 @@ class TaskShell(cmd.Cmd):
 
     :ivar Timer timer: timer
     :ivar OutputFormatter output_formatter: output formatter
-    :ivar ArgumentParser argument_parser: argument parser
     """
 
     def __init__(self, path=None):
@@ -71,7 +70,6 @@ class TaskShell(cmd.Cmd):
         self.output_formatter = src.output_formatter.OutputFormatter(
             config["colour_scheme"]
         )
-        self.argument_parser = src.argument_parser.ArgumentParser()
         self._reset_prompt()
 
     def _reset_prompt(self):
@@ -91,7 +89,7 @@ class TaskShell(cmd.Cmd):
         if not args:
             print("usage: start FULL_NAME")
             return
-        full_name, _ = self.argument_parser.find_full_name(args)
+        full_name, _ = argument_parser.find_full_name(args)
         if full_name.name:
             try:
                 self.timer.start(full_name.name, tags=full_name.tags)
@@ -135,10 +133,10 @@ class TaskShell(cmd.Cmd):
         example: 'list foo[bar] @year' to list all occurrences of the
         task 'foo[bar]' in the current year
         """
-        full_name, args = self.argument_parser.find_full_name(args)
-        from_, args = self.argument_parser.find_from(args)
+        full_name, args = argument_parser.find_full_name(args)
+        from_, args = argument_parser.find_from(args)
         from_ = from_ or "today"
-        to, _ = self.argument_parser.find_to(args)
+        to, _ = argument_parser.find_to(args)
         to = to or "today"
         tasks = self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
         if not tasks:
@@ -171,11 +169,11 @@ class TaskShell(cmd.Cmd):
         example: 'sum @yesterday tag' to sum up total time of the individual
         tags since yesterday
         """
-        from_, args = self.argument_parser.find_from(args)
+        from_, args = argument_parser.find_from(args)
         from_ = from_ or "today"
-        to, args = self.argument_parser.find_to(args)
+        to, args = argument_parser.find_to(args)
         to = to or "today"
-        summand, _ = self.argument_parser.find_summand(args)
+        summand, _ = argument_parser.find_summand(args)
         summand = summand or "full name"
         full_name = summand == "full name"
         name = summand == "name"
@@ -248,17 +246,17 @@ class TaskShell(cmd.Cmd):
         while not args:
             args = input(f"enter new {action} ~> ")
         if action == "name":
-            if not self.argument_parser.NAME_PATTERN.fullmatch(args):
+            if not argument_parser.NAME_PATTERN.fullmatch(args):
                 print(f"{args} is not a valid name")
                 raise UserQuit
         elif action == "tags":
-            if self.argument_parser.TAG_PATTERN.sub(args, ""):
+            if argument_parser.TAG_PATTERN.sub(args, ""):
                 print(f"{args} is not a valid list of tags")
                 raise UserQuit
-            args = self.argument_parser.TAG_PATTERN.findall(args)
+            args = argument_parser.TAG_PATTERN.findall(args)
         elif action in ("start", "end"):
             try:
-                args = self.argument_parser.cast_to_datetime(args)[0]
+                args = argument_parser.cast_to_datetime(args)[0]
             except ValueError as exception:
                 print(exception)
                 raise UserQuit
@@ -281,13 +279,13 @@ class TaskShell(cmd.Cmd):
         example: 'edit foo[bar] yesterday yesterday' to edit
         one of yesterday's 'foo[bar]' tasks
         """
-        full_name, args = self.argument_parser.find_full_name(args)
+        full_name, args = argument_parser.find_full_name(args)
         if not full_name.name:
             print("usage: edit FULL_NAME [FROM [TO]]")
             return
-        from_, args = self.argument_parser.find_from(args)
+        from_, args = argument_parser.find_from(args)
         from_ = from_ or "today"
-        to, _ = self.argument_parser.find_to(args)
+        to, _ = argument_parser.find_to(args)
         to = to or "today"
         tasks = self.timer.list_tasks(
             full_name=full_name, from_=from_, to=to
@@ -327,12 +325,12 @@ class TaskShell(cmd.Cmd):
         example: 'add foo[bar] @10:00 @11:00' to add task 'foo[bar]'
         running from 10:00 to 11:00
         """
-        full_name, args = self.argument_parser.find_full_name(args)
+        full_name, args = argument_parser.find_full_name(args)
         if not full_name.name:
             print("usage: FULL_NAME FROM TO")
             return
         try:
-            from_, to = self.argument_parser.cast_to_datetime(args)
+            from_, to = argument_parser.cast_to_datetime(args)
         except ValueError as exception:
             print(exception)
             return
@@ -355,13 +353,13 @@ class TaskShell(cmd.Cmd):
         example: 'remove foo[bar] @yesterday @yesterday' to remove
         one of yesterday's 'foo[bar]' tasks
         """
-        full_name, args = self.argument_parser.find_full_name(args)
+        full_name, args = argument_parser.find_full_name(args)
         if not full_name.name:
             print("usage: add FULL_NAME [FROM [TO]]")
             return
-        from_, args = self.argument_parser.find_from(args)
+        from_, args = argument_parser.find_from(args)
         from_ = from_ or "today"
-        to, _ = self.argument_parser.find_to(args)
+        to, _ = argument_parser.find_to(args)
         to = to or "today"
         tasks = self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
         if not tasks:

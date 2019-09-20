@@ -21,22 +21,17 @@
 
 
 # standard library imports
-import unittest
 import datetime
+import unittest
 
 # third party imports
 
 # library specific imports
-import src.argument_parser
-from src import FullName
+from src import argument_parser, FullName
 
 
 class TestArgumentParser(unittest.TestCase):
     """Argument parser test cases."""
-
-    def setUp(self):
-        """Set test cases up."""
-        self.argument_parser = src.argument_parser.ArgumentParser()
 
     def test_find_full_name(self):
         """Test finding full name.
@@ -48,7 +43,7 @@ class TestArgumentParser(unittest.TestCase):
         tags = {"bar", "baz"}
         remaining = "all"
         args = f"{name}{''.join(f'[{tag}]' for tag in tags)}{remaining}"
-        full_name, args = self.argument_parser.find_full_name(args)
+        full_name, args = argument_parser.find_full_name(args)
         self.assertEqual(full_name, FullName(name, tags))
         self.assertEqual(args, remaining)
 
@@ -62,7 +57,7 @@ class TestArgumentParser(unittest.TestCase):
         yesterday = (now - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
         remaining = now.strftime("%Y-%m-%d")
         args = f"@{yesterday}{remaining}"
-        from_, args = self.argument_parser.find_from(args)
+        from_, args = argument_parser.find_from(args)
         self.assertEqual(from_, yesterday)
         self.assertEqual(args, remaining)
 
@@ -76,7 +71,7 @@ class TestArgumentParser(unittest.TestCase):
         today = now.strftime("%Y-%m-%d")
         remaining = f"foo[bar][baz]"
         args = f"@{today}{remaining}"
-        to, args = self.argument_parser.find_to(args)
+        to, args = argument_parser.find_to(args)
         self.assertEqual(to, today)
         self.assertEqual(args, remaining)
 
@@ -89,6 +84,6 @@ class TestArgumentParser(unittest.TestCase):
         full_name = "full name"
         remaining = "all"
         args = f"{full_name}{remaining}"
-        summand, args = self.argument_parser.find_summand(args)
+        summand, args = argument_parser.find_summand(args)
         self.assertEqual(summand, full_name)
         self.assertEqual(args, remaining)

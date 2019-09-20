@@ -29,112 +29,106 @@ import datetime
 from src import FullName
 
 
-class ArgumentParser():
-    """Argument parser.
+NAME_PATTERN = re.compile(r"(?:\w|\s[!#+-?])+")
+TAG_PATTERN = re.compile(fr"\[({NAME_PATTERN.pattern})\]")
+FULL_NAME_PATTERN = re.compile(
+    fr"({NAME_PATTERN.pattern})(?:{TAG_PATTERN.pattern})*"
+)
+ISODATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
+ISOTIME_PATTERN = re.compile(r"\d{2}:\d{2}")
+ISO_PATTERN = re.compile(
+    fr"({ISODATE_PATTERN.pattern})?\s*({ISOTIME_PATTERN.pattern})"
+)
+TIME_PERIOD = ("all", "year", "month", "week", "yesterday", "today")
+TIME_PERIOD_PATTERN = re.compile(fr"{'|'.join(TIME_PERIOD)}")
+FROM_PATTERN = re.compile(
+    fr"@({ISODATE_PATTERN.pattern}|{TIME_PERIOD_PATTERN.pattern})"
+)
+TO_PATTERN = re.compile(
+    fr"@({ISODATE_PATTERN.pattern}|{'|'.join(TIME_PERIOD[1:])})"
+)
+SUMMAND_PATTERN = re.compile(r"full name|name|tag")
 
-    :cvar Pattern NAME_PATTERN: regular expression matching name
-    :cvar Pattern TAG_PATTERN: regular expression matching tag
-    :cvar Pattern FULL_NAME_PATTERN: regular expression matching full name
-    :cvar Pattern ISODATE_PATTERN: regular expression matching ISO 8601 date
-    :cvar Pattern FROM_PATTERN: regular expression matching from ...
-    :cvar Pattern TO_PATTERN: regular expression matching ... to
-    :cvar Pattern SUMMAND_PATTERN: regular expression matching summand
+
+def cast_to_datetime(args):
+    """Cast command-line arguments to datetime objects.
+
+    :param str args: command-line arguments
+
+    :returns: list of datetime objects
+    :rtype: datetime
     """
-    NAME_PATTERN = re.compile(r"(?:\w|\s|[!#+-?])+")
-    TAG_PATTERN = re.compile(r"\[((?:\w|\s|[!#+-?])+)\]")
-    FULL_NAME_PATTERN = re.compile(
-        fr"({NAME_PATTERN.pattern})(?:{TAG_PATTERN.pattern})*"
-    )
-    ISODATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
-    ISOTIME_PATTERN = re.compile(r"\d{2}:\d{2}")
-    ISO_PATTERN = re.compile(
-        fr"({ISODATE_PATTERN.pattern})?\s*({ISOTIME_PATTERN.pattern})"
-    )
-    TIME_PERIOD = ("all", "year", "month", "week", "yesterday", "today")
-    TIME_PERIOD_PATTERN = re.compile(fr"{'|'.join(TIME_PERIOD)}")
-    FROM_PATTERN = re.compile(
-        fr"@({ISODATE_PATTERN.pattern}|{TIME_PERIOD_PATTERN.pattern})"
-    )
-    TO_PATTERN = re.compile(
-        fr"@({ISODATE_PATTERN.pattern}|{'|'.join(TIME_PERIOD[1:])})"
-    )
-    SUMMAND_PATTERN = re.compile(r"full name|name|tag")
-
-    def cast_to_datetime(self, args):
-        """Cast command-line arguments to datetime objects.
-
-        :param str args: command-line arguments
-
-        :returns: list of datetime objects
-        :rtype: datetime
-        """
-        iso_matches = self.ISO_PATTERN.findall(args)
-        if not iso_matches:
-            raise ValueError(f"{args} is not YYYY-MM-DD hh:mm format")
-        datetimes = []
-        for iso_match in iso_matches:
-            now = iso_match[0] or datetime.datetime.now().strftime("%Y-%m-%d")
-            datetimes.append(
-                datetime.datetime.strptime(
-                    f"{now} {iso_match[1]}", "%Y-%m-%d %H:%M"
-                )
+    iso_matches = ISO_PATTERN.findall(args)
+    if not iso_matches:
+        raise ValueError(f"{args} is not YYYY-MM-DD hh:mm format")
+    datetimes = []
+    for iso_match in iso_matches:
+        now = iso_match[0] or datetime.datetime.now().strftime("%Y-%m-%d")
+        datetimes.append(
+            datetime.datetime.strptime(
+                f"{now} {iso_match[1]}", "%Y-%m-%d %H:%M"
             )
-        return datetimes
+        )
+    return datetimes
 
-    def find_full_name(self, args):
-        """Find full name.
 
-        :param str args: command-line arguments
+def find_full_name(args):
+    """Find full name.
 
-        :returns: full name and remaining command-line arguments
-        :rtype: tuple
-        """
-        full_name_match = self.FULL_NAME_PATTERN.match(args)
-        if full_name_match:
-            name = full_name_match.group(1).strip()
-            tags = set(self.TAG_PATTERN.findall(args))
-            args = self.FULL_NAME_PATTERN.sub("", args, count=1).strip()
-            return FullName(name=name, tags=tags), args
-        return FullName("", ()), args
+    :param str args: command-line arguments
 
-    def find_from(self, args):
-        """Find from ... .
+    :returns: full name and remaining command-line arguments
+    :rtype: tuple
+    """
+    full_name_match = FULL_NAME_PATTERN.match(args)
+    if full_name_match:
+        name = full_name_match.group(1).strip()
+        tags = set(TAG_PATTERN.findall(args))
+        args = FULL_NAME_PATTERN.sub("", args, count=1).strip()
+        return FullName(name=name, tags=tags), args
+    return FullName("", ()), args
 
-        :param str args: command-line arguments
 
-        :returns: from ... and remaining command-line arguments
-        :rtype: tuple
-        """
-        from_match = self.FROM_PATTERN.match(args)
-        if from_match:
-            args = self.FROM_PATTERN.sub("", args, count=1).strip()
-            return from_match.group(1).strip(), args
-        return "", args
+def find_from(args):
+    """Find from ... .
 
-    def find_to(self, args):
-        """Find ... to.
+    :param str args: command-line arguments
 
-        :param str args: command-line arguments
+    :returns: from ... and remaining command-line arguments
+    :rtype: tuple
+    """
+    from_match = FROM_PATTERN.match(args)
+    if from_match:
+        args = FROM_PATTERN.sub("", args, count=1).strip()
+        return from_match.group(1).strip(), args
+    return "", args
 
-        :returns: ... to and remaining command-line arguments
-        :rtype: tuple
-        """
-        to_match = self.TO_PATTERN.match(args)
-        if to_match:
-            args = self.TO_PATTERN.sub("", args).strip()
-            return to_match.group(1), args
-        return "", args
 
-    def find_summand(self, args):
-        """Find summand.
+def find_to(args):
+    """Find ... to.
 
-        :param str args: command-line arguments
+    :param str args: command-line arguments
 
-        :returns: summand and remaining command-line arguments
-        :rtype: tuple
-        """
-        summand_match = self.SUMMAND_PATTERN.match(args)
-        if summand_match:
-            args = self.SUMMAND_PATTERN.sub("", args).strip()
-            return summand_match.group(0), args
-        return "", args
+    :returns: ... to and remaining command-line arguments
+    :rtype: tuple
+    """
+    to_match = TO_PATTERN.match(args)
+    if to_match:
+        args = TO_PATTERN.sub("", args).strip()
+        return to_match.group(1), args
+    return "", args
+
+
+def find_summand(args):
+    """Find summand.
+
+    :param str args: command-line arguments
+
+    :returns: summand and remaining command-line arguments
+    :rtype: tuple
+    """
+    summand_match = SUMMAND_PATTERN.match(args)
+    if summand_match:
+        args = SUMMAND_PATTERN.sub("", args).strip()
+        return summand_match.group(0), args
+    return "", args
