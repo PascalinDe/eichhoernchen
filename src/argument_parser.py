@@ -34,42 +34,31 @@ TAG_PATTERN = re.compile(fr"\[({NAME_PATTERN.pattern})\]")
 FULL_NAME_PATTERN = re.compile(
     fr"({NAME_PATTERN.pattern})(?:{TAG_PATTERN.pattern})*"
 )
-ISODATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
-ISOTIME_PATTERN = re.compile(r"\d{2}:\d{2}")
-ISO_PATTERN = re.compile(
-    fr"({ISODATE_PATTERN.pattern})?\s*({ISOTIME_PATTERN.pattern})"
-)
-TIME_PERIOD = ("all", "year", "month", "week", "yesterday", "today")
-TIME_PERIOD_PATTERN = re.compile(fr"{'|'.join(TIME_PERIOD)}")
-FROM_PATTERN = re.compile(
-    fr"@({ISODATE_PATTERN.pattern}|{TIME_PERIOD_PATTERN.pattern})"
-)
-TO_PATTERN = re.compile(
-    fr"@({ISODATE_PATTERN.pattern}|{'|'.join(TIME_PERIOD[1:])})"
+_TIME_PERIOD = ("all", "year", "month", "week", "yesterday", "today")
+TIME_PERIOD_PATTERN = re.compile(fr"({'|'.join(TIME_PERIOD)})")
+TIME_SPAN_PATTERN = re.compile(
+    fr"@()(?:\W@())?"
 )
 SUMMAND_PATTERN = re.compile(r"full name|name|tag")
 
 
-def cast_to_datetime(args):
-    """Cast command-line arguments to datetime objects.
+def find_datetime(args, normalise=True, date=True, time=True):
+    """Find date and/or time.
 
     :param str args: command-line arguments
+    :param bool normalise: toggle returning normalised string on/off
 
-    :returns: list of datetime objects
-    :rtype: datetime
+    :returns: normalised string or datetime object
+    :rtype: string or datetime
     """
-    iso_matches = ISO_PATTERN.findall(args)
-    if not iso_matches:
-        raise ValueError(f"{args} is not YYYY-MM-DD hh:mm format")
-    datetimes = []
-    for iso_match in iso_matches:
-        now = iso_match[0] or datetime.datetime.now().strftime("%Y-%m-%d")
-        datetimes.append(
-            datetime.datetime.strptime(
-                f"{now} {iso_match[1]}", "%Y-%m-%d %H:%M"
-            )
-        )
-    return datetimes
+    if date and time:
+        format_string = "%Y-%m-%d %H:%M"
+    elif date:
+        format_string = "%Y-%m-%d"
+    elif time:
+        format_string = "%H:%M"
+    datetime_obj = datetime.datetime.strptime(args, format_string)
+    return args if normalise else datetime_obj
 
 
 def find_full_name(args):
@@ -87,6 +76,18 @@ def find_full_name(args):
         args = FULL_NAME_PATTERN.sub("", args, count=1).strip()
         return FullName(name=name, tags=tags), args
     return FullName("", ()), args
+
+
+def find_time_span(args):
+    """Find time span.
+
+    :param str args: command-line arguments
+
+    :returns: time span and remaining command-line arguments
+    :rtype: tuple
+    """
+    time_periods = ("all", "year", "month", "week", "yesterday", "today")
+    iso_datetime_pattern = re.compile(r"[- \t0-9:]+")
 
 
 def find_from(args):
