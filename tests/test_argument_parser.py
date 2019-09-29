@@ -47,33 +47,57 @@ class TestArgumentParser(unittest.TestCase):
         self.assertEqual(full_name, FullName(name, tags))
         self.assertEqual(args, remaining)
 
-    def test_find_from(self):
-        """Test finding from ... .
+    def test_find_time_span_date(self):
+        """Test finding time span.
 
-        Trying: finding from ...
-        Expecting: from ... and remaining command-line arguments
+        Trying: finding date
+        Expecting: time span and remaining command-line arguments
+        """
+        today = datetime.date.today()
+        tomorrow = (today + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+        today = today.strftime("%Y-%m-%d")
+        expected = ((today, tomorrow), "")
+        actual = argument_parser.find_time_span(
+            f"@{today} @{tomorrow}", time=False
+        )
+        self.assertEqual(actual, expected)
+        expected = (("today", ""), "")
+        actual = argument_parser.find_time_span("@today", time=False)
+        self.assertEqual(actual, expected)
+
+    def test_find_time_span_time(self):
+        """Test finding time span.
+
+        Trying: finding time
+        Expecting: time span and remaining command-line arguments
         """
         now = datetime.datetime.now()
-        yesterday = (now - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-        remaining = now.strftime("%Y-%m-%d")
-        args = f"@{yesterday}{remaining}"
-        from_, args = argument_parser.find_from(args)
-        self.assertEqual(from_, yesterday)
-        self.assertEqual(args, remaining)
+        later = (now + datetime.timedelta(hours=1)).strftime("%H:%M")
+        now = now.strftime("%H:%M")
+        expected = ((now, later), "")
+        actual = argument_parser.find_time_span(
+            f"@{now} @{later}", date=False
+        )
+        self.assertEqual(actual, expected)
+        expected = (("", ""), "@today")
+        actual = argument_parser.find_time_span("@today", date=False)
 
-    def test_find_to(self):
-        """Test finding ... to.
+    def test_find_time_span_datetime(self):
+        """Test finding time span.
 
-        Trying: finding ... to
-        Expecting: ... to and remaining command-line arguments
+        Trying: finding date and time
+        Expecting: time span and remaining command-line arguments
         """
         now = datetime.datetime.now()
-        today = now.strftime("%Y-%m-%d")
-        remaining = f"foo[bar][baz]"
-        args = f"@{today}{remaining}"
-        to, args = argument_parser.find_to(args)
-        self.assertEqual(to, today)
-        self.assertEqual(args, remaining)
+        later = (now + datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M")
+        now = now.strftime("%Y-%m-%d %H:%M")
+        expected = ((now, later), "")
+        actual = argument_parser.find_time_span(
+            f"@{now} @{later}"
+        )
+        self.assertEqual(actual, expected)
+        expected = (("", ""), "@today")
+        actual = argument_parser.find_time_span("@today")
 
     def test_find_summand(self):
         """Test finding summand.

@@ -134,9 +134,8 @@ class TaskShell(cmd.Cmd):
         task 'foo[bar]' in the current year
         """
         full_name, args = argument_parser.find_full_name(args)
-        from_, args = argument_parser.find_from(args)
+        (from_, to), args = argument_parser.find_time_span(args, time=False)
         from_ = from_ or "today"
-        to, _ = argument_parser.find_to(args)
         to = to or "today"
         tasks = self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
         if not tasks:
@@ -169,9 +168,8 @@ class TaskShell(cmd.Cmd):
         example: 'sum @yesterday tag' to sum up total time of the individual
         tags since yesterday
         """
-        from_, args = argument_parser.find_from(args)
+        (from_, to), args = argument_parser.find_time_span(args, time=False)
         from_ = from_ or "today"
-        to, args = argument_parser.find_to(args)
         to = to or "today"
         summand, _ = argument_parser.find_summand(args)
         summand = summand or "full name"
@@ -283,9 +281,8 @@ class TaskShell(cmd.Cmd):
         if not full_name.name:
             print("usage: edit FULL_NAME [FROM [TO]]")
             return
-        from_, args = argument_parser.find_from(args)
+        (from_, to), args = argument_parser.find_time_span(args, time=False)
         from_ = from_ or "today"
-        to, _ = argument_parser.find_to(args)
         to = to or "today"
         tasks = self.timer.list_tasks(
             full_name=full_name, from_=from_, to=to
@@ -357,9 +354,8 @@ class TaskShell(cmd.Cmd):
         if not full_name.name:
             print("usage: add FULL_NAME [FROM [TO]]")
             return
-        from_, args = argument_parser.find_from(args)
+        (from_, to), args = argument_parser.find_time_span(time=False)
         from_ = from_ or "today"
-        to, _ = argument_parser.find_to(args)
         to = to or "today"
         tasks = self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
         if not tasks:

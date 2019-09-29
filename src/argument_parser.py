@@ -34,11 +34,6 @@ TAG_PATTERN = re.compile(fr"\[({NAME_PATTERN.pattern})\]")
 FULL_NAME_PATTERN = re.compile(
     fr"({NAME_PATTERN.pattern})(?:{TAG_PATTERN.pattern})*"
 )
-_TIME_PERIOD = ("all", "year", "month", "week", "yesterday", "today")
-TIME_PERIOD_PATTERN = re.compile(fr"({'|'.join(TIME_PERIOD)})")
-TIME_SPAN_PATTERN = re.compile(
-    fr"@()(?:\W@())?"
-)
 SUMMAND_PATTERN = re.compile(r"full name|name|tag")
 
 
@@ -61,6 +56,53 @@ def find_datetime(args, normalise=True, date=True, time=True):
     return args if normalise else datetime_obj
 
 
+def find_time_span(args, date=True, time=True):
+    """Find time span.
+
+    :param str args: command-line arguments
+    :param bool date: toggle finding date on/off
+    :param bool time: toggle finding time on/off
+
+    :raises ValueError: if neither finding date nor finding time
+    is toggled on
+
+    :returns: time span and remaining command-line arguments
+    :rtype: tuple
+    """
+    if not (date or time):
+        raise ValueError("neither finding date nor finding time is toggled on")
+    time_periods = ("year", "month", "week", "yesterday", "today")
+    time_period_pattern = r"|".join(time_periods)
+    if date and time:
+        iso_pattern = r"\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}"
+    elif date:
+        iso_pattern = r"\d{4}-\d{2}-\d{2}"
+    elif time:
+        iso_pattern = r"\d{2}:\d{2}"
+    if time:
+        start_pattern = end_pattern = iso_pattern
+    elif date:
+        start_pattern = fr"all|{time_period_pattern}|{iso_pattern}"
+        end_pattern = fr"{time_period_pattern}|{iso_pattern}"
+    time_span_pattern = re.compile(
+        fr"@({start_pattern})(?:\s+@({end_pattern}))?"
+    )
+    time_span_match = time_span_pattern.match(args)
+    if time_span_match:
+        start, end = time_span_match.groups()
+        args = time_span_pattern.sub("", args, count=1).strip()
+        if start not in ("all", ) + time_periods:
+            start = find_datetime(
+                start, normalise=True, date=date, time=time
+            )
+        if not end:
+            end = ""
+        elif end not in time_periods:
+            end = find_datetime(end, normalise=True, date=date, time=time)
+        return (start, end), args
+    return ("", ""), args
+
+
 def find_full_name(args):
     """Find full name.
 
@@ -76,48 +118,6 @@ def find_full_name(args):
         args = FULL_NAME_PATTERN.sub("", args, count=1).strip()
         return FullName(name=name, tags=tags), args
     return FullName("", ()), args
-
-
-def find_time_span(args):
-    """Find time span.
-
-    :param str args: command-line arguments
-
-    :returns: time span and remaining command-line arguments
-    :rtype: tuple
-    """
-    time_periods = ("all", "year", "month", "week", "yesterday", "today")
-    iso_datetime_pattern = re.compile(r"[- \t0-9:]+")
-
-
-def find_from(args):
-    """Find from ... .
-
-    :param str args: command-line arguments
-
-    :returns: from ... and remaining command-line arguments
-    :rtype: tuple
-    """
-    from_match = FROM_PATTERN.match(args)
-    if from_match:
-        args = FROM_PATTERN.sub("", args, count=1).strip()
-        return from_match.group(1).strip(), args
-    return "", args
-
-
-def find_to(args):
-    """Find ... to.
-
-    :param str args: command-line arguments
-
-    :returns: ... to and remaining command-line arguments
-    :rtype: tuple
-    """
-    to_match = TO_PATTERN.match(args)
-    if to_match:
-        args = TO_PATTERN.sub("", args).strip()
-        return to_match.group(1), args
-    return "", args
 
 
 def find_summand(args):
