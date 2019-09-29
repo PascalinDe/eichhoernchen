@@ -52,7 +52,14 @@ def find_datetime(args, normalise=True, date=True, time=True):
         format_string = "%Y-%m-%d"
     elif time:
         format_string = "%H:%M"
-    datetime_obj = datetime.datetime.strptime(args, format_string)
+    try:
+        datetime_obj = datetime.datetime.strptime(args, format_string)
+    except ValueError:
+        if date and time:
+            now = datetime.datetime.now().strftime("%Y-%m-%d")
+            datetime_obj = datetime.datetime.strptime(
+                f"{now} {args}", format_string
+            )
     return args if normalise else datetime_obj
 
 

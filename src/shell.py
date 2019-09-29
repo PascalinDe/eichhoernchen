@@ -254,7 +254,7 @@ class TaskShell(cmd.Cmd):
             args = argument_parser.TAG_PATTERN.findall(args)
         elif action in ("start", "end"):
             try:
-                args = argument_parser.cast_to_datetime(args)[0]
+                args = argument_parser.find_datetime(args, normalise=False)
             except ValueError as exception:
                 print(exception)
                 raise UserQuit
@@ -327,7 +327,9 @@ class TaskShell(cmd.Cmd):
             print("usage: FULL_NAME FROM TO")
             return
         try:
-            from_, to = argument_parser.cast_to_datetime(args)
+            from_, to = args.split(maxsplit=1)
+            from_ = argument_parser.find_datetime(from_, normalise=False)
+            to = argument_parser.find_datetime(to, normalise=False)
         except ValueError as exception:
             print(exception)
             return
