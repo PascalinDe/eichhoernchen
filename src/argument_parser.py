@@ -29,11 +29,6 @@ import datetime
 from src import FullName
 
 
-NAME_PATTERN = re.compile(r"(?:\w|\s[!#+-?])+")
-TAG_PATTERN = re.compile(fr"\[({NAME_PATTERN.pattern})\]")
-FULL_NAME_PATTERN = re.compile(
-    fr"({NAME_PATTERN.pattern})(?:{TAG_PATTERN.pattern})*"
-)
 SUMMAND_PATTERN = re.compile(r"full name|name|tag")
 
 
@@ -118,11 +113,14 @@ def find_full_name(args):
     :returns: full name and remaining command-line arguments
     :rtype: tuple
     """
-    full_name_match = FULL_NAME_PATTERN.match(args)
+    name_pattern = r"(?:\w|\s[!#+-?])+"
+    tag_pattern = fr"\[({name_pattern})\]"
+    full_name_pattern = re.compile(fr"({name_pattern})(?:{tag_pattern})*")
+    full_name_match = full_name_pattern.match(args)
     if full_name_match:
         name = full_name_match.group(1).strip()
-        tags = set(TAG_PATTERN.findall(args))
-        args = FULL_NAME_PATTERN.sub("", args, count=1).strip()
+        tags = set(re.findall(tag_pattern, args))
+        args = full_name_pattern.sub("", args, count=1).strip()
         return FullName(name=name, tags=tags), args
     return FullName("", ()), args
 
