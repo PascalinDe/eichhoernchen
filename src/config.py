@@ -16,7 +16,7 @@
 
 
 """
-:synopsis:
+:synopsis: Configuration file handling.
 """
 
 
