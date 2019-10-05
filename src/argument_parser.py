@@ -29,9 +29,6 @@ import datetime
 from src import FullName
 
 
-SUMMAND_PATTERN = re.compile(r"full name|name|tag")
-
-
 def find_datetime(args, normalise=True, date=True, time=True):
     """Find date and/or time.
 
@@ -133,8 +130,9 @@ def find_summand(args):
     :returns: summand and remaining command-line arguments
     :rtype: tuple
     """
-    summand_match = SUMMAND_PATTERN.match(args)
+    summand_pattern = re.compile(r"full name|name|tag")
+    summand_match = summand_pattern.match(args)
     if summand_match:
-        args = SUMMAND_PATTERN.sub("", args).strip()
+        args = summand_pattern.sub("", args).strip()
         return summand_match.group(0), args
     return "", args
