@@ -29,7 +29,7 @@ import datetime
 from src import FullName
 
 
-def find_datetime(args, normalise=True, date=True, time=True):
+def find_datetime(args, normalise=True):
     """Find date and/or time.
 
     :param str args: command-line arguments
@@ -38,51 +38,50 @@ def find_datetime(args, normalise=True, date=True, time=True):
     :returns: normalised string or datetime object
     :rtype: string or datetime
     """
-    if date and time:
-        format_string = "%Y-%m-%d %H:%M"
-    elif date:
-        format_string = "%Y-%m-%d"
-    elif time:
-        format_string = "%H:%M"
-    try:
-        datetime_obj = datetime.datetime.strptime(args, format_string)
-    except ValueError:
-        if date and time:
-            now = datetime.datetime.now().strftime("%Y-%m-%d")
-            datetime_obj = datetime.datetime.strptime(
-                f"{now} {args}", format_string
-            )
-    return args if normalise else datetime_obj
+    for format_string in ("%Y-%m-%d %H:%M", "%Y-%m-%d", "%H:%M"):
+        try:
+            datetime_obj = datetime.datetime.strptime(args, format_string)
+            if format_string == "%H:%M":
+                now = datetime.datetime.now()
+                datetime_obj = datetime.datetime(
+                    now.year, now.month, now.day,
+                    datetime_obj.hour, datetime_obj.minute
+                )
+            break
+        except ValueError:
+            continue
+    else:
+        raise ValueError(
+            f"time data '{args}' does not match any supported format"
+        )
+    if normalise:
+        return datetime_obj.strftime("%Y-%m-%d %H:%M")
+    else:
+        return datetime_obj
 
 
-def find_time_span(args, date=True, time=True):
+def find_time_span(args, normalise=True):
     """Find time span.
 
     :param str args: command-line arguments
-    :param bool date: toggle finding date on/off
-    :param bool time: toggle finding time on/off
-
-    :raises ValueError: if neither finding date nor finding time
-    is toggled on
+    :param bool normalise: toggle returning normalised string on/off
 
     :returns: time span and remaining command-line arguments
     :rtype: tuple
     """
-    if not (date or time):
-        raise ValueError("neither finding date nor finding time is toggled on")
     time_periods = ("year", "month", "week", "yesterday", "today")
     time_period_pattern = r"|".join(time_periods)
-    if date and time:
-        iso_pattern = r"\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}"
-    elif date:
-        iso_pattern = r"\d{4}-\d{2}-\d{2}"
-    elif time:
-        iso_pattern = r"\d{2}:\d{2}"
-    if time:
-        start_pattern = end_pattern = iso_pattern
-    elif date:
-        start_pattern = fr"all|{time_period_pattern}|{iso_pattern}"
-        end_pattern = fr"{time_period_pattern}|{iso_pattern}"
+    iso_date_pattern = r"\d{4}-\d{2}-\d{2}"
+    iso_time_pattern = r"\d{2}:\d{2}"
+    iso_pattern = r"|".join(
+        (
+            fr"{iso_date_pattern}\s+{iso_time_pattern}",
+            fr"{iso_date_pattern}",
+            fr"{iso_time_pattern}"
+        )
+    )
+    start_pattern = fr"all|{time_period_pattern}|{iso_pattern}"
+    end_pattern = fr"{time_period_pattern}|{iso_pattern}"
     time_span_pattern = re.compile(
         fr"@({start_pattern})(?:\s+@({end_pattern}))?"
     )
@@ -91,13 +90,11 @@ def find_time_span(args, date=True, time=True):
         start, end = time_span_match.groups()
         args = time_span_pattern.sub("", args, count=1).strip()
         if start not in ("all", ) + time_periods:
-            start = find_datetime(
-                start, normalise=True, date=date, time=time
-            )
+            start = find_datetime(start, normalise=normalise)
         if not end:
             end = ""
         elif end not in time_periods:
-            end = find_datetime(end, normalise=True, date=date, time=time)
+            end = find_datetime(end, normalise=normalise)
         return (start, end), args
     return ("", ""), args
 

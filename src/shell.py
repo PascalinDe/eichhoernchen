@@ -134,7 +134,7 @@ class TaskShell(cmd.Cmd):
         task 'foo[bar]' in the current year
         """
         full_name, args = argument_parser.find_full_name(args)
-        (from_, to), args = argument_parser.find_time_span(args, time=False)
+        (from_, to), args = argument_parser.find_time_span(args)
         from_ = from_ or "today"
         to = to or "today"
         tasks = self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
@@ -168,7 +168,7 @@ class TaskShell(cmd.Cmd):
         example: 'sum @yesterday tag' to sum up total time of the individual
         tags since yesterday
         """
-        (from_, to), args = argument_parser.find_time_span(args, time=False)
+        (from_, to), args = argument_parser.find_time_span(args)
         from_ = from_ or "today"
         to = to or "today"
         summand, _ = argument_parser.find_summand(args)
@@ -281,7 +281,7 @@ class TaskShell(cmd.Cmd):
         if not full_name.name:
             print("usage: edit FULL_NAME [FROM [TO]]")
             return
-        (from_, to), args = argument_parser.find_time_span(args, time=False)
+        (from_, to), args = argument_parser.find_time_span(args)
         from_ = from_ or "today"
         to = to or "today"
         tasks = self.timer.list_tasks(
@@ -315,7 +315,7 @@ class TaskShell(cmd.Cmd):
         FULL_NAME is name of task followed by 0 or more tags
         enclosed in brackets
 
-        FROM and TO are ISO 8601 date
+        FROM and TO are at sign followed by ISO 8601 datetime
         (e.g. '2019-07-27 15:38')
         FROM and TO's day defaults to today
 
@@ -327,9 +327,9 @@ class TaskShell(cmd.Cmd):
             print("usage: FULL_NAME FROM TO")
             return
         try:
-            from_, to = args.split(maxsplit=1)
-            from_ = argument_parser.find_datetime(from_, normalise=False)
-            to = argument_parser.find_datetime(to, normalise=False)
+            (from_, to), _ = argument_parser.find_time_span(
+                args, normalise=False
+            )
         except ValueError as exception:
             print(exception)
             return
@@ -356,7 +356,7 @@ class TaskShell(cmd.Cmd):
         if not full_name.name:
             print("usage: add FULL_NAME [FROM [TO]]")
             return
-        (from_, to), args = argument_parser.find_time_span(time=False)
+        (from_, to), args = argument_parser.find_time_span(args)
         from_ = from_ or "today"
         to = to or "today"
         tasks = self.timer.list_tasks(full_name=full_name, from_=from_, to=to)

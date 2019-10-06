@@ -54,15 +54,19 @@ class TestArgumentParser(unittest.TestCase):
         Expecting: time span and remaining command-line arguments
         """
         today = datetime.date.today()
-        tomorrow = (today + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-        today = today.strftime("%Y-%m-%d")
-        expected = ((today, tomorrow), "")
+        tomorrow = (today + datetime.timedelta(days=1))
+        today = today
+        expected = (
+            (today.strftime("%Y-%m-%d %H:%M"),
+             tomorrow.strftime("%Y-%m-%d %H:%M")),
+            ""
+        )
         actual = argument_parser.find_time_span(
-            f"@{today} @{tomorrow}", time=False
+            f"@{today.strftime('%Y-%m-%d')} @{tomorrow.strftime('%Y-%m-%d')}"
         )
         self.assertEqual(actual, expected)
         expected = (("today", ""), "")
-        actual = argument_parser.find_time_span("@today", time=False)
+        actual = argument_parser.find_time_span("@today")
         self.assertEqual(actual, expected)
 
     def test_find_time_span_time(self):
@@ -72,15 +76,17 @@ class TestArgumentParser(unittest.TestCase):
         Expecting: time span and remaining command-line arguments
         """
         now = datetime.datetime.now()
-        later = (now + datetime.timedelta(hours=1)).strftime("%H:%M")
-        now = now.strftime("%H:%M")
-        expected = ((now, later), "")
+        later = (now + datetime.timedelta(hours=1))
+        expected = (
+            (now.strftime("%Y-%m-%d %H:%M"), later.strftime("%Y-%m-%d %H:%M")),
+            ""
+        )
         actual = argument_parser.find_time_span(
-            f"@{now} @{later}", date=False
+            f"@{now.strftime('%H:%M')} @{later.strftime('%H:%M')}"
         )
         self.assertEqual(actual, expected)
         expected = (("", ""), "@today")
-        actual = argument_parser.find_time_span("@today", date=False)
+        actual = argument_parser.find_time_span("@today")
 
     def test_find_time_span_datetime(self):
         """Test finding time span.
@@ -92,9 +98,7 @@ class TestArgumentParser(unittest.TestCase):
         later = (now + datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M")
         now = now.strftime("%Y-%m-%d %H:%M")
         expected = ((now, later), "")
-        actual = argument_parser.find_time_span(
-            f"@{now} @{later}"
-        )
+        actual = argument_parser.find_time_span(f"@{now} @{later}")
         self.assertEqual(actual, expected)
         expected = (("", ""), "@today")
         actual = argument_parser.find_time_span("@today")
