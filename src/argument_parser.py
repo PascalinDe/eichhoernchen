@@ -107,7 +107,7 @@ def find_full_name(args):
     :returns: full name and remaining command-line arguments
     :rtype: tuple
     """
-    name_pattern = r"(?:\w|\s[!#+-?])+"
+    name_pattern = r"(?:\w|\s|[!#+-?])+"
     tag_pattern = fr"\[({name_pattern})\]"
     full_name_pattern = re.compile(fr"({name_pattern})(?:{tag_pattern})*")
     full_name_match = full_name_pattern.match(args)
