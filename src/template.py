@@ -1,4 +1,4 @@
-#    This file is part of Eichhörnchen 1.1.
+#    This file is part of Eichhörnchen 1.2.
 #    Copyright (C) 2019  Carine Dengler
 #
 #    Eichhörnchen is free software: you can redistribute it and/or modify
