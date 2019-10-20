@@ -29,6 +29,10 @@ import datetime
 from src import FullName
 
 
+NAME_PATTERN = r"(?:\w|\s|[!#+-?])+"
+TAG_PATTERN = re.compile(fr"\[({NAME_PATTERN})\]")
+
+
 def find_datetime(args, normalise=True):
     """Find date and/or time.
 
@@ -107,13 +111,13 @@ def find_full_name(args):
     :returns: full name and remaining command-line arguments
     :rtype: tuple
     """
-    name_pattern = r"(?:\w|\s|[!#+-?])+"
-    tag_pattern = fr"\[({name_pattern})\]"
-    full_name_pattern = re.compile(fr"({name_pattern})(?:{tag_pattern})*")
+    full_name_pattern = re.compile(
+        fr"({NAME_PATTERN})(?:{TAG_PATTERN.pattern})*"
+    )
     full_name_match = full_name_pattern.match(args)
     if full_name_match:
         name = full_name_match.group(1).strip()
-        tags = set(re.findall(tag_pattern, args))
+        tags = set(TAG_PATTERN.findall(args))
         args = full_name_pattern.sub("", args, count=1).strip()
         return FullName(name=name, tags=tags), args
     return FullName("", ()), args
