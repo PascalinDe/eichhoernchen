@@ -244,7 +244,7 @@ class TaskShell(cmd.Cmd):
         while not args:
             args = input(f"enter new {action} ~> ")
         if action == "name":
-            if not argument_parser.NAME_PATTERN.fullmatch(args):
+            if not argument_parser.find_full_name(args)[0].name:
                 print(f"{args} is not a valid name")
                 raise UserQuit
         elif action == "tags":
