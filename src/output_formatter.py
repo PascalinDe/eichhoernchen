@@ -191,3 +191,8 @@ class OutputFormatter():
         else:
             running = ""
         return self.monochrome_template.prompt.format(running=running)
+
+
+def pprint_prompt(*args, **kwargs):
+    """Pretty-print prompt."""
+    return ""

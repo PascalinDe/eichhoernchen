@@ -21,12 +21,13 @@
 
 
 # standard library imports
+import curses
 import argparse
 
 # third party imports
 
 # library specific imports
-import src.shell
+import src.cshell
 
 
 def main():
@@ -41,8 +42,7 @@ def main():
     )
     args = parser.parse_args()
     try:
-        shell = src.shell.TaskShell(path=args.config)
-        shell.cmdloop()
+        curses.wrapper(src.cshell.launch, {"path": "", "database": ""})
     except Exception as exception:
         print(exception)
 
