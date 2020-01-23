@@ -26,33 +26,19 @@
 
 
 class Template():
-    """Template.
-
-    :ivar MonochromeColourScheme scheme: colour scheme
-    """
-
-    def __init__(self, scheme):
-        """Initialize template.
-
-        :param MonochromeColourScheme scheme: colour scheme
-        """
-        self.scheme = scheme
+    """Template."""
 
     @property
     def base_template(self):
-        return f"{self.scheme.default}{{template}}{self.scheme.default}"
+        return "{template}"
 
     @property
     def name(self):
-        return self.base_template.format(
-            template=f"{self.scheme.name}{{name}}"
-        )
+        return self.base_template.format(template="{name}")
 
     @property
     def tag(self):
-        return self.base_template.format(
-            template=f"{self.scheme.tag}[{{tag}}]"
-        )
+        return self.base_template.format(template="[{tag}]")
 
     @property
     def full_name(self):
@@ -60,15 +46,11 @@ class Template():
 
     @property
     def time_span(self):
-        return self.base_template.format(
-            template=f"{self.scheme.time_span}{{start}}-{{end}}"
-        )
+        return self.base_template.format(template="{start}-{end}")
 
     @property
     def total(self):
-        return self.base_template.format(
-            template=f"{self.scheme.total}{{hours}}h{{minutes}}m"
-        )
+        return self.base_template.format(template="{hours}h{minutes}m")
 
     @property
     def task(self):
@@ -82,13 +64,8 @@ class Template():
 
     @property
     def running(self):
-        return self.base_template.format(
-            template=(
-                f"{{full_name}}({self.scheme.time_span}"
-                f"{{start}}-{self.scheme.default})"
-            )
-        )
+        return self.base_template.format(template="{full_name}({start}-)")
 
     @property
     def prompt(self):
-        return self.base_template.format(template="{running}~> ")
+        return self.base_template.format(template="{running}~>")

@@ -23,176 +23,127 @@
 # standard library imports
 # third party imports
 # library specific imports
-from src.colour import MonochromeColourScheme
+from src import FullName
 from src.template import Template
 
 
-class OutputFormatter():
-    """Output formatter.
+TEMPLATE = Template()
 
-    :ivar MonochromeColourScheme monochrome_scheme: monochrome colour scheme
-    :ivar MonochromeColourScheme polychrome_scheme: polychrome colour scheme
+
+def pprint_name(name):
+    """Pretty-print name.
+
+    :param str name: name
+
+    :returns: pretty-printed name
+    :rtype: str
     """
+    return TEMPLATE.name.format(name=name)
 
-    def __init__(self, colour_scheme):
-        """Initialize output formatter."""
-        self.monochrome_template = Template(MonochromeColourScheme())
-        self.polychrome_template = Template(colour_scheme())
 
-    def pprint_name(self, name, colour=False):
-        """Pretty-print name.
+def pprint_tags(tags):
+    """Pretty-print tags.
 
-        :param str name: name
-        :param bool colour: toggle coloured display on/off
+    :param list tags: tags
 
-        :returns: pretty-printed name
-        :rtype: str
-        """
-        if colour:
-            return self.polychrome_template.name.format(name=name)
-        else:
-            return self.monochrome_template.name.format(name=name)
+    :returns: pretty-printed tags
+    :rtype: str
+    """
+    return "".join(TEMPLATE.tag.format(tag=tag) for tag in sorted(tags))
 
-    def pprint_tags(self, tags, colour=False):
-        """Pretty-print tags.
 
-        :param list tags: tags
-        :param bool colour: toggle coloured display on/off
+def pprint_full_name(full_name):
+    """Pretty-print full name.
 
-        :returns: pretty-printed tags
-        :rtype: str
-        """
-        tags = sorted(list(tags))
-        if colour:
-            return "".join(
-                self.polychrome_template.tag.format(tag=tag) for tag in tags
-            )
-        else:
-            return "".join(
-                self.monochrome_template.tag.format(tag=tag) for tag in tags
-            )
+    :param FullName full_name: full name
 
-    def pprint_full_name(self, name, tags, colour=False):
-        """Pretty-print full name.
+    :returns: pretty-printed full name
+    :rtype: str
+    """
+    return TEMPLATE.full_name.format(
+        name=pprint_name(full_name.name), tags=pprint_tags(full_name.tags)
+    )
 
-        :param str name: name
-        :param list tags: tags
-        :param bool colour: toggle coloured display on/off
 
-        :returns: pretty-printed full name
-        :rtype: str
-        """
-        name = self.pprint_name(name, colour=colour)
-        tags = self.pprint_tags(tags, colour=colour)
-        return self.monochrome_template.full_name.format(name=name, tags=tags)
+def pprint_time_span(time_span, date=False):
+    """Pretty-print time span.
 
-    def pprint_time_span(self, time_span, date=False, colour=False):
-        """Pretty-print time span.
+    :param tuple time_span: time span
+    :param bool date: toggle displaying date on/off
 
-        :param tuple time_span: time span
-        :param bool date: toggle displaying date on/off
-        :param bool colour: toggle coloured display on/off
-
-        :returns: time span
-        :rtype: str
-        """
-        start, end = time_span
-        if date:
-            if (end - start).days >= 1:
-                start = start.strftime("%Y-%m-%d %H:%M")
-            else:
-                start = start.strftime("%H:%M")
-            end = end.strftime("%H:%M %Y-%m-%d")
+    :returns: time span
+    :rtype: str
+    """
+    start, end = time_span
+    if date:
+        if (end - start).days >= 1:
+            start = start.strftime("%Y-%m-%d %H:%M")
         else:
             start = start.strftime("%H:%M")
-            end = end.strftime("%H:%M")
-        if colour:
-            return self.polychrome_template.time_span.format(
-                start=start, end=end
-            )
-        else:
-            return self.monochrome_template.time_span.format(
-                start=start, end=end
-            )
+        end = end.strftime("%H:%M %Y-%m-%d")
+    else:
+        start = start.strftime("%H:%M")
+        end = end.strftime("%H:%M")
+    return TEMPLATE.time_span.format(start=start, end=end)
 
-    def pprint_total(self, total, colour=False):
-        """Pretty-print representation of total runtime.
 
-        :param int total: runtime (in seconds)
+def pprint_total(total):
+    """Pretty-print total runtime.
 
-        :returns: pretty-printed representation of total runtime
-        :rtype: str
-        """
-        minutes, seconds = divmod(total, 60)
-        hours, minutes = divmod(minutes, 60)
-        if colour:
-            return self.polychrome_template.total.format(
-                hours=hours, minutes=minutes
-            )
-        else:
-            return self.monochrome_template.total.format(
-                hours=hours, minutes=minutes
-            )
+    :param int total: runtime (in seconds)
 
-    def pprint_task(self, task, date=False, colour=False):
-        """Pretty-print representation of task.
+    :returns: pretty-printed representation of total runtime
+    :rtype: str
+    """
+    minutes, _ = divmod(total, 60)
+    hours, minutes = divmod(minutes, 60)
+    return TEMPLATE.total.format(hours=hours, minutes=minutes)
 
-        :param Task task: task
-        :param bool date: toggle displaying date on/off
-        :param bool colour: toggle coloured display on/off
 
-        :returns: pretty-printed representation of task
-        :rtype: str
-        """
-        full_name = self.pprint_full_name(
-            task.name, task.tags, colour=colour
+def pprint_task(task, date=False):
+    """Pretty-print task.
+
+    :param Task task: task
+    :param bool date: toggle displaying date on/off
+
+    :returns: pretty-printed task
+    :rtype: str
+    """
+    return TEMPLATE.task.format(
+        time_span=pprint_time_span(task.time_span, date=date),
+        total=pprint_total(task.total),
+        full_name=pprint_full_name(FullName(task.name, task.tags))
+    )
+
+
+def pprint_sum(full_name, total):
+    """Pretty-print sum of total runtime.
+
+    :param FullName full_name: full name
+    :param int total: runtime (in seconds)
+
+    :returns: pretty-printed total runtime
+    :rtype: str
+    """
+    return TEMPLATE.sum.format(
+        full_name=pprint_full_name(full_name), total=pprint_total(total)
+    )
+
+
+def pprint_prompt(task=None):
+    """Pretty-print prompt.
+
+    :param task: task
+    :type task: Task or None
+
+    :returns: pretty-printed prompt
+    :rtype: str
+    """
+    if task:
+        full_name = pprint_full_name(FullName(task.name, task.tags))
+        start, _ = task.time_span
+        start = start.strftime("%H:%M")
+        return TEMPLATE.prompt.format(
+            running=TEMPLATE.running.format(full_name=full_name, start=start)
         )
-        time_span = self.pprint_time_span(
-            task.time_span, date=date, colour=colour
-        )
-        total = self.pprint_total(task.total, colour=colour)
-        return self.monochrome_template.task.format(
-            time_span=time_span, total=total, full_name=full_name
-        )
-
-    def pprint_sum(self, full_name, total, colour=False):
-        """Pretty-print sum of total runtime.
-
-        :param tuple full_name: full name
-        :param int total: runtime (in seconds)
-        :param bool colour: toggle coloured display on/off
-
-        :returns: pretty-printed representation of total runtime
-        :rtype: str
-        """
-        full_name = self.pprint_full_name(*full_name, colour=colour)
-        total = self.pprint_total(total, colour=colour)
-        return self.monochrome_template.sum.format(
-            full_name=full_name, total=total
-        )
-
-    def pprint_prompt(self, task):
-        """Pretty-print prompt.
-
-        :param Task task: task
-
-        :returns: prompt
-        :rtype: str
-        """
-        if task.name:
-            full_name = self.pprint_full_name(
-                task.name, task.tags, colour=True
-            )
-            start, _ = task.time_span
-            start = start.strftime("%H:%M")
-            running = self.polychrome_template.running.format(
-                full_name=full_name, start=start
-            )
-        else:
-            running = ""
-        return self.monochrome_template.prompt.format(running=running)
-
-
-def pprint_prompt(*args, **kwargs):
-    """Pretty-print prompt."""
-    return ""
+    return TEMPLATE.prompt.format(running="")
