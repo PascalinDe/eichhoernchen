@@ -27,7 +27,28 @@ import argparse
 # third party imports
 
 # library specific imports
+import src.config
 import src.cshell
+
+
+def _load_config(path=""):
+    """Load configuration file.
+
+    :param str path: path to configuration file
+
+    :returns: configuration
+    :rtype: dict
+    """
+    if not path:
+        try:
+            src.config.create_config()
+        except src.config.ConfigFound:
+            pass
+        path = os.path.join(os.environ["HOME"], ".config/eichhoernchen.ini")
+    try:
+        return src.config.read_config(path)
+    except src.config.BadConfig as exception:
+        raise SystemExit(f"configuration file contains errors:\t{exception}")
 
 
 def main():
@@ -41,8 +62,9 @@ def main():
         "--version", action="version", version="%(prog)s 1.2"
     )
     args = parser.parse_args()
+    config = _load_config(args.config)
     try:
-        curses.wrapper(src.cshell.launch, {"path": "", "database": ""})
+        curses.wrapper(src.cshell.launch, config)
     except Exception as exception:
         print(exception)
 
