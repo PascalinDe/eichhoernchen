@@ -137,7 +137,7 @@ def _loop(window, config):
                         y += 1
                     else:
                         window.scroll()
-                    window.addnstr(y, 0, output, max_x)
+                    window.addnstr(y, 0, line, max_x)
             except Exception as exception:
                 window.addnstr(y, 0, str(exception), max_x)
             finally:
