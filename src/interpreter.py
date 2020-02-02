@@ -54,9 +54,14 @@ class Interpreter():
         """Initialize parser."""
         self._parser = argparse.ArgumentParser(prog="", add_help=False)
         subparsers = self._parser.add_subparsers()
+        args = {
+            "full_name": {"type": self.get_full_name, "metavar": "full name"},
+            "from_": {"type": self.get_from, "metavar": "from"},
+            "to": {"type": self.get_to}
+        }
         # 'start' command arguments parser
         parser_start = subparsers.add_parser("start", add_help=False)
-        parser_start.add_argument("full_name", type=self.get_full_name)
+        parser_start.add_argument("full_name", **args["full_name"])
         parser_start.set_defaults(
             func=self.timer.start, formatter=lambda *args, **kwargs: [""]
         )
@@ -67,13 +72,9 @@ class Interpreter():
         )
         # 'add' command arguments parser
         parser_add = subparsers.add_parser("add", add_help=False)
-        parser_add.add_argument(
-            "full_name", type=self.get_full_name, metavar="full name"
-        )
-        parser_add.add_argument(
-            "from_", type=self.get_from, metavar="from"
-        )
-        parser_add.add_argument("to", type=self.get_to)
+        parser_add.add_argument("full_name", **args["full_name"])
+        parser_add.add_argument("from_", **args["from_"])
+        parser_add.add_argument("to", **args["to"])
         parser_add.set_defaults(
             func=self.timer.add,
             formatter=lambda task: [
@@ -82,18 +83,15 @@ class Interpreter():
         )
         # 'remove' command arguments parser
         parser_remove = subparsers.add_parser("remove", add_help=False)
-        parser_remove.add_argument(
-            "full_name", type=self.get_full_name, metavar="full name"
-        )
+        parser_remove.add_argument("full_name", **args["full_name"])
         parser_remove.add_argument(
             "from_",
+            **args["from_"],
             nargs="?",
-            default="today",
-            type=self.get_from,
-            metavar="from"
+            default="today"
         )
         parser_remove.add_argument(
-            "to", nargs="?", default="today", type=self.get_to
+            "to", **args["to"], nargs="?", default="today"
         )
         parser_remove.set_defaults(
             func=lambda *args, **kwargs: "",
@@ -103,20 +101,18 @@ class Interpreter():
         parser_list = subparsers.add_parser("list", add_help=False)
         parser_list.add_argument(
             "full_name",
+            **args["full_name"],
             nargs="?",
-            default=FullName("", set()),
-            type=self.get_full_name,
-            metavar="full name"
+            default=FullName("", set())
         )
         parser_list.add_argument(
             "from_",
+            **args["from_"],
             nargs="?",
-            default="today",
-            type=self.get_from,
-            metavar="from"
+            default="today"
         )
         parser_list.add_argument(
-            "to", nargs="?", default="today", type=self.get_to
+            "to", **args["to"], nargs="?", default="today"
         )
         parser_list.set_defaults(
             func=self.timer.list_tasks,
@@ -127,18 +123,12 @@ class Interpreter():
         )
         # 'edit' command arguments parser
         parser_edit = subparsers.add_parser("edit", add_help=False)
+        parser_edit.add_argument("full_name", **args["full_name"])
         parser_edit.add_argument(
-            "full_name", type=self.get_full_name, metavar="full name"
+            "from_", **args["from_"], nargs="?", default="today"
         )
         parser_edit.add_argument(
-            "from_",
-            nargs="?",
-            default="today",
-            type=self.get_from,
-            metavar="from"
-        )
-        parser_edit.add_argument(
-            "to", nargs="?", default="today", type=self.get_to
+            "to", **args["to"], nargs="?", default="today"
         )
         parser_edit.set_defaults(
             func=lambda *args, **kwargs: "",
@@ -153,13 +143,12 @@ class Interpreter():
         )
         parser_sum.add_argument(
             "from_",
+            **args["from_"],
             nargs="?",
-            default="today",
-            type=self.get_from,
-            metavar="from"
+            default="today"
         )
         parser_sum.add_argument(
-            "to", nargs="?", default="today", type=self.get_to
+            "to", **args["to"], nargs="?", default="today"
         )
         parser_sum.set_defaults(
             func=lambda *args, **kwargs: "",
