@@ -77,18 +77,30 @@ class Interpreter():
             }
         }
         # 'start' command arguments parser
-        parser_start = subparsers.add_parser("start", add_help=False)
+        parser_start = subparsers.add_parser(
+            "start",
+            description="start task",
+            add_help=False
+        )
         parser_start.add_argument("full_name", **args["full_name"])
         parser_start.set_defaults(
             func=self.timer.start, formatter=lambda *args, **kwargs: [""]
         )
         # 'stop' command arguments parser
-        parser_stop = subparsers.add_parser("stop", add_help=False)
+        parser_stop = subparsers.add_parser(
+            "stop",
+            description="stop task",
+            add_help=False
+        )
         parser_stop.set_defaults(
             func=self.timer.stop, formatter=lambda *args, **kwargs: [""]
         )
         # 'add' command arguments parser
-        parser_add = subparsers.add_parser("add", add_help=False)
+        parser_add = subparsers.add_parser(
+            "add",
+            description="add task",
+            add_help=False
+        )
         parser_add.add_argument("full_name", **args["full_name"])
         parser_add.add_argument("from_", **args["from_"])
         parser_add.add_argument("to", **args["to"])
@@ -99,7 +111,11 @@ class Interpreter():
             ]
         )
         # 'remove' command arguments parser
-        parser_remove = subparsers.add_parser("remove", add_help=False)
+        parser_remove = subparsers.add_parser(
+            "remove",
+            description="remove task",
+            add_help=False
+        )
         parser_remove.add_argument("full_name", **args["full_name"])
         parser_remove.add_argument(
             "from_",
@@ -115,7 +131,11 @@ class Interpreter():
             formatter=lambda *args, **kwargs: [""]
         )
         # 'list' command arguments parser
-        parser_list = subparsers.add_parser("list", add_help=False)
+        parser_list = subparsers.add_parser(
+            "list",
+            description="list tasks",
+            add_help=False
+        )
         parser_list.add_argument(
             "full_name",
             **args["full_name"],
@@ -139,7 +159,11 @@ class Interpreter():
             ]
         )
         # 'edit' command arguments parser
-        parser_edit = subparsers.add_parser("edit", add_help=False)
+        parser_edit = subparsers.add_parser(
+            "edit",
+            description="edit task",
+            add_help=False
+        )
         parser_edit.add_argument("full_name", **args["full_name"])
         parser_edit.add_argument(
             "from_", **args["from_"], nargs="?", default="today"
@@ -154,7 +178,11 @@ class Interpreter():
             ]
         )
         # 'sum' command arguments parser
-        parser_sum = subparsers.add_parser("sum", add_help=False)
+        parser_sum = subparsers.add_parser(
+            "sum",
+            description="sum up total time",
+            add_help=False
+        )
         parser_sum.add_argument(
             "summand",
             default="full name",
@@ -175,7 +203,11 @@ class Interpreter():
             formatter=lambda *args, **kwargs: [""]
         )
         # 'help' command arguments parser
-        parser_help = subparsers.add_parser("help", add_help=False)
+        parser_help = subparsers.add_parser(
+            "help",
+            description="show help",
+            add_help=False
+        )
         progs = {
             subparser.prog.strip(): subparser
             for subparser in (
