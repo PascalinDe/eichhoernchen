@@ -159,12 +159,9 @@ class Interpreter():
         )
         # 'help' command arguments parser
         parser_help = subparsers.add_parser("help", add_help=False)
-        parser_help.set_defaults(
-            func=lambda *args, **kwargs: "",
-            formatter=lambda *args, **kwargs: [""]
-        )
-        progs = (
-            subparser.prog.strip() for subparser in (
+        progs = {
+            subparser.prog.strip(): subparser
+            for subparser in (
                 parser_start,
                 parser_stop,
                 parser_add,
@@ -174,8 +171,17 @@ class Interpreter():
                 parser_sum,
                 parser_help
             )
+        }
+        parser_help.add_argument(
+            "command", nargs="?", choices=tuple(progs.keys())
         )
-        self._parser.usage = f"<{'|'.join(progs)}> <arg>..."
+        parser_help.set_defaults(
+            func=lambda command: command or "",
+            formatter=lambda command: [
+                *progs[command].format_help().split("\n")
+            ] if command else [*self._parser.format_usage().split("\n")]
+        )
+        self._parser.usage = f"<{'|'.join(progs.keys())}> <arg>..."
 
     def interpret_line(self, line):
         """Interpret line.
