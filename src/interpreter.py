@@ -131,7 +131,11 @@ class Interpreter():
             "full_name", type=self.get_full_name, metavar="full name"
         )
         parser_edit.add_argument(
-            "from", nargs="?", default="today", type=self.get_from
+            "from_",
+            nargs="?",
+            default="today",
+            type=self.get_from,
+            metavar="from"
         )
         parser_edit.add_argument(
             "to", nargs="?", default="today", type=self.get_to
@@ -148,7 +152,11 @@ class Interpreter():
             "summand", default="full name", type=self.get_summand
         )
         parser_sum.add_argument(
-            "from", nargs="?", default="today", type=self.get_from
+            "from_",
+            nargs="?",
+            default="today",
+            type=self.get_from,
+            metavar="from"
         )
         parser_sum.add_argument(
             "to", nargs="?", default="today", type=self.get_to
