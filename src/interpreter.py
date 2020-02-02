@@ -55,9 +55,26 @@ class Interpreter():
         self._parser = argparse.ArgumentParser(prog="", add_help=False)
         subparsers = self._parser.add_subparsers()
         args = {
-            "full_name": {"type": self.get_full_name, "metavar": "full name"},
-            "from_": {"type": self.get_from, "metavar": "from"},
-            "to": {"type": self.get_to}
+            "full_name": {
+                "type": self.get_full_name,
+                "help": "name followed by 0 or more tags, e.g. foo[bar]",
+                "metavar": "full name"
+            },
+            "from_": {
+                "type": self.get_from,
+                "help": (
+                    "@([YYYY-MM-DD] [hh:mm]|"
+                    "{all,year,month,week,yesterday,today})"
+                ),
+                "metavar": "from"
+            },
+            "to": {
+                "type": self.get_to,
+                "help": (
+                    "@([YYYY-MM-DD] [hh:mm]|"
+                    "{year,month,week,yesterday,today})"
+                )
+            }
         }
         # 'start' command arguments parser
         parser_start = subparsers.add_parser("start", add_help=False)
@@ -139,7 +156,10 @@ class Interpreter():
         # 'sum' command arguments parser
         parser_sum = subparsers.add_parser("sum", add_help=False)
         parser_sum.add_argument(
-            "summand", default="full name", type=self.get_summand
+            "summand",
+            default="full name",
+            type=self.get_summand,
+            help="{full name,name,tag}"
         )
         parser_sum.add_argument(
             "from_",
