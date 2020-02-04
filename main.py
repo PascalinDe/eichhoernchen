@@ -21,6 +21,7 @@
 
 
 # standard library imports
+import os
 import curses
 import argparse
 
