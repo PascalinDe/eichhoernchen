@@ -27,12 +27,6 @@ import os.path
 
 # third party imports
 # library specific imports
-import src.colour
-
-
-COLOUR_SCHEMES = {
-    "GrmlVCSLike": src.colour.GrmlVCSLikeColourScheme
-}
 
 
 class ConfigFound(Exception):
@@ -61,8 +55,7 @@ def create_config(force=False):
         config = configparser.ConfigParser()
         config["DEFAULT"] = {
             "database": "eichhoernchen.db",
-            "path": os.path.join(os.environ["HOME"], ".local/share"),
-            "colour_scheme": "GrmlVCSLike"
+            "path": os.path.join(os.environ["HOME"], ".local/share")
         }
         config["CUSTOM"] = {}
         with open(path, "w") as fp:
@@ -76,15 +69,11 @@ def validate_config(config):
 
     :raises: BadConfig when required keys are missing
     """
-    required = {"database", "path", "colour_scheme"}
+    required = {"database", "path"}
     missing = required.difference(set(config.keys()))
     if missing:
         missing = ", ".join(f"'{key}'" for key in missing)
         raise BadConfig(f"required keys {missing} are missing")
-    try:
-        COLOUR_SCHEMES[config["colour_scheme"]]
-    except KeyError:
-        raise BadConfig(f"unknown colour scheme '{config['colour_scheme']}'")
 
 
 def read_config(path):
@@ -102,5 +91,4 @@ def read_config(path):
         config.read(path)
     config = dict(config["CUSTOM"])
     validate_config(config)
-    config["colour_scheme"] = COLOUR_SCHEMES[config["colour_scheme"]]
     return config
