@@ -230,7 +230,6 @@ class Interpreter():
                 *progs[command].format_help().split("\n")
             ] if command else [*self._parser.format_usage().split("\n")]
         )
-        self._parser.usage = f"<{'|'.join(progs.keys())}> <arg>..."
 
     def interpret_line(self, line):
         """Interpret line.
