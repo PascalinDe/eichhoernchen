@@ -84,7 +84,7 @@ class Interpreter():
         )
         parser_start.add_argument("full_name", **args["full_name"])
         parser_start.set_defaults(
-            func=self.timer.start, formatter=lambda *args, **kwargs: [""]
+            func=self.timer.start, formatter=lambda *args, **kwargs: []
         )
         # 'stop' command arguments parser
         parser_stop = subparsers.add_parser(
@@ -93,7 +93,7 @@ class Interpreter():
             add_help=False
         )
         parser_stop.set_defaults(
-            func=self.timer.stop, formatter=lambda *args, **kwargs: [""]
+            func=self.timer.stop, formatter=lambda *args, **kwargs: []
         )
         # 'add' command arguments parser
         parser_add = subparsers.add_parser(
@@ -128,7 +128,7 @@ class Interpreter():
         )
         parser_remove.set_defaults(
             func=lambda *args, **kwargs: "",
-            formatter=lambda *args, **kwargs: [""]
+            formatter=lambda *args, **kwargs: []
         )
         # 'list' command arguments parser
         parser_list = subparsers.add_parser(
@@ -200,7 +200,7 @@ class Interpreter():
         )
         parser_sum.set_defaults(
             func=lambda *args, **kwargs: "",
-            formatter=lambda *args, **kwargs: [""]
+            formatter=lambda *args, **kwargs: []
         )
         # 'help' command arguments parser
         parser_help = subparsers.add_parser(
