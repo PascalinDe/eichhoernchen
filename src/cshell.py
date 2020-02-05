@@ -120,7 +120,9 @@ def _loop(window, config):
     )
     while True:
         try:
-            prompt = src.output_formatter.pprint_prompt(task=None)
+            prompt = src.output_formatter.pprint_prompt(
+                task=interpreter.timer.task
+            )
             window.addnstr(y, 0, prompt, max_x)
             window.move(y, len(prompt)+1)
             line = _readline(window)

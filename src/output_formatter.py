@@ -23,7 +23,7 @@
 # standard library imports
 # third party imports
 # library specific imports
-from src import FullName
+from src import FullName, Task
 from src.template import Template
 
 
@@ -130,16 +130,15 @@ def pprint_sum(full_name, total):
     )
 
 
-def pprint_prompt(task=None):
+def pprint_prompt(task=Task("", set(), ())):
     """Pretty-print prompt.
 
-    :param task: task
-    :type task: Task or None
+    :param Task task: task
 
     :returns: pretty-printed prompt
     :rtype: str
     """
-    if task:
+    if task.name:
         full_name = pprint_full_name(FullName(task.name, task.tags))
         start, _ = task.time_span
         start = start.strftime("%H:%M")
