@@ -57,11 +57,10 @@ class Timer():
         """Replace current task."""
         self._reset_task(task=self.task._replace(**kwargs))
 
-    def start(self, task, tags=set()):
+    def start(self, full_name):
         """Start task.
 
-        :param str task: task
-        :param list tags: tags
+        :param FullName full_name: full name
         """
         start = datetime.datetime.now()
         connection = self.sqlite.connect()
@@ -71,13 +70,17 @@ class Timer():
         connection.execute(sql, (start,))
         connection.commit()
         sql = "INSERT INTO running (name,start) VALUES (?,?)"
-        connection.execute(sql, (task, start))
+        connection.execute(sql, (full_name.name, start))
         connection.commit()
-        if tags:
+        if full_name.tags:
             sql = "INSERT INTO tagged (tag,start) VALUES (?,?)"
-            connection.executemany(sql, [(tag, start) for tag in tags])
+            connection.executemany(
+                sql, [(tag, start) for tag in full_name.tags]
+            )
             connection.commit()
-        self._reset_task(task=src.Task(task, tags, (start, None)))
+        self._reset_task(
+            task=src.Task(full_name.name, full_name.tags, (start, None))
+        )
 
     def stop(self):
         """Stop task."""

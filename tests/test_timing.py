@@ -54,9 +54,9 @@ class TestTiming(unittest.TestCase):
         """
         timer = src.timing.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
-        name = "foo"
-        timer.start(name)
-        self.assertEqual(timer.task.name, name)
+        full_name = FullName("foo", set())
+        timer.start(full_name)
+        self.assertEqual(timer.task.name, full_name.name)
         rows = connection.execute(
             "SELECT start,end FROM time_span WHERE start = ?",
             (timer.task.time_span[0],)
@@ -70,7 +70,7 @@ class TestTiming(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         name = rows[0][0]
         self.assertEqual(time_span, timer.task.time_span)
-        self.assertEqual(name, timer.task.name)
+        self.assertEqual(full_name.name, timer.task.name)
 
     def test_start_tagged(self):
         """Test starting task.
@@ -81,10 +81,9 @@ class TestTiming(unittest.TestCase):
         """
         timer = src.timing.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
-        name = "foo"
-        tags = {"bar"}
-        timer.start(name, tags=tags)
-        self.assertEqual(timer.task.tags, tags)
+        full_name = FullName("foo", {"bar"})
+        timer.start(full_name)
+        self.assertEqual(timer.task.tags, full_name.tags)
         rows = connection.execute(
             "SELECT tag FROM tagged WHERE start = ?",
             (timer.task.time_span[0],)
@@ -100,7 +99,7 @@ class TestTiming(unittest.TestCase):
         Expecting: Warning
         """
         timer = src.timing.Timer(self.DATABASE)
-        timer.start("foo")
+        timer.start(FullName("foo", set()))
         with self.assertRaises(Warning):
             timer.start("bar")
 
@@ -112,14 +111,14 @@ class TestTiming(unittest.TestCase):
         """
         timer = src.timing.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
-        name = "foo"
-        timer.start(name)
+        full_name = FullName("foo", set())
+        timer.start(full_name)
         timer.stop()
         rows = connection.execute(
             """SELECT time_span.start,end
             FROM time_span JOIN running ON time_span.start=running.start
             WHERE name=?""",
-            (name,)
+            (full_name.name,)
         ).fetchall()
         self.assertEqual(len(rows), 1)
         start, end = rows.pop(0)
@@ -714,7 +713,7 @@ class TestTiming(unittest.TestCase):
         Expecting: ValueError
         """
         timer = src.timing.Timer(self.DATABASE)
-        timer.start("foo")
+        timer.start(FullName("foo", set()))
         now = datetime.datetime.now()
         with self.assertRaises(ValueError):
             timer.edit(timer.task, "start", now)
@@ -726,7 +725,7 @@ class TestTiming(unittest.TestCase):
         Expecting: task is removed
         """
         timer = src.timing.Timer(self.DATABASE)
-        timer.start("foo")
+        timer.start(FullName("foo", set()))
         task = timer.task
         start, _ = task.time_span
         timer.stop()
@@ -748,7 +747,7 @@ class TestTiming(unittest.TestCase):
         Expecting: ValueError
         """
         timer = src.timing.Timer(self.DATABASE)
-        timer.start("foo")
+        timer.start(FullName("foo", set()))
         with self.assertRaises(ValueError):
             timer.remove(timer.task)
 
@@ -780,7 +779,7 @@ class TestTiming(unittest.TestCase):
         Expecting: ValueError
         """
         timer = src.timing.Timer(self.DATABASE)
-        timer.start("foo")
+        timer.start(FullName("foo", set()))
         start, _ = timer.task.time_span
         end = datetime.timedelta(days=1)
         task = Task("bar", set(), (start, end))
