@@ -283,7 +283,7 @@ class Interpreter():
             if format_string == "%H:%M":
                 now = datetime.datetime.now()
                 args = f"{now.year}-{now.month}-{now.day} {args}"
-                break
+            break
         else:
             raise ValueError(f"time data {args} does not match any format")
         return args
