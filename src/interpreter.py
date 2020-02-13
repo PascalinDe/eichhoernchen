@@ -74,6 +74,14 @@ class Interpreter():
                     "@([YYYY-MM-DD] [hh:mm]|"
                     "{year,month,week,yesterday,today})"
                 )
+            },
+            "start": {
+                "type": self.get_end_point,
+                "help": "@YYYY-MM-DD[ hh:mm]"
+            },
+            "end": {
+                "type": self.get_end_point,
+                "help": "@YYYY-MM-DD[ hh:mm]"
             }
         }
         # 'start' command arguments parser
@@ -102,8 +110,8 @@ class Interpreter():
             add_help=False
         )
         parser_add.add_argument("full_name", **args["full_name"])
-        parser_add.add_argument("from_", **args["from_"])
-        parser_add.add_argument("to", **args["to"])
+        parser_add.add_argument("start", **args["start"])
+        parser_add.add_argument("end", **args["end"])
         parser_add.set_defaults(
             func=self.timer.add,
             formatter=lambda task: [
@@ -117,15 +125,8 @@ class Interpreter():
             add_help=False
         )
         parser_remove.add_argument("full_name", **args["full_name"])
-        parser_remove.add_argument(
-            "from_",
-            **args["from_"],
-            nargs="?",
-            default="today"
-        )
-        parser_remove.add_argument(
-            "to", **args["to"], nargs="?", default="today"
-        )
+        parser_remove.add_argument("start", **args["start"])
+        parser_remove.add_argument("end", **args["end"])
         parser_remove.set_defaults(
             func=lambda *args, **kwargs: "",
             formatter=lambda *args, **kwargs: []
@@ -323,6 +324,21 @@ class Interpreter():
         except ValueError:
             raise argparse.ArgumentTypeError(
                 f"'{args}' is not ISO 8601 string or time period keyword"
+            )
+
+    def get_end_point(self, args):
+        """Get end point.
+
+        :param str args: command-line arguments
+
+        :returns: end point
+        :rtype: datetime
+        """
+        try:
+            return self.get_time(args)
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                f"'{args}' is not ISO 8601 string"
             )
 
     def get_tags(self, args):
