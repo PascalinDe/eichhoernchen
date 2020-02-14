@@ -125,8 +125,15 @@ class Interpreter():
             add_help=False
         )
         parser_remove.add_argument("full_name", **args["full_name"])
-        parser_remove.add_argument("start", **args["start"])
-        parser_remove.add_argument("end", **args["end"])
+        parser_remove.add_argument(
+            "from_",
+            **args["from_"],
+            nargs="?",
+            default="today"
+        )
+        parser_remove.add_argument(
+            "to", **args["to"], nargs="?", default="today"
+        )
         parser_remove.set_defaults(
             func=lambda *args, **kwargs: "",
             formatter=lambda *args, **kwargs: []
