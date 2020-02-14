@@ -759,10 +759,17 @@ class TestTiming(unittest.TestCase):
         """
         timer = src.timing.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
-        start = datetime.datetime.now()
+        start = datetime.datetime.strptime(
+            datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "%Y-%m-%d %H:%M"
+        )
         end = start + datetime.timedelta(days=1)
         task = Task("foo", set(), (start, end))
-        timer.add(task)
+        timer.add(
+            full_name=FullName("foo", set()),
+            start=start.strftime("%Y-%m-%d %H:%M"),
+            end=end.strftime("%Y-%m-%d %H:%M")
+        )
         rows = connection.execute(
             "SELECT 1 FROM time_span WHERE start=?", (start,)
         ).fetchall()
