@@ -167,22 +167,16 @@ class Timer():
             tasks.append(Task(name, tags, (start, end)))
         return tasks
 
-    def sum_total(
-            self, full_name=True, name=False, tag=False,
-            from_="today", to="today"
-    ):
+    def sum_total(self, summand="full name", from_="today", to="today"):
         """Sum total time up.
 
-        :param bool full_name: toggle summing total time (full name) on/off
-        :param bool name: toggle summing total time (name) on/off
-        :param bool tag: toggle summing total time (tag) on/off
+        :param str summand: summand
         :param str from_: start of time period
         :param str to: end of time period
         """
-        if not any((full_name, name, tag)):
-            raise ValueError(
-                "neither full name nor name nor tag toggle is on"
-            )
+        full_name = summand == "full name"
+        name = summand == "name"
+        tag = summand == "tag"
         sum_total = collections.defaultdict(int)
         for task in self.list_tasks(from_=from_, to=to):
             start, end = task.time_span

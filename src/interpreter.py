@@ -193,9 +193,7 @@ class Interpreter():
         )
         parser_sum.add_argument(
             "summand",
-            default="full name",
-            type=self.get_summand,
-            help="{full name,name,tag}"
+            choices=("full name", "name", "tag")
         )
         parser_sum.add_argument(
             "from_",
@@ -207,8 +205,11 @@ class Interpreter():
             "to", **args["to"], nargs="?", default="today"
         )
         parser_sum.set_defaults(
-            func=lambda *args, **kwargs: "",
-            formatter=lambda *args, **kwargs: []
+            func=self.timer.sum_total,
+            formatter=lambda sums: [
+                src.output_formatter.pprint_sum(FullName(*full_name), total)
+                for full_name, total in sums
+            ]
         )
         # 'help' command arguments parser
         parser_help = subparsers.add_parser(
@@ -392,18 +393,3 @@ class Interpreter():
         except argparse.ArgumentTypeError:
             tags = set()
         return FullName(name, tags)
-
-    def get_summand(self, args):
-        """Get summand.
-
-        :param str args: command-line arguments
-
-        :returns: summand
-        :rtype: str
-        """
-        pattern = re.compile(r"full name|name|tag")
-        match = pattern.match(args)
-        if match:
-            args = pattern.sub("", args).strip()
-            return match.group(0)
-        raise argparse.ArgumentTypeError(f"'{args}' is not summand")
