@@ -22,10 +22,11 @@
 
 # standard library imports
 import time
-import curses
 import unicodedata
 import os
 import os.path
+import curses
+import curses.panel
 
 # third party imports
 # library specific imports
@@ -33,6 +34,35 @@ import src.interpreter
 import src.output_formatter
 
 BANNER = "Welcome to Eichhörnchen.\tType help or ? to list commands."
+
+
+def _get_window_pos(max_y, max_x):
+    """Get secondary window position.
+
+    :param int max_y: maximum y position
+    :param int max_x: maximum x position
+
+    :returns: number of lines, number of columns and y, x position
+    :rtype: int, int, int and int
+    """
+    nlines = max_y//2
+    ncols = max_x//2
+    begin_y = (max_y-nlines)//2
+    begin_x = (max_x-ncols)//2
+    return nlines, ncols, begin_y, begin_x
+
+
+def _resize_panel(max_y, max_x):
+    """Resize secondary panel.
+
+    :param int max_y: maximum y position
+    :param int max_x: maximum x postition
+    """
+    panel = curses.panel.bottom_panel()
+    window = panel.window()
+    nlines, ncols, begin_y, begin_x = _get_window_pos(max_y, max_x)
+    window.resize(nlines, ncols)
+    panel.move(begin_y, begin_x)
 
 
 def _readline(window):
@@ -51,7 +81,8 @@ def _readline(window):
         y, x = window.getyx()
         char = window.get_wch()
         if char == curses.KEY_RESIZE:
-            _, max_x = window.getmaxyx()
+            max_y, max_x = window.getmaxyx()
+            _resize_panel(max_y, max_x)
             continue
         if char in (curses.KEY_ENTER, os.linesep):
             break
@@ -107,12 +138,37 @@ def _readline(window):
     return "".join(buffer).strip()
 
 
-def _loop(window, config):
+def _mk_panel(nlines, ncols, begin_y, begin_x):
+    """Make panel.
+
+    :param int nlines: number of lines
+    :param int ncols: number of columns
+    :param int begin_y: y position of window
+    :param int begin_x: x position of window
+
+    :returns: panel
+    :rtype: panel
+    """
+    window = curses.newwin(nlines, ncols, begin_y, begin_x)
+    _init(window)
+    panel = curses.panel.new_panel(window)
+    return panel
+
+
+def _loop(stdscr, config):
     """Loop through user interaction.
 
-    :param window window: window
+    :param window stdscr: window
     :param dict config: configuration
     """
+    max_y, max_x = stdscr.getmaxyx()
+    nlines, ncols, begin_y, begin_x = _get_window_pos(max_y, max_x)
+    subpanel = _mk_panel(nlines, ncols, begin_y, begin_x)
+    panel = _mk_panel(max_y, max_x, 0, 0)
+    window = panel.window()
+    window.addstr(0, 0, BANNER)
+    curses.panel.update_panels()
+    curses.doupdate()
     y = 2
     max_y, max_x = window.getmaxyx()
     interpreter = src.interpreter.Interpreter(
@@ -168,8 +224,6 @@ def _init(window):
     window.idlok(True)
     window.keypad(True)
     window.scrollok(True)
-    window.addstr(0, 0, BANNER)
-    window.refresh()
 
 
 def launch(window, config):
