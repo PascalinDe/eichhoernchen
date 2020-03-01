@@ -136,8 +136,8 @@ class Interpreter():
             "to", **args["to"], nargs="?", default="today"
         )
         parser_remove.set_defaults(
-            func=lambda *args, **kwargs: "",
-            formatter=lambda *args, **kwargs: []
+            func=self.remove,
+            formatter=lambda line: [line]
         )
         # 'list' command arguments parser
         parser_list = subparsers.add_parser(
@@ -436,3 +436,19 @@ class Interpreter():
         curses.panel.update_panels()
         curses.doupdate()
         return int(char)-1
+
+    def remove(self, full_name=FullName("", set()), from_="today", to="today"):
+        """Choose task to remove.
+
+        :param FullName full_name: full name
+        :param str from_: from
+        :param str to: to
+        """
+        tasks = self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
+        if not tasks:
+            return "no task"
+        choices = [src.output_formatter.pprint_task(task) for task in tasks]
+        i = self.display_choices(choices)
+        task = tasks[i]
+        self.timer.remove(task)
+        return f"removed {choices[i]}"
