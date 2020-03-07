@@ -24,7 +24,6 @@
 import re
 import argparse
 import datetime
-import curses.panel
 from io import StringIO
 from contextlib import redirect_stderr
 
@@ -32,6 +31,7 @@ from contextlib import redirect_stderr
 # library specific imports
 import src.timing
 from src import FullName
+from src.cutils import display_choices
 
 
 class InterpreterError(Exception):
@@ -259,7 +259,7 @@ class Interpreter():
             fp = StringIO()
             with redirect_stderr(fp):
                 args = self._parser.parse_args(args)
-        except SystemExit as exception:
+        except SystemExit:
             fp.seek(0)
             raise InterpreterError(
                 "\t".join(line.strip() for line in fp.readlines())
@@ -395,48 +395,6 @@ class Interpreter():
             tags = set()
         return FullName(name, tags)
 
-    def display_choices(self, choices):
-        """Display choices.
-
-        :param list choices: choices
-
-        :returns: choice
-        :rtype: int
-        """
-        if len(choices) == 1:
-            return 0
-        panel = curses.panel.bottom_panel()
-        window = panel.window()
-        panel.top()
-        curses.panel.update_panels()
-        curses.doupdate()
-        window.clear()
-        window.box()
-        y, _ = window.getyx()
-        y += 1
-        x = 1
-        max_y, max_x = window.getmaxyx()
-        window.addnstr(y, x, f"Pick choice 1...{len(choices)}.", max_x)
-        if y < max_y-1:
-            y += 1
-        else:
-            window.scroll()
-        for i, choice in enumerate(choices, start=1):
-            window.addnstr(y, x, f"{i}: {choice}", max_x)
-            y, _ = window.getyx()
-            if y < max_y-1:
-                y += 1
-            else:
-                window.scroll()
-        char = ""
-        while char not in (str(i) for i in range(1, len(choices)+1)):
-            char = window.get_wch()
-        window.clear()
-        panel.bottom()
-        curses.panel.update_panels()
-        curses.doupdate()
-        return int(char)-1
-
     def remove(self, full_name=FullName("", set()), from_="today", to="today"):
         """Choose task to remove.
 
@@ -448,7 +406,7 @@ class Interpreter():
         if not tasks:
             return "no task"
         choices = [src.output_formatter.pprint_task(task) for task in tasks]
-        i = self.display_choices(choices)
+        i = display_choices(choices)
         task = tasks[i]
         self.timer.remove(task)
         return f"removed {choices[i]}"
