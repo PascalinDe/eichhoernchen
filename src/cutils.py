@@ -104,8 +104,9 @@ def readline(window, prompt="", x=-1, y=-1):
                 continue
         if char == curses.KEY_RIGHT:
             if x < max_x-1:
-                i += 1
-                window.move(y, x+1)
+                if i < len(buffer):
+                    i += 1
+                    window.move(y, x+1)
                 continue
             if i < len(buffer)-1:
                 window.delch(y, min_x)
