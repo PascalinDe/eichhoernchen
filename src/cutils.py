@@ -59,9 +59,10 @@ def resize_panel(max_y, max_x):
     panel.move(begin_y, begin_x)
 
 
-def readline(window, prompt="", x=-1, y=-1):
+def readline(window, boxed=False, prompt="", x=-1, y=-1):
     """Read line.
 
+    :param bool boxed: a box is drawn around the edges of the window
     :param window: window
 
     :returns: line
@@ -77,6 +78,10 @@ def readline(window, prompt="", x=-1, y=-1):
     window.move(y, x)
     _, min_x = window.getyx()
     _, max_x = window.getmaxyx()
+    if boxed:
+        min_x += 1
+        x += 1
+        max_x -= 1
     if prompt:
         window.addnstr(y, x, prompt, max_x)
     min_x += len(prompt)
@@ -141,6 +146,8 @@ def readline(window, prompt="", x=-1, y=-1):
             window.move(y, x-1)
         window.insch(char)
         window.move(y, x)
+        if boxed:
+            window.box()
     return "".join(buffer).strip()
 
 
