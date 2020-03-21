@@ -31,7 +31,7 @@ from contextlib import redirect_stderr
 # library specific imports
 import src.timing
 from src import FullName
-from src.cutils import display_choices
+from src.cutils import display_choices, mv_back, mv_front, readline
 
 
 class InterpreterError(Exception):
@@ -181,9 +181,9 @@ class Interpreter():
             "to", **args["to"], nargs="?", default="today"
         )
         parser_edit.set_defaults(
-            func=lambda *args, **kwargs: "",
+            func=self.edit,
             formatter=lambda task: [
-                self.output_formatter.pprint_task(task=task)
+                src.output_formatter.pprint_task(task=task)
             ]
         )
         # 'sum' command arguments parser
@@ -410,3 +410,25 @@ class Interpreter():
         task = tasks[i]
         self.timer.remove(task)
         return f"removed {choices[i]}"
+
+    def edit(self, full_name=FullName("", set()), from_="today", to="today"):
+        """Choose task to edit.
+
+        :param FullName full_name: full name
+        :param str from_: from
+        :param str to: to
+        """
+        tasks = self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
+        if not tasks:
+            return "no task"
+        choices = [src.output_formatter.pprint_task(task) for task in tasks]
+        i = display_choices(choices)
+        task = tasks[i]
+        actions = ("name", "tags", "start", "end")
+        j = display_choices(actions)
+        action = actions[j]
+        window = mv_front()
+        window.box()
+        line = readline(window, boxed=True, prompt=f"new {action} >", y=1)
+        mv_back()
+        return self.timer.edit(task, action, line)
