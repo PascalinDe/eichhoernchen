@@ -31,7 +31,7 @@ import curses.panel
 # library specific imports
 import src.interpreter
 import src.output_formatter
-from src.cutils import get_window_pos, init, mk_panel, readline
+from src.cutils import get_window_pos, init, init_color, mk_panel, readline
 
 BANNER = "Welcome to Eichhörnchen.\tType help or ? to list commands."
 
@@ -104,5 +104,7 @@ def launch(window, config):
     """
     curses.start_color()
     curses.cbreak()
+    curses.use_default_colors()
     init(window)
+    init_color()
     _loop(window, config)

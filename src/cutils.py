@@ -227,6 +227,14 @@ def display_choices(choices):
     return int(char)-1
 
 
+def init_color():
+    """Initialize colours."""
+    curses.init_pair(1, 2, -1)      # name
+    curses.init_pair(2, 8, -1)      # tags
+    curses.init_pair(3, 5, -1)      # time span
+    curses.init_pair(4, 11, -1)     # total
+
+
 def init(window):
     """Initialize shell.
 
