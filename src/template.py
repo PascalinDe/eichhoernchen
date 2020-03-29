@@ -41,10 +41,6 @@ class Template():
         return self.base_template.format(template="[{tag}]")
 
     @property
-    def full_name(self):
-        return self.base_template.format(template="{name}{tags}")
-
-    @property
     def time_span(self):
         return self.base_template.format(template="{start}-{end}")
 
@@ -53,19 +49,5 @@ class Template():
         return self.base_template.format(template="{hours}h{minutes}m")
 
     @property
-    def task(self):
-        return self.base_template.format(
-            template="{time_span} ({total}) {full_name}"
-        )
-
-    @property
-    def sum(self):
-        return self.base_template.format(template="{full_name} {total}")
-
-    @property
-    def running(self):
-        return self.base_template.format(template="{full_name}({start}-)")
-
-    @property
     def prompt(self):
-        return self.base_template.format(template="{running}~>")
+        return self.base_template.format(template="~>")

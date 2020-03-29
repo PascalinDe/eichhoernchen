@@ -151,6 +151,20 @@ def readline(window, boxed=False, prompt="", x=-1, y=-1):
     return "".join(buffer).strip()
 
 
+def writeline(window, y, x, multi_part_line, n):
+    """Write multi-part line.
+
+    :param window: window
+    :param int y: y
+    :param int x: x
+    :param tuple multi_part_line: multi-part line
+    :param int n: maximum number of characters
+    """
+    for line, attr in multi_part_line:
+        window.addnstr(y, x, line, n, attr)
+        x += len(line)
+
+
 def mk_panel(nlines, ncols, begin_y, begin_x):
     """Make panel.
 

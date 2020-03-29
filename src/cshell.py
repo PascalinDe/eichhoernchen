@@ -31,7 +31,9 @@ import curses.panel
 # library specific imports
 import src.interpreter
 import src.output_formatter
-from src.cutils import get_window_pos, init, init_color, mk_panel, readline
+
+from src.cutils import (get_window_pos, init, init_color, mk_panel, readline,
+                        writeline)
 
 BANNER = "Welcome to Eichhörnchen.\tType help or ? to list commands."
 
@@ -60,8 +62,7 @@ def _loop(stdscr, config):
             prompt = src.output_formatter.pprint_prompt(
                 task=interpreter.timer.task
             )
-            window.addnstr(y, 0, prompt, max_x)
-            window.move(y, len(prompt)+1)
+            writeline(window, y, 0, prompt, max_x)
             line = readline(window)
             if not line:
                 if y < max_y-1:
@@ -76,7 +77,7 @@ def _loop(stdscr, config):
                         y += 1
                     else:
                         window.scroll()
-                    window.addnstr(y, 0, line, max_x)
+                    writeline(window, y, 0, line, max_x)
             except Exception as exception:
                 window.addnstr(y, 0, str(exception), max_x)
             finally:
