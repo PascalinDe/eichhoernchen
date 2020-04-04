@@ -83,7 +83,7 @@ def readline(window, boxed=False, prompt="", x=-1, y=-1):
         x += 1
         max_x -= 1
     if prompt:
-        window.addnstr(y, x, prompt, max_x)
+        window.addstr(y, x, prompt)
     min_x += len(prompt)
     i = 0
     buffer = []
@@ -151,17 +151,16 @@ def readline(window, boxed=False, prompt="", x=-1, y=-1):
     return "".join(buffer).strip()
 
 
-def writeline(window, y, x, multi_part_line, n):
+def writeline(window, y, x, multi_part_line):
     """Write multi-part line.
 
     :param window: window
     :param int y: y
     :param int x: x
     :param tuple multi_part_line: multi-part line
-    :param int n: maximum number of characters
     """
     for line, attr in multi_part_line:
-        window.addnstr(y, x, line, n, attr)
+        window.addstr(y, x, line, attr)
         x += len(line)
 
 
@@ -221,13 +220,13 @@ def display_choices(choices):
     y += 1
     x = 1
     max_y, max_x = window.getmaxyx()
-    window.addnstr(y, x, f"Pick choice 1...{len(choices)}.", max_x)
+    window.addstr(y, x, f"Pick choice 1...{len(choices)}.")
     if y < max_y-1:
         y += 1
     else:
         window.scroll()
     for i, choice in enumerate(choices, start=1):
-        window.addnstr(y, x, f"{i}: {choice}", max_x)
+        window.addstr(y, x, f"{i}: {choice}")
         y, _ = window.getyx()
         if y < max_y-1:
             y += 1
@@ -247,6 +246,7 @@ def init_color():
     curses.init_pair(2, 8, -1)      # tags
     curses.init_pair(3, 5, -1)      # time span
     curses.init_pair(4, 11, -1)     # total
+    curses.init_pair(5, 9, -1)      # error
 
 
 def init(window):

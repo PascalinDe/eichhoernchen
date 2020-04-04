@@ -62,7 +62,7 @@ def _loop(stdscr, config):
             prompt = src.output_formatter.pprint_prompt(
                 task=interpreter.timer.task
             )
-            writeline(window, y, 0, prompt, max_x)
+            writeline(window, y, 0, prompt)
             line = readline(window)
             if not line:
                 if y < max_y-1:
@@ -77,10 +77,10 @@ def _loop(stdscr, config):
                         y += 1
                     else:
                         window.scroll()
-                    writeline(window, y, 0, line, max_x)
+                    writeline(window, y, 0, line)
             except Exception as exception:
-                window.addnstr(
-                    y, 0, str(exception), max_x, curses.color_pair(5)
+                window.addstr(
+                    y, 0, str(exception), curses.color_pair(5)
                 )
             finally:
                 y, _ = window.getyx()
@@ -93,7 +93,7 @@ def _loop(stdscr, config):
                 y += 1
             else:
                 window.scroll()
-            window.addnstr(y, 0, "Goodbye!", max_x)
+            window.addstr(y, 0, "Goodbye!")
             window.refresh()
             time.sleep(0.5)
             raise SystemExit
