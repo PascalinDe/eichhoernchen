@@ -226,7 +226,9 @@ def display_choices(choices):
     else:
         window.scroll()
     for i, choice in enumerate(choices, start=1):
-        window.addstr(y, x, f"{i}: {choice}")
+        window.addstr(
+            y, x, f"{i}: {''.join(x[0] for x in choice)}", curses.color_pair(0)
+        )
         y, _ = window.getyx()
         if y < max_y-1:
             y += 1
