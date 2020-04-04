@@ -79,7 +79,9 @@ def _loop(stdscr, config):
                         window.scroll()
                     writeline(window, y, 0, line, max_x)
             except Exception as exception:
-                window.addnstr(y, 0, str(exception), max_x)
+                window.addnstr(
+                    y, 0, str(exception), max_x, curses.color_pair(5)
+                )
             finally:
                 y, _ = window.getyx()
                 if y < max_y-1:
