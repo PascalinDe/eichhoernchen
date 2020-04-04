@@ -68,7 +68,6 @@ class TestTiming(unittest.TestCase):
             (timer.task.time_span[0],)
         ).fetchall()
         self.assertEqual(len(rows), 1)
-        name = rows[0][0]
         self.assertEqual(time_span, timer.task.time_span)
         self.assertEqual(full_name.name, timer.task.name)
 
@@ -710,7 +709,6 @@ class TestTiming(unittest.TestCase):
             "%Y-%m-%d %H:%M"
         )
         end = start + datetime.timedelta(days=1)
-        task = Task("foo", set(), (start, end))
         timer.add(
             full_name=FullName("foo", set()),
             start=start.strftime("%Y-%m-%d %H:%M"),
