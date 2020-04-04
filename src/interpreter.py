@@ -431,4 +431,12 @@ class Interpreter():
         window.box()
         line = readline(window, boxed=True, prompt=f"new {action} >", y=1)
         mv_back()
-        return self.timer.edit(task, action, line)
+        args = {
+            k: v for k, v in zip(
+                actions,
+                (self.get_name, self.get_tags, self.get_from, self.get_to)
+            )
+        }[action](line)
+        if action in ("start", "end"):
+            args = (datetime.datetime.strptime(args, "%Y-%m-%d %H:%M"))
+        return self.timer.edit(task, action, args)
