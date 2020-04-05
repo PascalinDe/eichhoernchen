@@ -59,11 +59,12 @@ def resize_panel(max_y, max_x):
     panel.move(begin_y, begin_x)
 
 
-def readline(window, boxed=False, prompt="", x=-1, y=-1):
+def readline(window, boxed=False, prompt="", x=-1, y=-1, clear=False):
     """Read line.
 
     :param bool boxed: a box is drawn around the edges of the window
     :param window: window
+    :param bool clear: toggle clearing line on/off
 
     :returns: line
     :rtype: str
@@ -145,9 +146,14 @@ def readline(window, boxed=False, prompt="", x=-1, y=-1):
             window.delch(y, min_x)
             window.move(y, x-1)
         window.insch(char)
-        window.move(y, x)
         if boxed:
             window.box()
+        window.move(y, x)
+    if clear:
+        window.move(y, 1)
+        window.clrtoeol()
+    if boxed:
+        window.box()
     return "".join(buffer).strip()
 
 
@@ -234,12 +240,12 @@ def display_choices(choices):
             y += 1
         else:
             window.scroll()
-    char = ""
-    while char not in (str(i) for i in range(1, len(choices)+1)):
-        char = window.get_wch()
+    line = ""
+    while line not in (str(i) for i in range(1, len(choices)+1)):
+        line = readline(window, prompt=">", y=y, x=0, clear=True, boxed=True)
     window.clear()
     mv_back()
-    return int(char)-1
+    return int(line)-1
 
 
 def init_color():
