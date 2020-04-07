@@ -424,12 +424,17 @@ class Interpreter():
         """
         tasks = self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
         if not tasks:
-            return "no task"
+            return (("no task", curses.color_pair(4)),)
         choices = [src.output_formatter.pprint_task(task) for task in tasks]
         i = display_choices(choices)
         task = tasks[i]
         self.timer.remove(task)
-        return f"removed {choices[i]}"
+        return (
+            (
+                f"removed {''.join(x[0] for x in choices[i])}",
+                curses.color_pair(4)
+            ),
+        )
 
     def edit(self, full_name=FullName("", set()), from_="today", to="today"):
         """Choose task to edit.
