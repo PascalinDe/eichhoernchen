@@ -103,7 +103,7 @@ class Interpreter():
             add_help=False
         )
         parser_stop.set_defaults(
-            func=self.timer.stop, formatter=lambda *args, **kwargs: []
+            func=self.stop, formatter=lambda x: [x] if x[0][0] else []
         )
         # 'add' command arguments parser
         parser_add = subparsers.add_parser(
@@ -465,3 +465,11 @@ class Interpreter():
         if action in ("start", "end"):
             args = (datetime.datetime.strptime(args, "%Y-%m-%d %H:%M"))
         return self.timer.edit(task, action, args)
+
+    def stop(self):
+        """Stop task."""
+        if self.timer.task.name:
+            self.timer.stop()
+            return (("", curses.color_pair(0)),)
+        else:
+            return (("no running task", curses.color_pair(0)),)
