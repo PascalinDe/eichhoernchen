@@ -89,6 +89,8 @@ def readline(window, boxed=False, prompt="", x=-1, y=-1, clear=False):
     i = 0
     buffer = []
     while True:
+        if boxed:
+            window.box()
         y, x = window.getyx()
         char = window.get_wch()
         if char == curses.KEY_RESIZE:
@@ -119,16 +121,18 @@ def readline(window, boxed=False, prompt="", x=-1, y=-1, clear=False):
                 i += 1
                 window.insch(y, x, buffer[i])
                 continue
-            if window.instr(y, x).decode(encoding="utf-8") == buffer[-1]:
+            if window.instr(y, x, 1).decode(encoding="utf-8") == buffer[-1]:
                 window.delch(y, min_x)
                 i += 1
-                window.move(y, x)
+                window.delch(y, x)
                 continue
         if char in (curses.KEY_BACKSPACE, 8, 127):
             if x > min_x:
                 i -= 1
                 x -= 1
                 buffer.pop(i)
+                if boxed:
+                    window.delch(y, max_x)
                 window.delch(y, x)
                 if len(buffer) > max_x-(min_x+2) and i >= x-1:
                     window.insch(y, min_x, buffer[(i-x)+1])
@@ -146,8 +150,6 @@ def readline(window, boxed=False, prompt="", x=-1, y=-1, clear=False):
             window.delch(y, min_x)
             window.move(y, x-1)
         window.insch(char)
-        if boxed:
-            window.box()
         window.move(y, x)
     if clear:
         window.move(y, 1)
