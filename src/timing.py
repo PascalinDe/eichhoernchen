@@ -219,10 +219,14 @@ class Timer():
             )
         elif action == "end":
             end, = args
+            if end <= start:
+                raise ValueError(f"{end} is before task's start")
             sql = "UPDATE time_span SET end=? WHERE start=?"
             connection.execute(sql, (end, start))
         elif action == "start":
             start, = args
+            if end <= start:
+                raise ValueError(f"{start} is after task's end")
             sql = "SELECT start FROM running WHERE start=?"
             row = connection.execute(sql, (start,)).fetchone()
             if row:
@@ -267,6 +271,10 @@ class Timer():
         connection = self.sqlite.connect()
         start = datetime.datetime.strptime(start, "%Y-%m-%d %H:%M")
         end = datetime.datetime.strptime(end, "%Y-%m-%d %H:%M")
+        if end <= start:
+            raise ValueError(
+                f"task's end ({end}) is before its start ({start})"
+            )
         row = connection.execute(
             "SELECT start FROM running WHERE start=?", (start,)
         ).fetchone()

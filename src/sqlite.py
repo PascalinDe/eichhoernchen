@@ -29,7 +29,10 @@ import collections
 
 
 TIME_SPAN_COLUMN_DEF = (
-    "time_span", ("start TIMESTAMP PRIMARY KEY", "end TIMESTAMP")
+    "time_span", (
+        "start TIMESTAMP PRIMARY KEY",
+        "end TIMESTAMP CHECK (end > start)"
+    )
 )
 TAGGED_COLUMN_DEF = (
     "tagged", (

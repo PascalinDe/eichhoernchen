@@ -663,6 +663,52 @@ class TestTiming(unittest.TestCase):
         with self.assertRaises(ValueError):
             timer.edit(timer.task, "start", now)
 
+    def test_edit_start_after_end(self):
+        """Test editing task.
+
+        Trying: editing start so that start is after end
+        Expecting: ValueError
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        now = datetime.datetime.now()
+        task = Task("foo", set(), (now, now + datetime.timedelta(minutes=1)))
+        connection.execute(
+            "INSERT INTO time_span (start,end) VALUES (?,?)",
+            task.time_span
+        )
+        connection.execute(
+            "INSERT INTO running (name,start) VALUES (?,?)",
+            (task.name, task.time_span[0])
+        )
+        connection.commit()
+        start = now + datetime.timedelta(minutes=1)
+        with self.assertRaises(ValueError):
+            timer.edit(task, "start", start)
+
+    def test_edit_end_before_start(self):
+        """Test editing task.
+
+        Trying: editing end so that end is before start
+        Expecting: ValueError
+        """
+        timer = src.timing.Timer(self.DATABASE)
+        connection = timer.sqlite.connect()
+        now = datetime.datetime.now()
+        task = Task("foo", set(), (now, now + datetime.timedelta(minutes=1)))
+        connection.execute(
+            "INSERT INTO time_span (start,end) VALUES (?,?)",
+            task.time_span
+        )
+        connection.execute(
+            "INSERT INTO running (name,start) VALUES (?,?)",
+            (task.name, task.time_span[0])
+        )
+        connection.commit()
+        end = now - datetime.timedelta(minutes=2)
+        with self.assertRaises(ValueError):
+            timer.edit(task, "end", end)
+
     def test_remove(self):
         """Test removing task.
 
