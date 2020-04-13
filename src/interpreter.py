@@ -185,7 +185,7 @@ class Interpreter():
             func=self.edit,
             formatter=lambda task: [
                 src.output_formatter.pprint_task(task=task)
-            ]
+            ] if task else [(("no task", curses.color_pair(0)),)]
         )
         # 'sum' command arguments parser
         parser_sum = subparsers.add_parser(
@@ -445,7 +445,7 @@ class Interpreter():
         """
         tasks = self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
         if not tasks:
-            return "no task"
+            return []
         choices = [src.output_formatter.pprint_task(task) for task in tasks]
         i = display_choices(choices)
         task = tasks[i]
