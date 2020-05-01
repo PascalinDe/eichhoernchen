@@ -33,7 +33,7 @@ import src.interpreter
 import src.output_formatter
 
 from src.cutils import (get_window_pos, init, init_color, mk_panel, readline,
-                        writeline)
+                        scroll_down, writeline)
 
 BANNER = "Welcome to Eichhörnchen.\tType help or ? to list commands."
 
@@ -57,18 +57,20 @@ def _loop(stdscr, config):
     interpreter = src.interpreter.Interpreter(
         os.path.join(config["path"], config["database"])
     )
+    upper_stack = []
+    lower_stack = []
     while True:
         try:
             prompt = src.output_formatter.pprint_prompt(
                 task=interpreter.timer.task
             )
             writeline(window, y, 0, prompt)
-            line = readline(window)
+            line = readline(window, upper_stack, lower_stack, scroll=True)
             if not line:
                 if y < max_y-1:
                     y += 1
                 else:
-                    window.scroll()
+                    scroll_down(window, upper_stack, lower_stack)
                 continue
             try:
                 output = interpreter.interpret_line(line)
@@ -76,7 +78,7 @@ def _loop(stdscr, config):
                     if y < max_y-1:
                         y += 1
                     else:
-                        window.scroll()
+                        scroll_down(window, upper_stack, lower_stack)
                     writeline(window, y, 0, line)
             except Exception as exception:
                 window.addstr(
@@ -87,12 +89,12 @@ def _loop(stdscr, config):
                 if y < max_y-1:
                     y += 1
                 else:
-                    window.scroll()
+                    scroll_down(window, upper_stack, lower_stack)
         except KeyboardInterrupt:
             if y < max_y-1:
                 y += 1
             else:
-                window.scroll()
+                scroll_down(window, upper_stack, lower_stack)
             window.addstr(y, 0, "Goodbye!")
             window.refresh()
             time.sleep(0.5)

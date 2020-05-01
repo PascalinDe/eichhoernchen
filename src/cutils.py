@@ -59,12 +59,53 @@ def resize_panel(max_y, max_x):
     panel.move(begin_y, begin_x)
 
 
-def readline(window, boxed=False, prompt="", x=-1, y=-1, clear=False):
+def scroll_up(window, upper_stack, lower_stack):
+    """Scroll up.
+
+    :param window window: window
+    :param list upper_stack: stack (upper window)
+    :param list lower_stack: stack (lower window)
+    """
+    if not upper_stack:
+        # top of the window
+        return
+    y, x = window.getyx()
+    max_y, _ = window.getmaxyx()
+    lower_stack.append(scrapeline(window, max_y-1))
+    window.scroll(-1)
+    writeline(window, 0, 0, upper_stack.pop())
+    window.move(max_y-1, 0)
+
+
+def scroll_down(window, upper_stack, lower_stack):
+    """Scroll down.
+
+    :param window window: window
+    :param list upper_stack: stack (upper window)
+    :param list lower_stack: stack (lower window)
+    """
+    upper_stack.append(scrapeline(window, 0))
+    window.scroll(1)
+    y, x = window.getyx()
+    max_y, _ = window.getmaxyx()
+    window.move(max_y-1, 0)
+    if not lower_stack:
+        # bottom of the window
+        return
+    writeline(window, max_y-1, 0, lower_stack.pop())
+    window.move(max_y-1, 0)
+
+
+def readline(
+        window, upper_stack, lower_stack,
+        boxed=False, prompt="", x=-1, y=-1, clear=False, scroll=False
+):
     """Read line.
 
     :param bool boxed: a box is drawn around the edges of the window
     :param window: window
     :param bool clear: toggle clearing line on/off
+    :param bool scroll: toggle scrolling on/off
 
     :returns: line
     :rtype: str
@@ -91,16 +132,29 @@ def readline(window, boxed=False, prompt="", x=-1, y=-1, clear=False):
     while True:
         if boxed:
             window.box()
+        max_y, max_x = window.getmaxyx()
         y, x = window.getyx()
         char = window.get_wch()
         if char == curses.KEY_RESIZE:
-            max_y, max_x = window.getmaxyx()
             resize_panel(max_y, max_x)
+            continue
+        if char in (curses.KEY_DOWN, curses.KEY_UP):
+            if not scroll:
+                continue
+        if char == curses.KEY_DOWN:
+            if y < max_y and lower_stack:
+                scroll_down(window, upper_stack, lower_stack)
+            else:
+                window.move(y, len(scrapeline(window, y))+1)
+            continue
+        if char == curses.KEY_UP:
+            if y > 2 or len(upper_stack) > 1:
+                scroll_up(window, upper_stack, lower_stack)
+            continue
+        if x == 0:
             continue
         if char in (curses.KEY_ENTER, os.linesep):
             break
-        if char in (curses.KEY_DOWN, curses.KEY_UP):
-            continue
         if char == curses.KEY_LEFT:
             if x > min_x:
                 i -= 1
@@ -170,6 +224,34 @@ def writeline(window, y, x, multi_part_line):
     for line, attr in multi_part_line:
         window.addstr(y, x, line, attr)
         x += len(line)
+
+
+def scrapeline(window, y):
+    """Scrape multi-part line from the window.
+
+    :param window: window
+    :param int y: y
+
+    :returns: multi-part line
+    :rtype: tuple
+    """
+    _, max_x = window.getmaxyx()
+    multi_part_line = []
+    buffer = []
+    current_attr = window.inch(y, 0) & curses.A_COLOR
+    for x in range(max_x):
+        ch = window.inch(y, x)
+        attr = ch & curses.A_COLOR
+        ch = ch & curses.A_CHARTEXT
+        if current_attr != attr:
+            multi_part_line.append(("".join(buffer), current_attr))
+            buffer = []
+            current_attr = attr
+        buffer.append(chr(ch))
+    buffer = buffer[:-1]
+    if buffer:
+        multi_part_line.append(("".join(buffer), attr))
+    return multi_part_line
 
 
 def mk_panel(nlines, ncols, begin_y, begin_x):
@@ -244,7 +326,10 @@ def display_choices(choices):
             window.scroll()
     line = ""
     while line not in (str(i) for i in range(1, len(choices)+1)):
-        line = readline(window, prompt=">", y=y, x=0, clear=True, boxed=True)
+        line = readline(
+            window, [None],
+            prompt=">", y=y, x=0, clear=True, boxed=True, scroll=False
+        )
     window.clear()
     mv_back()
     return int(line)-1
