@@ -327,7 +327,7 @@ def display_choices(choices):
     line = ""
     while line not in (str(i) for i in range(1, len(choices)+1)):
         line = readline(
-            window, [None],
+            window, [], [],
             prompt=">", y=y, x=0, clear=True, boxed=True, scroll=False
         )
     window.clear()
