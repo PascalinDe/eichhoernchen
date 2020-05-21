@@ -59,7 +59,7 @@ def resize_panel(max_y, max_x):
     panel.move(begin_y, begin_x)
 
 
-def scroll_up(window, upper_stack, lower_stack):
+def scroll_up(window, upper_stack, lower_stack, boxed=False):
     """Scroll up.
 
     :param window window: window
@@ -71,23 +71,36 @@ def scroll_up(window, upper_stack, lower_stack):
         return
     y, x = window.getyx()
     max_y, _ = window.getmaxyx()
+    if boxed:
+        min_y = 1
+        max_y -= 1
+    else:
+        min_y = 0
     lower_stack.append(scrapeline(window, max_y-1))
     window.scroll(-1)
-    writeline(window, 0, 0, upper_stack.pop())
+    writeline(window, min_y, 0, upper_stack.pop())
     window.move(max_y-1, 0)
 
 
-def scroll_down(window, upper_stack, lower_stack):
+def scroll_down(window, upper_stack, lower_stack, boxed=False):
     """Scroll down.
 
     :param window window: window
     :param list upper_stack: stack (upper window)
     :param list lower_stack: stack (lower window)
     """
-    upper_stack.append(scrapeline(window, 0))
-    window.scroll(1)
     y, x = window.getyx()
     max_y, _ = window.getmaxyx()
+    if boxed:
+        min_y = 1
+        max_y -= 1
+    else:
+        min_y = 0
+    upper_stack.append(scrapeline(window, min_y))
+    window.scroll(1)
+    if boxed:
+        window.move(max_y-1, 0)
+        window.deleteln()
     window.move(max_y-1, 0)
     if not lower_stack:
         # bottom of the window
@@ -143,13 +156,13 @@ def readline(
                 continue
         if char == curses.KEY_DOWN:
             if y < max_y and lower_stack:
-                scroll_down(window, upper_stack, lower_stack)
+                scroll_down(window, upper_stack, lower_stack, boxed=boxed)
             else:
                 window.move(y, len(scrapeline(window, y))+1)
             continue
         if char == curses.KEY_UP:
             if y > 2 or len(upper_stack) > 1:
-                scroll_up(window, upper_stack, lower_stack)
+                scroll_up(window, upper_stack, lower_stack, boxed=boxed)
             continue
         if x == 0:
             continue
@@ -303,6 +316,8 @@ def display_choices(choices):
     """
     if len(choices) == 1:
         return 0
+    lower_stack = []
+    upper_stack = []
     window = mv_front()
     window.clear()
     window.box()
@@ -310,11 +325,12 @@ def display_choices(choices):
     y += 1
     x = 1
     max_y, max_x = window.getmaxyx()
+    max_y -= 1
     window.addstr(y, x, f"Pick choice 1...{len(choices)}.")
     if y < max_y-1:
         y += 1
     else:
-        window.scroll()
+        scroll_down(window, upper_stack, lower_stack, boxed=True)
     for i, choice in enumerate(choices, start=1):
         window.addstr(
             y, x, f"{i}: {''.join(x[0] for x in choice)}", curses.color_pair(0)
@@ -323,12 +339,12 @@ def display_choices(choices):
         if y < max_y-1:
             y += 1
         else:
-            window.scroll()
+            scroll_down(window, upper_stack, lower_stack, boxed=True)
     line = ""
     while line not in (str(i) for i in range(1, len(choices)+1)):
         line = readline(
-            window, [], [],
-            prompt=">", y=y, x=0, clear=True, boxed=True, scroll=False
+            window, upper_stack, lower_stack,
+            prompt=f">", y=y, x=0, clear=True, boxed=True, scroll=True
         )
     window.clear()
     mv_back()
