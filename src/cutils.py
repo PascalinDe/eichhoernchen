@@ -199,7 +199,7 @@ def readline(
                 x -= 1
                 buffer.pop(i)
                 if boxed:
-                    window.delch(y, max_x)
+                    window.delch(y, max_x-1)
                 window.delch(y, x)
                 if len(buffer) > max_x-(min_x+2) and i >= x-1:
                     window.insch(y, min_x, buffer[(i-x)+1])
