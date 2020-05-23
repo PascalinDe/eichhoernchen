@@ -454,7 +454,9 @@ class Interpreter():
         action = actions[j]
         window = mv_front()
         window.box()
-        line = readline(window, [], [], boxed=True, prompt=f"new {action} >", y=1)
+        line = readline(
+            window, [], [], boxed=True, prompt=f"new {action} >", y=1
+        )
         mv_back()
         args = {
             k: v for k, v in zip(
