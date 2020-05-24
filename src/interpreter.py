@@ -183,9 +183,7 @@ class Interpreter():
         )
         parser_edit.set_defaults(
             func=self.edit,
-            formatter=lambda task: [
-                src.output_formatter.pprint_task(task=task)
-            ] if task else [(("no task", curses.color_pair(0)),)]
+            formatter=lambda line: [line]
         )
         # 'sum' command arguments parser
         parser_sum = subparsers.add_parser(
@@ -427,6 +425,13 @@ class Interpreter():
             return (("no task", curses.color_pair(4)),)
         choices = [src.output_formatter.pprint_task(task) for task in tasks]
         i = display_choices(choices)
+        if i < 0:
+            return (
+                (
+                    "aborted removing task",
+                    curses.color_pair(5)
+                ),
+            )
         task = tasks[i]
         self.timer.remove(task)
         return (
@@ -448,9 +453,23 @@ class Interpreter():
             return []
         choices = [src.output_formatter.pprint_task(task) for task in tasks]
         i = display_choices(choices)
+        if i < 0:
+            return (
+                (
+                    "aborted editing task",
+                    curses.color_pair(5)
+                ),
+            )
         task = tasks[i]
         actions = ("name", "tags", "start", "end")
         j = display_choices(actions)
+        if j < 0:
+            return (
+                (
+                    "aborted editing task",
+                    curses.color_pair(5)
+                ),
+            )
         action = actions[j]
         window = mv_front()
         window.box()
@@ -466,7 +485,9 @@ class Interpreter():
         }[action](line)
         if action in ("start", "end"):
             args = (datetime.datetime.strptime(args, "%Y-%m-%d %H:%M"))
-        return self.timer.edit(task, action, args)
+        return src.output_formatter.pprint_task(
+            self.timer.edit(task, action, args)
+        ) if task else [(("no task", curses.color_pair(0)),)]
 
     def stop(self):
         """Stop task."""

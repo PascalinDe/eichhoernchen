@@ -148,6 +148,8 @@ def readline(
         max_y, max_x = window.getmaxyx()
         y, x = window.getyx()
         char = window.get_wch()
+        if char == "\x03":
+            raise KeyboardInterrupt
         if char == curses.KEY_RESIZE:
             resize_panel(max_y, max_x)
             continue
@@ -341,13 +343,17 @@ def display_choices(choices):
         else:
             scroll_down(window, upper_stack, lower_stack, boxed=True)
     line = ""
-    while line not in (str(i) for i in range(1, len(choices)+1)):
-        line = readline(
-            window, upper_stack, lower_stack,
-            prompt=f">", y=y, x=0, clear=True, boxed=True, scroll=True
-        )
-    window.clear()
-    mv_back()
+    try:
+        while line not in (str(i) for i in range(1, len(choices)+1)):
+            line = readline(
+                window, upper_stack, lower_stack,
+                prompt=f">", y=y, x=0, clear=True, boxed=True, scroll=True
+            )
+    except KeyboardInterrupt:
+        return -1
+    finally:
+        window.clear()
+        mv_back()
     return int(line)-1
 
 

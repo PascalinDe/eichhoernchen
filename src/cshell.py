@@ -108,7 +108,7 @@ def launch(window, config):
     :param dict config: configuration
     """
     curses.start_color()
-    curses.cbreak()
+    curses.raw()
     curses.use_default_colors()
     init(window)
     init_color()
