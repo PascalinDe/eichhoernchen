@@ -74,12 +74,14 @@ def scroll_up(window, upper_stack, lower_stack, boxed=False):
     if boxed:
         min_y = 1
         max_y -= 1
+        min_x = 1
     else:
         min_y = 0
+        min_x = 0
     lower_stack.append(scrapeline(window, max_y-1))
     window.scroll(-1)
     writeline(window, min_y, 0, upper_stack.pop())
-    window.move(max_y-1, 0)
+    window.move(max_y-1, min_x)
 
 
 def scroll_down(window, upper_stack, lower_stack, boxed=False):
@@ -94,19 +96,21 @@ def scroll_down(window, upper_stack, lower_stack, boxed=False):
     if boxed:
         min_y = 1
         max_y -= 1
+        min_x = 1
     else:
         min_y = 0
+        min_x = 0
     upper_stack.append(scrapeline(window, min_y))
     window.scroll(1)
     if boxed:
         window.move(max_y-1, 0)
         window.deleteln()
-    window.move(max_y-1, 0)
+    window.move(max_y-1, min_x)
     if not lower_stack:
         # bottom of the window
         return
     writeline(window, max_y-1, 0, lower_stack.pop())
-    window.move(max_y-1, 0)
+    window.move(max_y-1, min_x)
 
 
 def readline(
