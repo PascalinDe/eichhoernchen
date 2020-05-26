@@ -351,7 +351,7 @@ def display_choices(choices):
         while line not in (str(i) for i in range(1, len(choices)+1)):
             line = readline(
                 window, upper_stack, lower_stack,
-                prompt=f">", y=y, x=0, clear=True, boxed=True, scroll=True
+                prompt=">", y=y, x=0, clear=True, boxed=True, scroll=True
             )
     except KeyboardInterrupt:
         return -1
