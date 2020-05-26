@@ -163,8 +163,8 @@ def readline(
         if char == curses.KEY_DOWN:
             if y < max_y and lower_stack:
                 scroll_down(window, upper_stack, lower_stack, boxed=boxed)
-            else:
-                window.move(y, len(scrapeline(window, y))+1)
+                if not lower_stack:
+                    window.move(y, len(scrapeline(window, y))+1)
             continue
         if char == curses.KEY_UP:
             if y > 2 or len(upper_stack) > 1:
