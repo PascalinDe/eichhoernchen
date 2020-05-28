@@ -1,3 +1,10 @@
+# [2.0] (2020-05-28)
+## Bug Fixes
+* replaced Pylint with Flake8
+## Features
+* curses-based user interface
+* pip-installable
+
 # [1.2] (2019-10-07)
 ## Bug Fixes
 * common punctuation characters are allowed in task names and tags (closes [#2](https://github.com/PascalinDe/eichhoernchen/issues/2))
