@@ -46,19 +46,6 @@ def get_window_pos(max_y, max_x):
     return nlines, ncols, begin_y, begin_x
 
 
-def resize_panel(max_y, max_x):
-    """Resize secondary panel.
-
-    :param int max_y: maximum y position
-    :param int max_x: maximum x postition
-    """
-    panel = curses.panel.bottom_panel()
-    window = panel.window()
-    nlines, ncols, begin_y, begin_x = get_window_pos(max_y, max_x)
-    window.resize(nlines, ncols)
-    panel.move(begin_y, begin_x)
-
-
 def scroll_up(window, upper_stack, lower_stack, boxed=False):
     """Scroll up.
 
@@ -154,9 +141,6 @@ def readline(
         char = window.get_wch()
         if char == "\x03":
             raise KeyboardInterrupt
-        if char == curses.KEY_RESIZE:
-            resize_panel(max_y, max_x)
-            continue
         if char in (curses.KEY_DOWN, curses.KEY_UP):
             if not scroll:
                 continue
