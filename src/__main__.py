@@ -1,4 +1,4 @@
-#    Eichhörnchen 1.2
+#    Eichhörnchen 2.0
 #    Copyright (C) 2018-2019  Carine Dengler
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
 
 
 """
-:synopsis: Eichhörnchen 1.1.
+:synopsis: Eichhörnchen 2.0.
 """
 
 
@@ -30,6 +30,9 @@ import argparse
 # library specific imports
 import src.config
 import src.cshell
+
+
+__version__ = "2.0"
 
 
 def _load_config(path=""):
@@ -60,7 +63,7 @@ def main():
     )
     parser.add_argument("-c", "--config", help="use this configuration file")
     parser.add_argument(
-        "--version", action="version", version="%(prog)s 1.2"
+        "--version", action="version", version=f"%(prog)s {__version__}"
     )
     args = parser.parse_args()
     config = _load_config(args.config)
