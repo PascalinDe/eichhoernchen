@@ -27,7 +27,7 @@ pip install eichhoernchen
 ```
 usage: eichhoernchen [-h] [-c CONFIG] [--version]
 
-Curses-based time tracking tool.
+Lightweight curses-based time tracking tool.
 
 optional arguments:
   -h, --help            show this help message and exit

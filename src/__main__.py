@@ -59,7 +59,7 @@ def main():
     """Main function."""
     parser = argparse.ArgumentParser(
         prog="eichhoernchen",
-        description="Curses-based time tracking tool."
+        description="Lightweight curses-based time tracking tool."
     )
     parser.add_argument("-c", "--config", help="use this configuration file")
     parser.add_argument(
