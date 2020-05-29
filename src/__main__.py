@@ -58,8 +58,8 @@ def _load_config(path=""):
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(
-        prog="Eichhörnchen",
-        description="Command-line time tracking."
+        prog="eichhoernchen",
+        description="Curses-based time tracking tool."
     )
     parser.add_argument("-c", "--config", help="use this configuration file")
     parser.add_argument(
