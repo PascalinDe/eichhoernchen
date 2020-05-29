@@ -24,7 +24,7 @@ pip install eichhoernchen
 
 ## Usage
 
-```bash
+```
 usage: eichhoernchen [-h] [-c CONFIG] [--version]
 
 Curses-based time tracking tool.
