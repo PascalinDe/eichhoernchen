@@ -4,6 +4,9 @@
 ## Features
 * curses-based user interface
 * pip-installable
+* replaced ``bye`` command to exit program with Control+C
+* dropped configurable colour scheme
+* dropped template
 
 # [1.2] (2019-10-07)
 ## Bug Fixes
