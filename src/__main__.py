@@ -70,5 +70,4 @@ def main():
         print(exception)
 
 
-if __name__ == "__main__":
-    main()
+main()
