@@ -1,3 +1,10 @@
+# [2.1] ()
+## Migrations
+* configuration file
+	* "DEFAULT" section has been dropped
+	* keys in "DEFAULT" section ("database", "path") have been moved to "database" section
+	* "database" key has been renamed to "dbname"
+
 # [2.0] (2020-05-28)
 ## Bug Fixes
 * replaced Pylint with Flake8

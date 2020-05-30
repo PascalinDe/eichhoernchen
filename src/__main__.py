@@ -32,7 +32,7 @@ import src.config
 import src.cshell
 
 
-__version__ = "2.0"
+__version__ = "2.1"
 
 
 def _load_config(path=""):
@@ -52,7 +52,10 @@ def _load_config(path=""):
     try:
         return src.config.read_config(path)
     except src.config.BadConfig as exception:
-        raise SystemExit(f"configuration file contains errors:\t{exception}")
+        msg = f"configuration file contains errors:\t{exception}"
+        if __version__ == "2.1":
+            msg = f"{msg} (HINT: refer to CHANGELOG to migrate config)"
+        raise SystemExit(msg)
 
 
 def main():
