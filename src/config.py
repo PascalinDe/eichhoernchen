@@ -53,11 +53,10 @@ def create_config(force=False):
         raise ConfigFound(f"configuration file {path} already exists")
     else:
         config = configparser.ConfigParser()
-        config["DEFAULT"] = {
-            "database": "eichhoernchen.db",
+        config["database"] = {
+            "dbname": "eichhoernchen.db",
             "path": os.path.join(os.environ["HOME"], ".local/share")
         }
-        config["CUSTOM"] = {}
         with open(path, "w") as fp:
             config.write(fp)
 
@@ -69,11 +68,17 @@ def validate_config(config):
 
     :raises: BadConfig when required keys are missing
     """
-    required = {"database", "path"}
-    missing = required.difference(set(config.keys()))
-    if missing:
-        missing = ", ".join(f"'{key}'" for key in missing)
-        raise BadConfig(f"required keys {missing} are missing")
+    check = {
+        "database": {"dbname", "path"}
+    }
+    for section, required in check.items():
+        try:
+            missing = required.difference(set(config[section].keys()))
+        except KeyError:
+            raise BadConfig(f"required section '{section}' is missing")
+        if missing:
+            missing = ", ".join(f"'{key}'" for key in missing)
+            raise BadConfig(f"required keys {missing} are missing")
 
 
 def read_config(path):
@@ -89,6 +94,6 @@ def read_config(path):
     else:
         config = configparser.ConfigParser()
         config.read(path)
-    config = dict(config["CUSTOM"])
+    config = dict(config)
     validate_config(config)
     return config

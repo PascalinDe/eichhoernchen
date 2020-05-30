@@ -55,7 +55,10 @@ def _loop(stdscr, config):
     y = 2
     max_y, max_x = window.getmaxyx()
     interpreter = src.interpreter.Interpreter(
-        os.path.join(config["path"], config["database"])
+        os.path.join(
+            config["database"]["path"],
+            config["database"]["dbname"]
+        )
     )
     upper_stack = []
     lower_stack = []
