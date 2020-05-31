@@ -21,6 +21,7 @@
 
 
 # standard library imports
+import json
 import time
 import os
 import os.path
@@ -58,7 +59,10 @@ def _loop(stdscr, config):
         os.path.join(
             config["database"]["path"],
             config["database"]["dbname"]
-        )
+        ),
+        {
+            k: json.loads(v) for k, v in config["aliases"].items()
+        } if "aliases" in config else {}
     )
     upper_stack = []
     lower_stack = []

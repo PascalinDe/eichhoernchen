@@ -44,15 +44,15 @@ class Interpreter():
     """Command-line interpreter."""
     RESERVED = "@"
 
-    def __init__(self, database):
+    def __init__(self, database, aliases):
         """Initialize command-line interpreter.
 
         :param str database: Eichhörnchen SQLite3 database
         """
         self.timer = src.timing.Timer(database)
-        self._init_parser()
+        self._init_parser(aliases)
 
-    def _init_parser(self):
+    def _init_parser(self, aliases):
         """Initialize parser."""
         self._parser = argparse.ArgumentParser(prog="", add_help=False)
         subparsers = self._parser.add_subparsers()
@@ -109,7 +109,8 @@ class Interpreter():
         parser_add = subparsers.add_parser(
             "add",
             description="add task",
-            add_help=False
+            add_help=False,
+            aliases=aliases.get("add", [])
         )
         parser_add.add_argument("full_name", **args["full_name"])
         parser_add.add_argument("start", **args["start"])
@@ -124,7 +125,8 @@ class Interpreter():
         parser_remove = subparsers.add_parser(
             "remove",
             description="remove task",
-            add_help=False
+            add_help=False,
+            aliases=aliases.get("remove", [])
         )
         parser_remove.add_argument("full_name", **args["full_name"])
         parser_remove.add_argument(
@@ -144,7 +146,8 @@ class Interpreter():
         parser_list = subparsers.add_parser(
             "list",
             description="list tasks",
-            add_help=False
+            add_help=False,
+            aliases=aliases.get("list", [])
         )
         parser_list.add_argument(
             "full_name",
@@ -172,7 +175,8 @@ class Interpreter():
         parser_edit = subparsers.add_parser(
             "edit",
             description="edit task",
-            add_help=False
+            add_help=False,
+            aliases=aliases.get("edit", [])
         )
         parser_edit.add_argument("full_name", **args["full_name"])
         parser_edit.add_argument(
@@ -189,7 +193,8 @@ class Interpreter():
         parser_sum = subparsers.add_parser(
             "sum",
             description="sum up total time",
-            add_help=False
+            add_help=False,
+            aliases=aliases.get("sum", [])
         )
         parser_sum.add_argument(
             "summand",
@@ -215,12 +220,14 @@ class Interpreter():
         parser_help = subparsers.add_parser(
             "help",
             description="show help",
-            add_help=False
+            add_help=False,
+            aliases=aliases.get("help", [])
         )
         parser_question_mark = subparsers.add_parser(
             "?",
             description="show help",
-            add_help=False
+            add_help=False,
+            aliases=aliases.get("?", [])
         )
         progs = {
             subparser.prog.strip(): subparser
