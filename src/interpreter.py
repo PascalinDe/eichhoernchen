@@ -221,13 +221,7 @@ class Interpreter():
             "help",
             description="show help",
             add_help=False,
-            aliases=aliases.get("help", [])
-        )
-        parser_question_mark = subparsers.add_parser(
-            "?",
-            description="show help",
-            add_help=False,
-            aliases=aliases.get("?", [])
+            aliases=aliases.get("help", [])+["?"]
         )
         progs = {
             subparser.prog.strip(): subparser
@@ -239,8 +233,7 @@ class Interpreter():
                 parser_list,
                 parser_edit,
                 parser_sum,
-                parser_help,
-                parser_question_mark
+                parser_help
             )
         }
         parser_help.add_argument(
@@ -257,13 +250,6 @@ class Interpreter():
                 for usage in self._parser.format_usage().split("\n")
                 if usage
             ]
-        )
-        parser_question_mark.add_argument(
-            "command", nargs="?", choices=tuple(progs.keys())
-        )
-        parser_question_mark.set_defaults(
-            func=parser_help._defaults["func"],
-            formatter=parser_help._defaults["formatter"]
         )
 
     def interpret_line(self, line):
