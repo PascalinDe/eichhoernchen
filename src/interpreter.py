@@ -237,19 +237,18 @@ class Interpreter():
             )
         }
         parser_help.add_argument(
-            "command", nargs="?", choices=tuple(progs.keys())
+            "command",
+            nargs="?",
+            choices=(
+                tuple(progs.keys())
+                + tuple(x for y in aliases.values() for x in y)
+            )
         )
         parser_help.set_defaults(
             func=lambda command: command or "",
-            formatter=lambda command: [
-                ((prog, curses.color_pair(4)),)
-                for prog in progs[command].format_help().split("\n")
-                if prog
-            ] if command else [
-                ((usage, curses.color_pair(4)),)
-                for usage in self._parser.format_usage().split("\n")
-                if usage
-            ]
+            formatter=lambda command: self.show_help_message(
+                command, progs, aliases
+            )
         )
 
     def interpret_line(self, line):
@@ -489,3 +488,29 @@ class Interpreter():
             return (("", curses.color_pair(0)),)
         else:
             return (("no running task", curses.color_pair(0)),)
+
+    def show_help_message(self, command, progs, aliases):
+        """Show help message.
+
+        :param str command: command
+        :param dict progs: mapping of command to subparser
+        :param dict aliases: mapping of aliases to command
+        """
+        if command:
+            if command not in progs:
+                for k, v in aliases.items():
+                    if command in v:
+                        break
+                subparser = progs[k]
+            else:
+                subparser = progs[command]
+            multi_part_line = [
+                ((help, curses.color_pair(4)),)
+                for help in subparser.format_help().split("\n")
+            ]
+        else:
+            multi_part_line = [
+                ((usage, curses.color_pair(4)),)
+                for usage in self._parser.format_usage().split("\n") if usage
+            ]
+        return multi_part_line
