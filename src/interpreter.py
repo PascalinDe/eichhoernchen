@@ -216,6 +216,17 @@ class Interpreter():
                 for full_name, total in sums
             ]
         )
+        # 'aliases' command arguments parsers
+        parser_aliases = subparsers.add_parser(
+            "aliases",
+            description="list aliases",
+            add_help=False,
+            aliases=aliases.get("aliases", [])
+        )
+        parser_aliases.set_defaults(
+            func=lambda *args, **kwargs: self.list_aliases(aliases),
+            formatter=lambda multi_part_line: multi_part_line
+        )
         # 'help' command arguments parsers
         parser_help = subparsers.add_parser(
             "help",
@@ -513,4 +524,23 @@ class Interpreter():
                 ((usage, curses.color_pair(4)),)
                 for usage in self._parser.format_usage().split("\n") if usage
             ]
+        return multi_part_line
+
+    def list_aliases(self, aliases):
+        """List aliases.
+
+        :param dict aliases: mapping of aliases to command
+
+        :returns: multi-part line
+        :rtype: list
+        """
+        multi_part_line = [
+            (("alias\tcommand", curses.color_pair(4)),),
+            (("\n", curses.color_pair(4)),)
+        ]
+        for k, v in aliases.items():
+            for alias in v:
+                multi_part_line.append(
+                    ((f"{alias}\t{k}", curses.color_pair(4)),)
+                )
         return multi_part_line
