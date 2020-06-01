@@ -42,3 +42,35 @@ the help message of the command ``command``.
 
 Use Control+C to close windows displaying choices (and thus
 aborting the related operation) or to exit the program.
+
+### Configuring Eichhörnchen
+
+The default location of the configuration file is
+``~/.config/eichhoernchen.ini``. An alternate configuration
+file can be specified using the ``-c``/``--config`` argument.
+
+#### Minimum configuration
+
+The configuration file is an INI file and needs to contain
+at least the following sections:
+
+```ini
+[database]
+dbname = eichhoernchen.db
+path = /home/user/.local/share
+```
+
+The ``dbname`` specifies the name of the SQLite3 database, and
+``path`` specifies the path to the database file.
+
+#### Aliases
+
+To define aliases for the standard commands, add the ``aliases``
+section containing key-value pairs defining one or more aliases
+per command:
+
+```ini
+[aliases]
+list = ["ls"]
+remove = ["rm", "rem"]
+```
