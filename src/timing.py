@@ -241,7 +241,9 @@ class Timer():
         tasks = self.list_tasks(
             full_name=FullName(name, tags), from_=start.date(), to=end.date()
         )
-        task = [task for task in tasks if task.time_span == (start, end)][0]
+        for task in tasks:
+            if task.time_span == (start, end):
+                break
         if is_running:
             self._reset_task(task=task)
         return task
