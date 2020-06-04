@@ -74,3 +74,60 @@ per command:
 list = ["ls"]
 remove = ["rm", "rem"]
 ```
+
+### Exporting tasks
+
+The tasks in the database can be exported to either CSV or JSON
+file format.
+
+#### Exporting to CSV file format
+
+When exporting to CSV file format, for each tag a task is
+associated with an entry is created. For example, the
+following list of tasks
+
+```
+~>list
+21:32-21:32 2020-06-04(0h0m)foo[bar]
+21:32-21:32 2020-06-04(0h0m)bar[foo]
+21:32-21:32 2020-06-04(0h0m)foobar[bar][foo]
+21:32-21:32 2020-06-04(0h0m)foo
+21:32-21:32 2020-06-04(0h0m)bar
+21:32-21:59 2020-06-04(0h27m)foobar
+```
+
+result in the following CSV file content
+
+```
+foo,bar,2020-06-04T21:32:19,2020-06-04T21:32:20
+bar,foo,2020-06-04T21:32:31,2020-06-04T21:32:32
+foobar,bar,2020-06-04T21:32:37,2020-06-04T21:32:39
+foobar,foo,2020-06-04T21:32:37,2020-06-04T21:32:39
+foo,,2020-06-04T21:32:43,2020-06-04T21:32:44
+bar,,2020-06-04T21:32:45,2020-06-04T21:32:46
+foobar,,2020-06-04T21:32:49,2020-06-04T21:59:38
+```
+
+To recreate the original list of tasks, the start time
+of the tasks can be used as it is unique.
+
+#### Exporting to JSON file format
+
+When exporting to JSON file format, the original tasks' structure
+is more or less preserved. For example, the following list of tasks
+
+```
+~>list
+21:32-21:32 2020-06-04(0h0m)foo[bar]
+21:32-21:32 2020-06-04(0h0m)bar[foo]
+21:32-21:32 2020-06-04(0h0m)foobar[bar][foo]
+21:32-21:32 2020-06-04(0h0m)foo
+21:32-21:32 2020-06-04(0h0m)bar
+21:32-21:59 2020-06-04(0h27m)foobar
+```
+
+results in the following JSON file content
+
+```
+[["foo", ["bar"], "2020-06-04T21:32:19", "2020-06-04T21:32:20"], ["bar", ["foo"], "2020-06-04T21:32:31", "2020-06-04T21:32:32"], ["foobar", ["bar", "foo"], "2020-06-04T21:32:37", "2020-06-04T21:32:39"], ["foo", [], "2020-06-04T21:32:43", "2020-06-04T21:32:44"], ["bar", [], "2020-06-04T21:32:45", "2020-06-04T21:32:46"], ["foobar", [], "2020-06-04T21:32:49", "2020-06-04T22:06:58"]]
+```

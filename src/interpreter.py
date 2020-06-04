@@ -227,6 +227,29 @@ class Interpreter():
             func=lambda *args, **kwargs: self.list_aliases(aliases),
             formatter=lambda multi_part_line: multi_part_line
         )
+        # 'export' command arguments parsers
+        parser_export = subparsers.add_parser(
+            "export",
+            description="export tasks",
+            add_help=False,
+            aliases=aliases.get("aliases", [])
+        )
+        parser_export.add_argument(
+            "ext", choices=("csv", "json"), metavar="format"
+        )
+        parser_export.add_argument(
+            "from_",
+            **args["from_"],
+            nargs="?",
+            default="today"
+        )
+        parser_export.add_argument(
+            "to", **args["to"], nargs="?", default="today"
+        )
+        parser_export.set_defaults(
+            func=self.timer.export,
+            formatter=lambda line: [((line, curses.color_pair(4)),)]
+        )
         # 'help' command arguments parsers
         parser_help = subparsers.add_parser(
             "help",

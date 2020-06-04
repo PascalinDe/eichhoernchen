@@ -21,12 +21,15 @@
 
 
 # standard library imports
+import csv
+import json
 import datetime
 import collections
 
 # third party imports
 # library specific imports
 import src.sqlite
+
 from src import FullName, Task
 
 
@@ -296,3 +299,63 @@ class Timer():
         )
         connection.commit()
         return Task(full_name.name, full_name.tags, (start, end))
+
+    def _export_csv(self, filename, tasks):
+        """Export tasks to CSV file.
+
+        :param str filename: filename
+        :param list tasks: list of tasks
+        """
+        rows = [
+            (
+                task.name,
+                tag,
+                task.time_span[0].strftime("%Y-%m-%dT%H:%M:%S"),
+                task.time_span[1].strftime("%Y-%m-%dT%H:%M:%S")
+            )
+            for task in tasks for tag in task.tags if task.tags
+        ]
+        rows += [
+            (
+                task.name,
+                "",
+                task.time_span[0].strftime("%Y-%m-%dT%H:%M:%S"),
+                task.time_span[1].strftime("%Y-%m-%dT%H:%M:%S")
+            )
+            for task in tasks if not task.tags
+        ]
+        with open(filename, mode="w") as fp:
+            csv.writer(fp).writerows(rows)
+
+    def _export_json(self, filename, tasks):
+        """Export tasks to JSON file.
+
+        :param str filename: filename
+        :param list tasks: list of tasks
+        """
+        obj = [
+            (
+                task.name,
+                list(task.tags),
+                task.time_span[0].strftime("%Y-%m-%dT%H:%M:%S"),
+                task.time_span[1].strftime("%Y-%m-%dT%H:%M:%S")
+            )
+            for task in tasks
+        ]
+        with open(filename, mode="w") as fp:
+            json.dump(obj, fp)
+
+    def export(self, ext="csv", from_="today", to="today"):
+        """Export tasks.
+
+        :param str ext: file format
+        :param str from_: start of time period
+        :param str to: end of time period
+        """
+        tasks = self.list_tasks(from_=from_, to=to)
+        filename = f"/tmp/{datetime.datetime.now().strftime('%Y%m%d')}.{ext}"
+        if ext == "csv":
+            self._export_csv(filename, tasks)
+        elif ext == "json":
+            self._export_json(filename, tasks)
+        return f"exported tasks from {from_} to {to} to {filename}"

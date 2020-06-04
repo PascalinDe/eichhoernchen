@@ -1,4 +1,6 @@
 # [2.1] ()
+## Features
+* export tasks to CSV or JSON files
 ## Migrations
 * configuration file
 	* "DEFAULT" section has been dropped
