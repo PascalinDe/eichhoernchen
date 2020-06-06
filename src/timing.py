@@ -310,8 +310,8 @@ class Timer():
             (
                 task.name,
                 tag,
-                task.time_span[0].strftime("%Y-%m-%dT%H:%M:%S"),
-                task.time_span[1].strftime("%Y-%m-%dT%H:%M:%S")
+                task.time_span[0].isoformat(timespec="seconds"),
+                task.time_span[1].isoformat(timespec="seconds")
             )
             for task in tasks for tag in task.tags if task.tags
         ]
@@ -319,8 +319,8 @@ class Timer():
             (
                 task.name,
                 "",
-                task.time_span[0].strftime("%Y-%m-%dT%H:%M:%S"),
-                task.time_span[1].strftime("%Y-%m-%dT%H:%M:%S")
+                task.time_span[0].isoformat(timespec="seconds"),
+                task.time_span[1].isoformat(timespec="seconds")
             )
             for task in tasks if not task.tags
         ]
@@ -337,8 +337,8 @@ class Timer():
             (
                 task.name,
                 list(task.tags),
-                task.time_span[0].strftime("%Y-%m-%dT%H:%M:%S"),
-                task.time_span[1].strftime("%Y-%m-%dT%H:%M:%S")
+                task.time_span[0].isoformat(timespec="seconds"),
+                task.time_span[1].isoformat(timespec="seconds")
             )
             for task in tasks
         ]
