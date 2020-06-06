@@ -21,9 +21,9 @@
 
 
 # standard library imports
-import configparser
 import os
 import os.path
+import configparser
 
 # third party imports
 # library specific imports
@@ -43,42 +43,40 @@ class ConfigNotFound(Exception):
     """Raised when configuration file does not exist."""
 
 
-def create_config(force=False):
-    """Create configuration file.
-
-    :param bool force: toggle overwriting configuration file on/off
-    """
+def create_config():
+    """Create configuration file."""
     path = os.path.join(os.environ["HOME"], ".config/eichhoernchen.ini")
-    if os.path.exists(path) and not force:
+    if os.path.exists(path):
         raise ConfigFound(f"configuration file {path} already exists")
-    else:
-        config = configparser.ConfigParser()
-        config["database"] = {
-            "dbname": "eichhoernchen.db",
-            "path": os.path.join(os.environ["HOME"], ".local/share")
-        }
-        with open(path, "w") as fp:
-            config.write(fp)
+    config = configparser.ConfigParser()
+    config["database"] = {
+        "dbname": "eichhoernchen.db",
+        "path": os.path.join(os.environ["HOME"], ".local/share")
+    }
+    with open(path, "w") as fp:
+        config.write(fp)
 
 
 def validate_config(config):
     """Validate configuration file.
 
-    :param dict config: configuration
+    :param ConfigParser config: configuration
 
-    :raises: BadConfig when required keys are missing
+    :raises: BadConfig when required section or key(s) are missing
     """
     check = {
         "database": {"dbname", "path"}
     }
     for section, required in check.items():
         try:
-            missing = required.difference(set(config[section].keys()))
+            missing = ",".join(
+                f"'{key}'" for key in
+                required.difference(set(config[section].keys()))
+            )
         except KeyError:
             raise BadConfig(f"required section '{section}' is missing")
         if missing:
-            missing = ", ".join(f"'{key}'" for key in missing)
-            raise BadConfig(f"required keys {missing} are missing")
+            raise BadConfig(f"required key(s) {missing} are missing")
 
 
 def read_config(path):
@@ -87,13 +85,12 @@ def read_config(path):
     :param str path: path to configuration file
 
     :returns: configuration
-    :rtype: dict
+    :rtype: ConfigParser
     """
     if not os.path.exists(path):
         raise ConfigNotFound(f"configuration file {path} does not exist")
     else:
         config = configparser.ConfigParser()
         config.read(path)
-    config = dict(config)
     validate_config(config)
     return config
