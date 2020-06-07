@@ -21,7 +21,6 @@
 
 
 # standard library imports
-import re
 import curses
 import argparse
 import datetime
@@ -31,6 +30,7 @@ from contextlib import redirect_stderr
 # third party imports
 # library specific imports
 import src.timing
+import src.parser
 from src import FullName
 from src.cutils import display_choices, mv_back, mv_front, readline
 
@@ -315,33 +315,6 @@ class Interpreter():
             )
         )
 
-    def get_time(self, args, time_periods=()):
-        """Get time.
-
-        :param str args: command-line arguments
-        :param tuple time_periods: time periods
-
-        :returns: time
-        :rtype: ISO 8601 datetime string or time period keyword
-        """
-        if time_periods:
-            time_period_pattern = re.compile(r"|".join(time_periods))
-            match = time_period_pattern.match(args)
-            if match:
-                return match.group(0)
-        for format_string in ("%Y-%m-%d %H:%M", "%Y-%m-%d", "%H:%M"):
-            try:
-                datetime.datetime.strptime(args, format_string)
-            except ValueError:
-                continue
-            if format_string == "%H:%M":
-                now = datetime.datetime.now()
-                args = f"{now.year}-{now.month}-{now.day} {args}"
-            break
-        else:
-            raise ValueError(f"time data {args} does not match any format")
-        return args
-
     def get_from(self, args):
         """Get from.
 
@@ -351,11 +324,7 @@ class Interpreter():
         :rtype: ISO 8601 datetime string or time period keyword
         """
         try:
-            return self.get_time(
-                args,
-                time_periods=(
-                    "all", "year", "month", "week", "yesterday", "today")
-            )
+            return src.parser.parse_from(args)
         except ValueError:
             raise argparse.ArgumentTypeError(
                 f"'{args}' is not ISO 8601 string or time period keyword"
@@ -370,10 +339,7 @@ class Interpreter():
         :rtype: datetime
         """
         try:
-            return self.get_time(
-                args,
-                time_periods=("year", "month", "week", "yesterday", "today")
-            )
+            return src.parser.parse_to(args)
         except ValueError:
             raise argparse.ArgumentTypeError(
                 f"'{args}' is not ISO 8601 string or time period keyword"
@@ -388,7 +354,7 @@ class Interpreter():
         :rtype: datetime
         """
         try:
-            return self.get_time(args)
+            return src.parser.parse_time(args)
         except ValueError:
             raise argparse.ArgumentTypeError(
                 f"'{args}' is not ISO 8601 string"
@@ -402,11 +368,10 @@ class Interpreter():
         :returns: list of tags
         :rtype: set
         """
-        tag_pattern = re.compile(r"\[((?:\w|\s|[!#+-?])+)\]")
-        matches = tag_pattern.findall(args)
-        if matches:
-            return set(tag.strip() for tag in matches)
-        raise argparse.ArgumentTypeError(f"'{args}' does not contain tags")
+        try:
+            return src.parser.parse_tags(args)
+        except ValueError as exception:
+            raise argparse.ArgumentTypeError(str(exception))
 
     def get_name(self, args):
         """Get name.
@@ -416,11 +381,10 @@ class Interpreter():
         :returns: name
         :rtype: str
         """
-        name_pattern = re.compile(r"(?:\w|\s|[!#+-?])+")
-        match = name_pattern.match(args)
-        if match:
-            return match.group(0).strip()
-        raise argparse.ArgumentTypeError(f"'{args}' is not name")
+        try:
+            return src.parser.parse_name(args)
+        except ValueError as exception:
+            raise argparse.ArgumentTypeError(str(exception))
 
     def get_full_name(self, args):
         """Get full name.
@@ -431,13 +395,12 @@ class Interpreter():
         :rtype: FullName
         """
         if not args:
-            return FullName("", set())
+            return FullName("", frozenset())
         name = self.get_name(args)
         try:
-            tags = self.get_tags(args)
+            return FullName(name, self.get_tags(args))
         except argparse.ArgumentTypeError:
-            tags = set()
-        return FullName(name, tags)
+            return FullName(name, frozenset())
 
     def remove(self, full_name=FullName("", set()), from_="today", to="today"):
         """Choose task to remove.
