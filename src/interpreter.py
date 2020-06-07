@@ -16,7 +16,7 @@
 
 
 """
-:synopsis: Command-line interpreter.
+:synopsis: Shell interpreter.
 """
 
 
@@ -36,16 +36,16 @@ from src.cutils import display_choices, mv_back, mv_front, readline
 
 
 class InterpreterError(Exception):
-    """Raised when command-line input cannot be parsed."""
+    """Raised when shell input cannot be parsed."""
     pass
 
 
 class Interpreter():
-    """Command-line interpreter."""
+    """Shell interpreter."""
     RESERVED = "@"
 
     def __init__(self, database, aliases):
-        """Initialize command-line interpreter.
+        """Initialize shell interpreter.
 
         :param str database: Eichhörnchen SQLite3 database
         """
