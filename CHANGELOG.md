@@ -6,6 +6,8 @@
 	* "DEFAULT" section has been dropped
 	* keys in "DEFAULT" section ("database", "path") have been moved to "database" section
 	* "database" key has been renamed to "dbname"
+## Miscellaneous
+* dropped support for < Python3.7
 
 # [2.0] (2020-05-28)
 ## Bug Fixes

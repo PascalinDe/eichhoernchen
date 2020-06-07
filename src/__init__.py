@@ -16,7 +16,7 @@
 
 
 """
-:synopsis: Basic elements.
+:synopsis: Basic objects.
 """
 
 
@@ -27,26 +27,24 @@ import collections
 # library specific imports
 
 
+# full name composed of name and one or more tags, e.g. foo[bar][baz]
 FullName = collections.namedtuple(
-    "FullName", ("name", "tags")
+    "FullName", ("name", "tags"), defaults=("", frozenset())
 )
-FullName.__new__.__defaults__ = ("", set())
 
 
 _Task = collections.namedtuple("Task", ["name", "tags", "time_span"])
 
 
 class Task(_Task):
-    """Task."""
+    """Task composed of name, one or more tags and its start and end time."""
 
     __slots__ = ()
 
     @property
     def total(self):
-        """Run time (in seconds) attribute."""
-        start, end = self.time_span
-        delta = end - start
-        seconds = delta.seconds
+        """Run time (in seconds)."""
+        delta = self.time_span[1] - self.time_span[0]
         if delta.days >= 1:
-            seconds += delta.days * (24 * 60 * 60)
-        return seconds
+            return delta.seconds + delta.days * (24 * 60 * 60)
+        return delta.seconds
