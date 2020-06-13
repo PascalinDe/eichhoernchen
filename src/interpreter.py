@@ -21,7 +21,6 @@
 
 
 # standard library imports
-import curses
 import argparse
 import datetime
 from io import StringIO
@@ -248,7 +247,7 @@ class Interpreter():
         )
         parser_export.set_defaults(
             func=self.timer.export,
-            formatter=lambda line: [((line, curses.color_pair(4)),)]
+            formatter=lambda line: [src.cutils.get_multi_part_line((line, 4))]
         )
         # 'help' command arguments parsers
         parser_help = subparsers.add_parser(
@@ -402,7 +401,12 @@ class Interpreter():
         except argparse.ArgumentTypeError:
             return FullName(name, frozenset())
 
-    def remove(self, full_name=FullName("", set()), from_="today", to="today"):
+    def remove(
+            self,
+            full_name=FullName("", frozenset()),
+            from_="today",
+            to="today"
+    ):
         """Choose task to remove.
 
         :param FullName full_name: full name
@@ -411,23 +415,15 @@ class Interpreter():
         """
         tasks = self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
         if not tasks:
-            return (("no task", curses.color_pair(4)),)
+            return src.cutils.get_multi_part_line(("no task", 4))
         choices = [src.output_formatter.pprint_task(task) for task in tasks]
         i = display_choices(choices)
         if i < 0:
-            return (
-                (
-                    "aborted removing task",
-                    curses.color_pair(5)
-                ),
-            )
+            return src.cutils.get_multi_part_line(("aborted removing task", 5))
         task = tasks[i]
         self.timer.remove(task)
-        return (
-            (
-                f"removed {''.join(x[0] for x in choices[i])}",
-                curses.color_pair(4)
-            ),
+        return src.cutils.get_multi_part_line(
+            (f"removed {''.join(x[0] for x in choices[i])}", 4)
         )
 
     def edit(self, full_name=FullName("", set()), from_="today", to="today"):
@@ -443,22 +439,12 @@ class Interpreter():
         choices = [src.output_formatter.pprint_task(task) for task in tasks]
         i = display_choices(choices)
         if i < 0:
-            return (
-                (
-                    "aborted editing task",
-                    curses.color_pair(5)
-                ),
-            )
+            return src.cutils.get_multi_part_line(("aborted editing task", 5))
         task = tasks[i]
         actions = ("name", "tags", "start", "end")
         j = display_choices(actions)
         if j < 0:
-            return (
-                (
-                    "aborted editing task",
-                    curses.color_pair(5)
-                ),
-            )
+            return src.cutils.get_multi_part_line(("aborted editing task", 5))
         action = actions[j]
         window = mv_front()
         window.box()
@@ -476,15 +462,15 @@ class Interpreter():
             args = (datetime.datetime.strptime(args, "%Y-%m-%d %H:%M"))
         return src.output_formatter.pprint_task(
             self.timer.edit(task, action, args)
-        ) if task else [(("no task", curses.color_pair(0)),)]
+        ) if task else [src.cutils.get_multi_part_line(("no task", 0))]
 
     def stop(self):
         """Stop task."""
         if self.timer.task.name:
             self.timer.stop()
-            return (("", curses.color_pair(0)),)
+            return src.cutils.get_multi_part_line(("", 0))
         else:
-            return (("no running task", curses.color_pair(0)),)
+            return src.cutils.get_multi_part_line(("no running task", 0))
 
     def show_help_message(self, command, progs, aliases):
         """Show help message.
@@ -501,16 +487,21 @@ class Interpreter():
                 subparser = progs[k]
             else:
                 subparser = progs[command]
-            multi_part_line = [
-                ((help, curses.color_pair(4)),)
+            multi_part_lines = [
+                src.cutils.get_multi_part_line((help, 4))
                 for help in subparser.format_help().split("\n")
             ]
         else:
-            multi_part_line = [
-                ((usage, curses.color_pair(4)),)
-                for usage in self._parser.format_usage().split("\n") if usage
+            multi_part_lines = [
+                src.cutils.get_multi_part_line(
+                    *[
+                        (usage, 4)
+                        for usage in self._parser.format_usage().split("\n")
+                        if usage
+                    ]
+                )
             ]
-        return multi_part_line
+        return multi_part_lines
 
     def list_aliases(self, aliases):
         """List aliases.
@@ -520,13 +511,10 @@ class Interpreter():
         :returns: multi-part line
         :rtype: list
         """
-        multi_part_line = [
-            (("alias\tcommand", curses.color_pair(4)),),
-            (("\n", curses.color_pair(4)),)
+        return [
+            src.cutils.get_multi_part_line(("alias\tcommand", 4)),
+            tuple()
+        ] + [
+            src.cutils.get_multi_part_line((f"{alias}\t{k}", 4))
+            for k, v in aliases.items() for alias in v
         ]
-        for k, v in aliases.items():
-            for alias in v:
-                multi_part_line.append(
-                    ((f"{alias}\t{k}", curses.color_pair(4)),)
-                )
-        return multi_part_line

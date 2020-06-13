@@ -345,6 +345,20 @@ def display_choices(choices):
     return int(line)-1
 
 
+def get_multi_part_line(*parts):
+    """Get multi-part line.
+
+    :param tuple parts: tuple of part and color pair index
+
+    :returns: multi-part line
+    :rtype: tuple
+    """
+    return tuple(
+        (part, curses.color_pair(i))
+        for (part, i) in parts
+    )
+
+
 def init_color():
     """Initialize colours."""
     curses.init_pair(1, 2, -1)      # name
