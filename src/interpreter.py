@@ -266,7 +266,8 @@ class Interpreter():
                 parser_list,
                 parser_edit,
                 parser_sum,
-                parser_help
+                parser_help,
+                parser_aliases
             )
         }
         parser_help.add_argument(
