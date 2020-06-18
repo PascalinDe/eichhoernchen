@@ -21,7 +21,6 @@
 
 
 # standard library imports
-import os
 import curses
 import argparse
 
@@ -35,29 +34,6 @@ import src.cshell
 __version__ = "2.1"
 
 
-def _load_config(path=""):
-    """Load configuration file.
-
-    :param str path: path to configuration file
-
-    :returns: configuration
-    :rtype: dict
-    """
-    if not path:
-        try:
-            src.config.create_config()
-        except src.config.ConfigFound:
-            pass
-        path = os.path.join(os.environ["HOME"], ".config/eichhoernchen.ini")
-    try:
-        return src.config.read_config(path)
-    except src.config.BadConfig as exception:
-        msg = f"configuration file contains errors:\t{exception}"
-        if __version__ == "2.1":
-            msg = f"{msg} (HINT: refer to CHANGELOG to migrate config)"
-        raise SystemExit(msg)
-
-
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(
@@ -68,8 +44,9 @@ def main():
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
     )
-    args = parser.parse_args()
-    config = _load_config(args.config)
+    config = src.config.load_config(
+        __version__, path=parser.parse_args().config
+    )
     try:
         curses.wrapper(src.cshell.launch, config)
     except Exception as exception:

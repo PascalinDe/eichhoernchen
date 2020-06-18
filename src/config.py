@@ -43,7 +43,7 @@ class ConfigNotFound(Exception):
     """Raised when configuration file does not exist."""
 
 
-def create_config():
+def _create_config():
     """Create configuration file."""
     path = os.path.join(os.environ["HOME"], ".config/eichhoernchen.ini")
     if os.path.exists(path):
@@ -57,7 +57,7 @@ def create_config():
         config.write(fp)
 
 
-def validate_config(config):
+def _validate_config(config):
     """Validate configuration file.
 
     :param ConfigParser config: configuration
@@ -79,7 +79,7 @@ def validate_config(config):
             raise BadConfig(f"required key(s) {missing} are missing")
 
 
-def read_config(path):
+def _read_config(path):
     """Read configuration file.
 
     :param str path: path to configuration file
@@ -92,5 +92,29 @@ def read_config(path):
     else:
         config = configparser.ConfigParser()
         config.read(path)
-    validate_config(config)
+    _validate_config(config)
     return config
+
+
+def load_config(version, path=""):
+    """Load configuration file.
+
+    :param str version: version
+    :param str path: path to configuration file
+
+    :returns: configuration
+    :rtype: dict
+    """
+    if not path:
+        try:
+            _create_config()
+        except ConfigFound:
+            pass
+        path = os.path.join(os.environ["HOME"], ".config/eichhoernchen.ini")
+    try:
+        return _read_config(path)
+    except BadConfig as exception:
+        msg = f"configuration file contains errors:\t{exception}"
+        if version == "2.1":
+            msg = f"{msg} (HINT: refer to CHANGELOG to migrate config)"
+        raise SystemExit(msg)
