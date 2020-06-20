@@ -207,7 +207,7 @@ class Timer():
             self.sqlite.execute(sql, (start,))
             sql = "INSERT INTO tagged (tag,start) VALUES (?,?)"
             self.sqlite.execute(
-                sql, [(tag, start) for tag in tags]
+                sql, *[(tag, start) for tag in tags]
             )
         elif action == "end":
             end, = args
