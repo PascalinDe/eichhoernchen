@@ -27,22 +27,24 @@ import collections
 # third party imports
 # library specific imports
 
-
 TIME_SPAN_COLUMN_DEF = (
-    "time_span", (
+    "time_span",
+    (
         "start TIMESTAMP PRIMARY KEY",
         "end TIMESTAMP CHECK (end > start)"
     )
 )
 TAGGED_COLUMN_DEF = (
-    "tagged", (
+    "tagged",
+    (
         "tag TEXT",
         "start TIMESTAMP",
         "FOREIGN KEY(start) REFERENCES time_span(start)"
     )
 )
 RUNNING_COLUMN_DEF = (
-    "running", (
+    "running",
+    (
         "name TEXT",
         "start TIMESTAMP",
         "FOREIGN KEY(start) REFERENCES time_span(start)"
@@ -56,19 +58,19 @@ COLUMN_DEF = collections.OrderedDict(
 def create_table(connection, table, close=True):
     """Create table.
 
-    :param Connection connection: Eichhörnchen SQLite3 database connection
+    :param Connection connection: SQLite3 database connection
     :param str table: table
     :param bool close: toggle closing database connection on/off
     """
     try:
-        column_def = ",".join(COLUMN_DEF[table])
-        sql = f"CREATE TABLE IF NOT EXISTS {table} ({column_def})"
+        sql = (
+            f"CREATE TABLE IF NOT EXISTS {table} "
+            f"({','.join(COLUMN_DEF[table])})"
+        )
         connection.execute(sql)
         connection.commit()
     except sqlite3.Error as exception:
-        raise SQLiteError(
-            "create table statement failed", sql=sql
-        ) from exception
+        raise SQLiteError("failed to create table", sql=sql) from exception
     except KeyError:
         raise ValueError(f"'{table}' is not defined")
     finally:
@@ -92,34 +94,33 @@ class SQLiteError(Exception):
 
 
 class SQLite():
-    """Eichhörnchen SQLite database interface.
+    """SQLite database interface.
 
-    :ivar str database: Eichhörnchen SQLite3 database
+    :ivar str database: SQLite3 database name
     """
 
     def __init__(self, database):
         """Initialize SQLite3 database interface.
 
-        :param str database: Eichhörnchen SQLite3 database
+        :param str database: path to SQLite3 database
         """
         self.database = database
 
     def connect(self):
-        """Connect to Eichhörnchen SQLite3 database.
+        """Connect to SQLite3 database.
 
         :returns: connection
         :rtype: Connection
         """
         try:
-            connection = sqlite3.connect(
+            return sqlite3.connect(
                 self.database,
                 detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
             )
         except sqlite3.Error as exception:
             raise SQLiteError(
-                "connecting to Eichhörnchen SQLite3 database failed"
+                "failed to connect to SQLite3 database"
             ) from exception
-        return connection
 
     def create_database(self):
         """Create SQLite3 database."""
@@ -137,15 +138,16 @@ class SQLite():
         :returns: rows
         :rtype: list
         """
-        connection = self.connect()
         try:
+            connection = self.connect()
             if len(parameters) > 1:
                 rows = connection.executemany(statement, parameters).fetchall()
             else:
                 rows = connection.execute(statement, *parameters).fetchall()
-        except sqlite3.Error:
+        except sqlite3.Error as exception:
             raise SQLiteError(
-                "failed to execute SQLite3 statement", sql=statement
-            )
+                "failed to execute SQLite3 statement",
+                sql=statement
+            ) from exception
         connection.commit()
         return rows
