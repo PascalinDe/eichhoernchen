@@ -120,3 +120,25 @@ class SQLite():
                 "connecting to Eichhörnchen SQLite3 database failed"
             ) from exception
         return connection
+
+    def execute(self, statement, *parameters):
+        """Execute SQLite3 statement(s).
+
+        :param str statement: SQLite3 statement
+        :param tuple parameters: parameters
+
+        :returns: rows
+        :rtype: list
+        """
+        connection = self.connect()
+        try:
+            if len(parameters) > 1:
+                rows = connection.executemany(statement, parameters).fetchall()
+            else:
+                rows = connection.execute(statement, *parameters).fetchall()
+        except sqlite3.Error:
+            raise SQLiteError(
+                "failed to execute SQLite3 statement", sql=statement
+            )
+        connection.commit()
+        return rows

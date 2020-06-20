@@ -66,21 +66,17 @@ class Timer():
         :param FullName full_name: full name
         """
         start = datetime.datetime.now()
-        connection = self.sqlite.connect()
         if self.task.name:
             raise Warning("there is already a running task")
         sql = "INSERT INTO time_span (start) VALUES (?)"
-        connection.execute(sql, (start,))
-        connection.commit()
+        self.sqlite.execute(sql, (start,))
         sql = "INSERT INTO running (name,start) VALUES (?,?)"
-        connection.execute(sql, (full_name.name, start))
-        connection.commit()
+        self.sqlite.execute(sql, (full_name.name, start))
         if full_name.tags:
             sql = "INSERT INTO tagged (tag,start) VALUES (?,?)"
-            connection.executemany(
-                sql, [(tag, start) for tag in full_name.tags]
+            self.sqlite.execute(
+                sql, *[(tag, start) for tag in full_name.tags]
             )
-            connection.commit()
         self._reset_task(
             task=src.Task(full_name.name, full_name.tags, (start, None))
         )
@@ -88,10 +84,8 @@ class Timer():
     def stop(self):
         """Stop task."""
         end = datetime.datetime.now()
-        connection = self.sqlite.connect()
         sql = "UPDATE time_span SET end = ? WHERE start = ?"
-        connection.execute(sql, (end, self.task.time_span[0]))
-        connection.commit()
+        self.sqlite.execute(sql, (end, self.task.time_span[0]))
         self._reset_task()
 
     @staticmethod
@@ -151,8 +145,7 @@ class Timer():
         JOIN running ON time_span.start=running.start
         LEFT JOIN tagged ON time_span.start=tagged.start """
         sql += self._define_time_period(from_, to)
-        connection = self.sqlite.connect()
-        rows = connection.execute(sql).fetchall()
+        rows = self.sqlite.execute(sql)
         agg = collections.defaultdict(list)
         for start, end, name, tag in rows:
             agg[(name, (start, end))].append(tag)
@@ -200,7 +193,6 @@ class Timer():
         :param str action: action
         :param str args: arguments
         """
-        connection = self.sqlite.connect()
         name = task.name
         tags = task.tags
         start, end = task.time_span
@@ -210,14 +202,14 @@ class Timer():
         if action == "name":
             name, = args
             sql = "UPDATE running SET name=? WHERE start=?"
-            connection.execute(sql, (name, start))
+            self.sqlite.execute(sql, (name, start))
         elif action == "tags":
             tags, = args
             tags = set(tags)
             sql = "DELETE FROM tagged WHERE start=?"
-            connection.execute(sql, (start,))
+            self.sqlite.execute(sql, (start,))
             sql = "INSERT INTO tagged (tag,start) VALUES (?,?)"
-            connection.executemany(
+            self.sqlite.execute(
                 sql, [(tag, start) for tag in tags]
             )
         elif action == "end":
@@ -225,22 +217,21 @@ class Timer():
             if end <= start:
                 raise ValueError(f"{end} is before task's start")
             sql = "UPDATE time_span SET end=? WHERE start=?"
-            connection.execute(sql, (end, start))
+            self.sqlite.execute(sql, (end, start))
         elif action == "start":
             start, = args
             if end <= start:
                 raise ValueError(f"{start} is after task's end")
             sql = "SELECT start FROM running WHERE start=?"
-            row = connection.execute(sql, (start,)).fetchone()
+            row = self.sqlite.execute(sql, (start,)).fetchone()
             if row:
                 raise ValueError(f"task started at {start} already exists")
             sql = "UPDATE time_span SET start=? WHERE start=?"
-            connection.execute(sql, (start, task.time_span[0]))
+            self.sqlite.execute(sql, (start, task.time_span[0]))
             sql = "UPDATE running SET start=? WHERE start=?"
-            connection.execute(sql, (start, task.time_span[0]))
+            self.sqlite.execute(sql, (start, task.time_span[0]))
             sql = "UPDATE tagged SET start=? WHERE start=?"
-            connection.execute(sql, (start, task.time_span[0]))
-        connection.commit()
+            self.sqlite.execute(sql, (start, task.time_span[0]))
         tasks = self.list_tasks(
             full_name=FullName(name, tags), from_=start.date(), to=end.date()
         )
@@ -256,15 +247,13 @@ class Timer():
 
         :param Task task: task to remove
         """
-        connection = self.sqlite.connect()
         start, _ = task.time_span
         is_running = self.task == Task(task.name, task.tags, (start, None))
         if is_running:
             raise ValueError("cannot remove a running task")
-        connection.execute("DELETE FROM running WHERE start=?", (start,))
-        connection.execute("DELETE FROM tagged WHERE start=?", (start,))
-        connection.execute("DELETE FROM time_span WHERE start=?", (start,))
-        connection.commit()
+        self.sqlite.execute("DELETE FROM running WHERE start=?", (start,))
+        self.sqlite.execute("DELETE FROM tagged WHERE start=?", (start,))
+        self.sqlite.execute("DELETE FROM time_span WHERE start=?", (start,))
 
     def add(self, full_name=FullName("", set()), start="", end=""):
         """Add task.
@@ -273,31 +262,29 @@ class Timer():
         :param str start: start of time period
         :param str end: end of time period
         """
-        connection = self.sqlite.connect()
         start = datetime.datetime.strptime(start, "%Y-%m-%d %H:%M")
         end = datetime.datetime.strptime(end, "%Y-%m-%d %H:%M")
         if end <= start:
             raise ValueError(
                 f"task's end ({end}) is before its start ({start})"
             )
-        row = connection.execute(
+        row = self.sqlite.execute(
             "SELECT start FROM running WHERE start=?", (start,)
         ).fetchone()
         if row:
             raise ValueError(f"task started at {start} already exists")
-        connection.execute(
+        self.sqlite.execute(
             "INSERT INTO running (start,name) VALUES (?,?)",
             (start, full_name.name)
         )
-        connection.executemany(
+        self.sqlite.execute(
             "INSERT INTO tagged (tag,start) VALUES (?,?)",
             [(tag, start) for tag in full_name.tags]
         )
-        connection.execute(
+        self.sqlite.execute(
             "INSERT INTO time_span (start,end) VALUES (?,?)",
             (start, end)
         )
-        connection.commit()
         return Task(full_name.name, full_name.tags, (start, end))
 
     def _export_csv(self, filename, tasks):
