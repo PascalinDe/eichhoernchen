@@ -46,10 +46,7 @@ class Timer():
         :param str database: Eichhörnchen SQLite3 database
         """
         self.sqlite = src.sqlite.SQLite(database)
-        connection = self.sqlite.connect()
-        for table in src.sqlite.COLUMN_DEF:
-            src.sqlite.create_table(connection, table, close=False)
-        connection.close()
+        self.sqlite.create_database()
         self._reset_task()
 
     def _reset_task(self, task=Task("", set(), ())):

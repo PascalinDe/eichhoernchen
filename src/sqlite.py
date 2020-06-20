@@ -121,6 +121,13 @@ class SQLite():
             ) from exception
         return connection
 
+    def create_database(self):
+        """Create SQLite3 database."""
+        connection = self.connect()
+        for table in COLUMN_DEF:
+            create_table(connection, table, close=False)
+        connection.close()
+
     def execute(self, statement, *parameters):
         """Execute SQLite3 statement(s).
 
