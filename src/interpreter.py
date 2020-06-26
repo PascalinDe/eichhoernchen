@@ -414,7 +414,9 @@ class Interpreter():
         :param str from_: from
         :param str to: to
         """
-        tasks = self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
+        tasks = list(
+            self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
+        )
         if not tasks:
             return src.cutils.get_multi_part_line(("no task", 4))
         choices = [src.output_formatter.pprint_task(task) for task in tasks]
@@ -434,7 +436,9 @@ class Interpreter():
         :param str from_: from
         :param str to: to
         """
-        tasks = self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
+        tasks = list(
+            self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
+        )
         if not tasks:
             return []
         choices = [src.output_formatter.pprint_task(task) for task in tasks]

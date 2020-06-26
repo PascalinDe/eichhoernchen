@@ -222,7 +222,7 @@ class TestTiming(unittest.TestCase):
             for name, (start, end) in values[:i]
         ]
         self.assertEqual(
-            timer.list_tasks(from_="week", to="today"), expected
+            list(timer.list_tasks(from_="week", to="today")), expected
         )
 
     def test_list_tasks_month(self):
@@ -259,7 +259,10 @@ class TestTiming(unittest.TestCase):
             Task(name, set(), (start, end))
             for name, (start, end) in values[:i]
         ]
-        self.assertEqual(timer.list_tasks(from_="month", to="today"), expected)
+        self.assertEqual(
+            list(timer.list_tasks(from_="month", to="today")),
+            expected
+        )
 
     def test_list_tasks_year(self):
         """Test listing all tasks since the beginning of the year.
@@ -295,7 +298,10 @@ class TestTiming(unittest.TestCase):
             Task(name, set(), (start, end))
             for name, (start, end) in values[:i]
         ]
-        self.assertEqual(timer.list_tasks(from_="year", to="today"), expected)
+        self.assertEqual(
+            list(timer.list_tasks(from_="year", to="today")),
+            expected
+        )
 
     def test_list_tasks_all(self):
         """Test listing all tasks.
@@ -328,7 +334,10 @@ class TestTiming(unittest.TestCase):
         expected = [
             Task(name, set(), (start, end)) for name, (start, end) in values
         ]
-        self.assertEqual(timer.list_tasks(from_="all", to="today"), expected)
+        self.assertEqual(
+            list(timer.list_tasks(from_="all", to="today")),
+            expected
+        )
 
     def test_list_tasks_up_to_date(self):
         """Test listing tasks up to date.
