@@ -26,28 +26,24 @@
 
 
 class Template():
-    """Template."""
-
-    @property
-    def base_template(self):
-        return "{template}"
+    """Output formatting template."""
 
     @property
     def name(self):
-        return self.base_template.format(template="{name}")
+        return "{name}"
 
     @property
     def tag(self):
-        return self.base_template.format(template="[{tag}]")
+        return "[{tag}]"
 
     @property
     def time_span(self):
-        return self.base_template.format(template="{start}-{end}")
+        return "{start}-{end}"
 
     @property
     def total(self):
-        return self.base_template.format(template="{hours}h{minutes}m")
+        return "{hours}h{minutes}m"
 
     @property
     def prompt(self):
-        return self.base_template.format(template="~>")
+        return "~>"
