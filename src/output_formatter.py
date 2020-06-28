@@ -21,8 +21,6 @@
 
 
 # standard library imports
-import curses
-
 # third party imports
 # library specific imports
 from src import FullName, Task
@@ -40,7 +38,7 @@ def pprint_name(name):
     :returns: pretty-printed name
     :rtype: tuple
     """
-    return ((TEMPLATE.name.format(name=name), curses.color_pair(1)),)
+    return ((TEMPLATE.name[0].format(name=name), TEMPLATE.name[1]),)
 
 
 def pprint_tags(tags):
@@ -52,8 +50,13 @@ def pprint_tags(tags):
     :rtype: tuple
     """
     return (
-        ("".join(TEMPLATE.tag.format(tag=tag) for tag in sorted(tags) if tag),
-         curses.color_pair(2)),
+        (
+            "".join(
+                TEMPLATE.tag[0].format(tag=tag)
+                for tag in sorted(tags) if tag
+            ),
+            TEMPLATE.tag[1]
+        ),
     )
 
 
@@ -77,20 +80,19 @@ def pprint_time_span(time_span, date=False):
     :returns: time span
     :rtype: tuple
     """
-    start, end = time_span
     if date:
-        if (end - start).days >= 1:
-            start = start.strftime("%Y-%m-%d %H:%M")
+        if (time_span[1] - time_span[0]).days >= 1:
+            start = time_span[0].strftime("%Y-%m-%d %H:%M")
         else:
-            start = start.strftime("%H:%M")
-        end = end.strftime("%H:%M %Y-%m-%d")
+            start = time_span[0].strftime("%H:%M")
+        end = time_span[1].strftime("%H:%M %Y-%m-%d")
     else:
-        start = start.strftime("%H:%M")
-        end = end.strftime("%H:%M")
+        start = time_span[0].strftime("%H:%M")
+        end = time_span[1].strftime("%H:%M")
     return (
         (
-            TEMPLATE.time_span.format(start=start, end=end),
-            curses.color_pair(3)
+            TEMPLATE.time_span[0].format(start=start, end=end),
+            TEMPLATE.time_span[1]
         ),
     )
 
@@ -100,15 +102,14 @@ def pprint_total(total):
 
     :param int total: runtime (in seconds)
 
-    :returns: pretty-printed representation of total runtime
+    :returns: pretty-printed runtime
     :rtype: tuple
     """
-    minutes, _ = divmod(total, 60)
-    hours, minutes = divmod(minutes, 60)
+    hours, minutes = divmod(divmod(total, 60)[0], 60)
     return (
         (
-            TEMPLATE.total.format(hours=hours, minutes=minutes),
-            curses.color_pair(4)
+            TEMPLATE.total[0].format(hours=hours, minutes=minutes),
+            TEMPLATE.total[1]
         ),
     )
 
@@ -124,9 +125,7 @@ def pprint_task(task, date=False):
     """
     return (
         *pprint_time_span(task.time_span, date=date),
-        ("(", curses.color_pair(0)),
         *pprint_total(task.total),
-        (")", curses.color_pair(0)),
         *pprint_full_name(FullName(task.name, task.tags))
     )
 
@@ -137,17 +136,33 @@ def pprint_sum(full_name, total):
     :param FullName full_name: full name
     :param int total: runtime (in seconds)
 
-    :returns: pretty-printed total runtime
+    :returns: pretty-printed runtime
     :rtype: tuple
     """
     return (
         *pprint_full_name(full_name),
-        (" ", curses.color_pair(0)),
         *pprint_total(total)
     )
 
 
-def pprint_prompt(task=Task("", set(), ())):
+def pprint_running(task):
+    """Pretty-print currently running task.
+
+    :param Task task: task
+
+    :returns: pretty-printed currently running task
+    :rtype: tuple
+    """
+    start = task.time_span[0].strftime("%H:%M")
+    return (
+        (
+            TEMPLATE.running[0].format(start=start),
+            TEMPLATE.running[1]
+        ),
+    )
+
+
+def pprint_prompt(task=Task("", frozenset(), ())):
     """Pretty-print prompt.
 
     :param Task task: task
@@ -156,14 +171,9 @@ def pprint_prompt(task=Task("", set(), ())):
     :rtype: tuple
     """
     if task.name:
-        full_name = pprint_full_name(FullName(task.name, task.tags))
-        start, _ = task.time_span
-        start = start.strftime("%H:%M")
-        return (
-            *full_name,
-            ("(", curses.color_pair(0)),
-            ("{start}-".format(start=start), curses.color_pair(3)),
-            (")", curses.color_pair(0)),
-            (TEMPLATE.prompt, curses.color_pair(0))
+        return(
+            *pprint_full_name(FullName(task.name, task.tags)),
+            *pprint_running(task),
+            TEMPLATE.prompt
         )
-    return ((TEMPLATE.prompt, curses.color_pair(0)),)
+    return (TEMPLATE.prompt,)
