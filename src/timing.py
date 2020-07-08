@@ -80,11 +80,12 @@ class Timer():
 
     def stop(self):
         """Stop task."""
-        self.sqlite.execute(
-            "UPDATE time_span SET end = ? WHERE start = ?",
-            (datetime.datetime.now(), self.task.time_span[0])
-        )
-        self._reset_task()
+        if self.task.name:
+            self.sqlite.execute(
+                "UPDATE time_span SET end = ? WHERE start = ?",
+                (datetime.datetime.now(), self.task.time_span[0])
+            )
+            self._reset_task()
 
     @staticmethod
     def _get_date(endpoint):
