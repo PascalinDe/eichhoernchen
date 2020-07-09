@@ -36,14 +36,12 @@ def get_window_pos(max_y, max_x):
     :param int max_y: maximum y position
     :param int max_x: maximum x position
 
-    :returns: number of lines, number of columns and y, x position
-    :rtype: int, int, int and int
+    :returns: number of lines and columns and y and x positions
+    :rtype: int, int, int, int
     """
     nlines = max_y//2
     ncols = max_x//2
-    begin_y = (max_y-nlines)//2
-    begin_x = (max_x-ncols)//2
-    return nlines, ncols, begin_y, begin_x
+    return nlines, ncols, (max_y-nlines)//2, (max_x-ncols)//2
 
 
 def scroll_up(window, upper_stack, lower_stack, boxed=False):
@@ -56,7 +54,6 @@ def scroll_up(window, upper_stack, lower_stack, boxed=False):
     if not upper_stack:
         # top of the window
         return
-    y, x = window.getyx()
     max_y, _ = window.getmaxyx()
     if boxed:
         min_y = 1
@@ -78,7 +75,6 @@ def scroll_down(window, upper_stack, lower_stack, boxed=False):
     :param list upper_stack: stack (upper window)
     :param list lower_stack: stack (lower window)
     """
-    y, x = window.getyx()
     max_y, _ = window.getmaxyx()
     if boxed:
         min_y = 1
@@ -101,36 +97,43 @@ def scroll_down(window, upper_stack, lower_stack, boxed=False):
 
 
 def readline(
-        window, upper_stack, lower_stack,
-        boxed=False, prompt="", x=-1, y=-1, clear=False, scroll=False
+        window,
+        upper_stack,
+        lower_stack,
+        boxed=False,
+        prompt="",
+        y=-1,
+        x=-1,
+        clear=False,
+        scroll=False
 ):
     """Read line.
 
-    :param bool boxed: a box is drawn around the edges of the window
-    :param window: window
+    :param window window: window
+    :param list upper_stack: stack (upper window)
+    :param list lower_stack: stack (lower window)
+    :param bool boxed: whether a box is drawn around the edges
+    :param str prompt: prompt
+    :param int y: y position
+    :param int x: x position
     :param bool clear: toggle clearing line on/off
     :param bool scroll: toggle scrolling on/off
 
     :returns: line
     :rtype: str
     """
-    if x >= 0:
-        if y < 0:
-            y, _ = window.getyx()
-    elif y >= 0:
+    if y < 0:
+        y, _ = window.getyx()
+    if x < 0:
         _, x = window.getyx()
-    else:
-        y, x = window.getyx()
     window.move(y, x)
     _, min_x = window.getyx()
-    _, max_x = window.getmaxyx()
     if boxed:
         min_x += 1
         x += 1
-        max_x -= 1
     if prompt:
         window.addstr(y, x, prompt)
-    min_x += len(prompt)
+        min_x += len(prompt)
     i = 0
     buffer = []
     while True:
@@ -219,7 +222,7 @@ def readline(
 def writeline(window, y, x, multi_part_line):
     """Write multi-part line.
 
-    :param window: window
+    :param window window: window
     :param int y: y
     :param int x: x
     :param tuple multi_part_line: multi-part line
@@ -232,7 +235,7 @@ def writeline(window, y, x, multi_part_line):
 def scrapeline(window, y):
     """Scrape multi-part line from the window.
 
-    :param window: window
+    :param window window: window
     :param int y: y
 
     :returns: multi-part line
@@ -262,8 +265,8 @@ def mk_panel(nlines, ncols, begin_y, begin_x):
 
     :param int nlines: number of lines
     :param int ncols: number of columns
-    :param int begin_y: y position of window
-    :param int begin_x: x position of window
+    :param int begin_y: y position
+    :param int begin_x: x position
 
     :returns: panel
     :rtype: panel
@@ -334,8 +337,15 @@ def display_choices(choices):
     try:
         while line not in (str(i) for i in range(1, len(choices)+1)):
             line = readline(
-                window, upper_stack, lower_stack,
-                prompt=">", y=y, x=0, clear=True, boxed=True, scroll=True
+                window,
+                upper_stack,
+                lower_stack,
+                prompt=">",
+                y=y,
+                x=0,
+                clear=True,
+                boxed=True,
+                scroll=True
             )
     except KeyboardInterrupt:
         return -1
@@ -348,14 +358,14 @@ def display_choices(choices):
 def get_multi_part_line(*parts):
     """Get multi-part line.
 
-    :param tuple parts: tuple of part and color pair index
+    :param tuple parts: tuples of part and color pair index
 
     :returns: multi-part line
     :rtype: tuple
     """
     return tuple(
         (part, curses.color_pair(i))
-        for (part, i) in parts
+        for part, i in parts
     )
 
 
