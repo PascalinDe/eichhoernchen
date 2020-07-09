@@ -32,9 +32,9 @@ import curses.panel
 # library specific imports
 import src.interpreter
 import src.output_formatter
-
 from src.cutils import (get_window_pos, init, init_color, mk_panel, readline,
                         scroll_down, writeline)
+
 
 BANNER = "Welcome to Eichhörnchen.\tType help or ? to list commands."
 
@@ -89,7 +89,10 @@ def _loop(stdscr, config):
                     writeline(window, y, 0, line)
             except Exception as exception:
                 window.addstr(
-                    y, 0, str(exception), curses.color_pair(5)
+                    y,
+                    0,
+                    str(exception),
+                    curses.color_pair(5)
                 )
             finally:
                 y, _ = window.getyx()
