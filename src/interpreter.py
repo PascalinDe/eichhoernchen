@@ -340,7 +340,8 @@ class Interpreter():
             subcommands[prog] = subparsers.add_parser(
                 prog,
                 description=subcommand["description"],
-                add_help=False
+                add_help=False,
+                aliases=subcommand["aliases"]
             )
             if prog == "help":
                 continue
