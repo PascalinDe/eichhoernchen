@@ -212,7 +212,7 @@ class Interpreter():
                 "args": {
                     "full_name": ARGS["full_name"],
                     "from_": {
-                        **ARGS["full_name"],
+                        **ARGS["from_"],
                         **{"nargs": "?", "default": "today"}
                     },
                     "to": {
@@ -413,7 +413,9 @@ class Interpreter():
         :param str from_: from
         :param str to: to
         """
-        tasks = list(self.timer.list_tasks(from_=from_, to=to))
+        tasks = list(
+            self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
+        )
         choices = [src.output_formatter.pprint_task(task) for task in tasks]
         if not choices:
             return src.cutils.get_multi_part_line(("no task", 4))
