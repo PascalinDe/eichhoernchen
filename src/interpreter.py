@@ -362,7 +362,7 @@ class Interpreter():
         subcommands["help"].set_defaults(
             func=lambda command: command or "",
             formatter=lambda command: self.show_help_message(
-                command, subcommands.keys(), aliases
+                command, subcommands, aliases
             )
         )
 
@@ -492,13 +492,9 @@ class Interpreter():
                 for help in subparser.format_help().split("\n")
             ]
         return [
-            src.cutils.get_multi_part_line(
-                *[
-                    (usage, 4)
-                    for usage in self._parser.format_usage().split("\n")
-                    if usage
-                ]
-            )
+            src.cutils.get_multi_part_line((usage.strip(), 4))
+            for usage in self._parser.format_usage().split("\n")
+            if usage
         ]
 
     def list_aliases(self, aliases):
