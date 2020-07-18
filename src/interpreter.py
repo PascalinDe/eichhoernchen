@@ -444,7 +444,7 @@ class Interpreter():
         )
         choices = [src.output_formatter.pprint_task(task) for task in tasks]
         if not choices:
-            return []
+            return src.cutils.get_multi_part_line(("no task", 4))
         i = display_choices(choices)
         if i < 0:
             return src.cutils.get_multi_part_line(("aborted editing task", 5))
