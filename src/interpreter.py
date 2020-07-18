@@ -459,7 +459,7 @@ class Interpreter():
         )
         mv_back()
         arg = (
-            self.get_name, self.get_tags, self.get_from, self.get_to
+            get_name, get_tags, get_from, get_to
         )[j](line)
         if actions[j] in ("start", "end"):
             arg = datetime.datetime.strptime(arg, "%Y-%m-%d %H:%M")
