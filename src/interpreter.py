@@ -454,10 +454,14 @@ class Interpreter():
             return src.cutils.get_multi_part_line(("aborted editing task", 5))
         window = mv_front()
         window.box()
-        line = readline(
-            window, [], [], boxed=True, prompt=f"new {actions[j]} >", y=1
-        )
-        mv_back()
+        try:
+            line = readline(
+                window, [], [], boxed=True, prompt=f"new {actions[j]} >", y=1
+            )
+        except KeyboardInterrupt:
+            return src.cutils.get_multi_part_line(("aborted editing task", 5))
+        finally:
+            mv_back()
         arg = (
             get_name, get_tags, get_from, get_to
         )[j](line)
