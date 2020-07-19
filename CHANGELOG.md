@@ -1,5 +1,11 @@
 # [2.1] ()
+## Bug Fixes
+* fixed displaying multi-part lines longer than window (closes [#15](https://github.com/PascalinDe/eichhoernchen/issues/15))
+* Control+C aborts editing task in editing window as well (closes [#13](https://github.com/PascalinDe/eichhoernchen/issues/13))
+* trying to edit non-existing task displays error message (closes [#12](https://github.com/PascalinDe/eichhoernchen/issues/12))
+* fixed editing tags of running task (closes [#11](https://github.com/PascalinDe/eichhoernchen/issues/11))
 ## Features
+* added command aliases
 * export tasks to CSV or JSON files
 ## Migrations
 * configuration file
