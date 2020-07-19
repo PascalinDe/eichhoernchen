@@ -71,7 +71,7 @@ def _loop(stdscr, config):
             prompt = src.output_formatter.pprint_prompt(
                 task=interpreter.timer.task
             )
-            writeline(window, y, 0, prompt)
+            y = writeline(window, y, 0, prompt)
             line = readline(window, upper_stack, lower_stack, scroll=True)
             if not line:
                 if y < max_y-1:
@@ -86,7 +86,7 @@ def _loop(stdscr, config):
                         y += 1
                     else:
                         scroll_down(window, upper_stack, lower_stack)
-                    writeline(window, y, 0, line)
+                    y = writeline(window, y, 0, line)
             except Exception as exception:
                 window.addstr(
                     y,

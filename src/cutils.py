@@ -229,7 +229,8 @@ def writeline(window, y, x, multi_part_line):
     """
     for line, attr in multi_part_line:
         window.addstr(y, x, line, attr)
-        x += len(line)
+        y, x = window.getyx()
+    return y
 
 
 def scrapeline(window, y):
