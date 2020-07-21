@@ -168,7 +168,7 @@ def readline(
                 continue
             if len(buffer) > 0 and i > 0:
                 i -= 1
-                window.insch(y, x, buffer[i])
+                window.insstr(y, x, buffer[i])
                 continue
         if char == curses.KEY_RIGHT:
             if x < max_x-1:
@@ -179,7 +179,7 @@ def readline(
             if i < len(buffer)-1:
                 window.delch(y, min_x)
                 i += 1
-                window.insch(y, x, buffer[i])
+                window.insstr(y, x, buffer[i])
                 continue
             if window.instr(y, x, 1).decode(encoding="utf-8") == buffer[-1]:
                 window.delch(y, min_x)
@@ -195,7 +195,7 @@ def readline(
                     window.delch(y, max_x-1)
                 window.delch(y, x)
                 if len(buffer) > max_x-(min_x+2) and i >= x-1:
-                    window.insch(y, min_x, buffer[(i-x)+1])
+                    window.insstr(y, min_x, buffer[(i-x)+1])
                     window.move(y, x+1)
             continue
         if isinstance(char, int):
@@ -209,7 +209,7 @@ def readline(
         else:
             window.delch(y, min_x)
             window.move(y, x-1)
-        window.insch(char)
+        window.insstr(char)
         window.move(y, x)
     if clear:
         window.move(y, 1)
