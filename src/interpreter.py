@@ -24,7 +24,6 @@
 import re
 import argparse
 import datetime
-
 from io import StringIO
 from contextlib import redirect_stderr
 
@@ -32,10 +31,8 @@ from contextlib import redirect_stderr
 # library specific imports
 import src.parser
 import src.timing
-
 from src import FullName
-from src.cutils import (display_choices, mv_back, mv_front, readline,
-                        ResizeError)
+from src.cutils import display_choices, mv_back, mv_front, readline
 
 
 def get_name(args):
