@@ -1,5 +1,6 @@
 # [2.1] ()
 ## Bug Fixes
+* take resizing into account (closes [#5](https://github.com/PascalinDe/eichhoernchen/issues/5))
 * fixed inserting non-ASCII characters (closes [#14](https://github.com/PascalinDe/eichhoernchen/issues/14))
 * fixed displaying multi-part lines longer than window (closes [#15](https://github.com/PascalinDe/eichhoernchen/issues/15))
 * Control+C aborts editing task in editing window as well (closes [#13](https://github.com/PascalinDe/eichhoernchen/issues/13))

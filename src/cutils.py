@@ -30,6 +30,11 @@ import curses.panel
 # library specific imports
 
 
+class ResizeError(Exception):
+    """Raised when window has been resized."""
+    pass
+
+
 def get_window_pos(max_y, max_x):
     """Get secondary window position.
 
@@ -142,6 +147,8 @@ def readline(
         max_y, max_x = window.getmaxyx()
         y, x = window.getyx()
         char = window.get_wch()
+        if char == curses.KEY_RESIZE:
+            raise ResizeError
         if char == "\x03":
             raise KeyboardInterrupt
         if char in (curses.KEY_DOWN, curses.KEY_UP):
@@ -300,6 +307,22 @@ def mv_back():
     curses.doupdate()
 
 
+def reinitialize_window(top=True):
+    """Reinitialize secondary window.
+
+    :param bool top: whether secondary window is on top
+    """
+    if top:
+        panel = curses.panel.top_panel()
+        bottom_window = curses.panel.bottom_panel().window()
+    else:
+        panel = curses.panel.bottom_panel()
+        bottom_window = curses.panel.top_panel().window()
+    window = curses.newwin(*get_window_pos(*bottom_window.getmaxyx()))
+    init(window)
+    panel.replace(window)
+
+
 def display_choices(choices):
     """Display choices.
 
@@ -310,49 +333,58 @@ def display_choices(choices):
     """
     if len(choices) == 1:
         return 0
-    lower_stack = []
-    upper_stack = []
-    window = mv_front()
-    window.clear()
-    window.box()
-    y, _ = window.getyx()
-    y += 1
-    x = 1
-    max_y, max_x = window.getmaxyx()
-    max_y -= 1
-    window.addstr(y, x, f"Pick choice 1...{len(choices)}.")
-    if y < max_y-1:
-        y += 1
-    else:
-        scroll_down(window, upper_stack, lower_stack, boxed=True)
-    for i, choice in enumerate(choices, start=1):
-        window.addstr(
-            y, x, f"{i}: {''.join(x[0] for x in choice)}", curses.color_pair(0)
-        )
+    while True:
+        lower_stack = []
+        upper_stack = []
+        window = mv_front()
+        window.clear()
+        window.box()
         y, _ = window.getyx()
+        y += 1
+        x = 1
+        max_y, max_x = window.getmaxyx()
+        max_y -= 1
+        window.addstr(y, x, f"Pick choice 1...{len(choices)}.")
         if y < max_y-1:
             y += 1
         else:
             scroll_down(window, upper_stack, lower_stack, boxed=True)
-    line = ""
-    try:
-        while line not in (str(i) for i in range(1, len(choices)+1)):
-            line = readline(
-                window,
-                upper_stack,
-                lower_stack,
-                prompt=">",
-                y=y,
-                x=0,
-                clear=True,
-                boxed=True,
-                scroll=True
+        for i, choice in enumerate(choices, start=1):
+            window.addstr(
+                y,
+                x,
+                f"{i}: {''.join(x[0] for x in choice)}",
+                curses.color_pair(0)
             )
-    except KeyboardInterrupt:
-        return -1
-    finally:
-        window.clear()
-        mv_back()
+            y, _ = window.getyx()
+            if y < max_y-1:
+                y += 1
+            else:
+                scroll_down(window, upper_stack, lower_stack, boxed=True)
+        line = ""
+        try:
+            while line not in (str(i) for i in range(1, len(choices)+1)):
+                line = readline(
+                    window,
+                    upper_stack,
+                    lower_stack,
+                    prompt=">",
+                    y=y,
+                    x=0,
+                    clear=True,
+                    boxed=True,
+                    scroll=True
+                )
+        except KeyboardInterrupt:
+            return -1
+        except ResizeError:
+            continue
+        else:
+            break
+        finally:
+            reinitialize_window()
+            window.clear()
+            mv_back()
     return int(line)-1
 
 
