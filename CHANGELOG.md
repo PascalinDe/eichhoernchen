@@ -7,6 +7,7 @@
 * trying to edit non-existing task displays error message (closes [#12](https://github.com/PascalinDe/eichhoernchen/issues/12))
 * fixed editing tags of running task (closes [#11](https://github.com/PascalinDe/eichhoernchen/issues/11))
 ## Features
+* sum up by specific full name, name or tag(s) instead of summing up and listing all of them
 * added command aliases
 * export tasks to CSV or JSON files
 ## Migrations

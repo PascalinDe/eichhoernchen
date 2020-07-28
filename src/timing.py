@@ -151,10 +151,15 @@ class Timer():
             end = end or datetime.datetime.now()
             yield Task(name, tags, (start, end))
 
-    def sum_total(self, summand="full name", from_="today", to="today"):
+    def sum_total(
+            self,
+            summand=FullName("", frozenset()),
+            from_="today",
+            to="today"
+    ):
         """Sum total time up.
 
-        :param str summand: summand
+        :param FullName summand: full name
         :param str from_: start of time period
         :param str to: end of time period
 
@@ -162,15 +167,16 @@ class Timer():
         :rtype: dict_items
         """
         sum_total = collections.defaultdict(int)
-        for task in self.list_tasks(from_=from_, to=to):
+        for task in self.list_tasks(full_name=summand, from_=from_, to=to):
             total = int(
                 (task.time_span[-1] - task.time_span[0]).total_seconds()
             )
-            if summand == "full name":
+            if summand.name and summand.tags:
                 sum_total[(task.name, tuple(task.tags))] += total
-            if summand == "name":
+                continue
+            if summand.name:
                 sum_total[(task.name, ("",))] += total
-            if summand == "tag":
+            if summand.tags:
                 for tag in task.tags:
                     sum_total[("", (tag,))] += total
         return sum_total.items()

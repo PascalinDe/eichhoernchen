@@ -79,6 +79,20 @@ def get_full_name(args):
         return FullName(get_name(args), frozenset())
 
 
+def get_summand(args):
+    """Get summand.
+
+    :param str args: command-line arguments
+
+    :returns: summand
+    :rtype: FullName
+    """
+    try:
+        return get_full_name(args)
+    except argparse.ArgumentTypeError:
+        return FullName("", get_tags(args))
+
+
 def get_from(args):
     """Get from.
 
@@ -272,7 +286,10 @@ class Interpreter():
                     for full_name, total in sums
                 ],
                 "args": {
-                    "summand": {"choices": ("full name", "name", "tag")},
+                    "summand": {
+                        "type": get_summand,
+                        "help": "full name, name or tag to sum up"
+                    },
                     "from_": {
                         **ARGS["from_"],
                         **{"nargs": "?", "default": "today"}
