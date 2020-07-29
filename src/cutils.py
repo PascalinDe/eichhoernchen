@@ -30,6 +30,9 @@ import curses.panel
 # library specific imports
 
 
+BANNER = "Welcome to Eichhörnchen.\tType help or ? to list commands."
+
+
 class ResizeError(Exception):
     """Raised when window has been resized."""
     pass
@@ -307,18 +310,33 @@ def mv_back():
     curses.doupdate()
 
 
-def reinitialize_window(top=True):
+def reinitialize_primary_window(top=True):
+    """Reinitialize primary window.
+
+    :param bool top: whether primary window is on top
+    """
+    if top:
+        primary_window = curses.panel.top_panel().window()
+    else:
+        primary_window = curses.panel.bottom_panel().window()
+    primary_window.clear()
+    primary_window.addstr(0, 0, BANNER)
+    y, _ = primary_window.getyx()
+    primary_window.move(y+1, 0)
+
+
+def reinitialize_secondary_window(top=True):
     """Reinitialize secondary window.
 
     :param bool top: whether secondary window is on top
     """
     if top:
         panel = curses.panel.top_panel()
-        bottom_window = curses.panel.bottom_panel().window()
+        secondary_window = curses.panel.bottom_panel().window()
     else:
         panel = curses.panel.bottom_panel()
-        bottom_window = curses.panel.top_panel().window()
-    window = curses.newwin(*get_window_pos(*bottom_window.getmaxyx()))
+        secondary_window = curses.panel.top_panel().window()
+    window = curses.newwin(*get_window_pos(*secondary_window.getmaxyx()))
     init(window)
     panel.replace(window)
 
@@ -378,11 +396,12 @@ def display_choices(choices):
         except KeyboardInterrupt:
             return -1
         except ResizeError:
+            reinitialize_primary_window(top=False)
             continue
         else:
             break
         finally:
-            reinitialize_window()
+            reinitialize_secondary_window()
             window.clear()
             mv_back()
     return int(line)-1

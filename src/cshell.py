@@ -33,19 +33,18 @@ import curses.panel
 import src.interpreter
 import src.output_formatter
 from src.cutils import (
+    BANNER,
     get_window_pos,
     init,
     init_color,
     mk_panel,
     readline,
-    reinitialize_window,
+    reinitialize_primary_window,
+    reinitialize_secondary_window,
     ResizeError,
     scroll_down,
     writeline
 )
-
-
-BANNER = "Welcome to Eichhörnchen.\tType help or ? to list commands."
 
 
 def _loop(stdscr, config):
@@ -85,11 +84,8 @@ def _loop(stdscr, config):
             try:
                 line = readline(window, upper_stack, lower_stack, scroll=True)
             except ResizeError:
-                reinitialize_window(top=False)
-                window.clear()
-                window.addstr(0, 0, BANNER)
-                y, _ = window.getyx()
-                y += 2
+                reinitialize_primary_window()
+                reinitialize_secondary_window(top=False)
                 max_x, max_y = window.getmaxyx()
                 upper_stack = []
                 lower_stack = []
@@ -102,6 +98,7 @@ def _loop(stdscr, config):
                 continue
             try:
                 output = interpreter.interpret_line(line)
+                y, x = window.getyx()
                 for line in output:
                     if y < max_y-1:
                         y += 1
