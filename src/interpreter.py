@@ -32,7 +32,15 @@ from contextlib import redirect_stderr
 import src.parser
 import src.timing
 from src import FullName
-from src.cutils import display_choices, mv_back, mv_front, readline
+from src.cutils import (
+    display_choices,
+    mv_back,
+    mv_front,
+    readline,
+    reinitialize_primary_window,
+    reinitialize_secondary_window,
+    ResizeError
+)
 
 
 def get_name(args):
@@ -469,16 +477,27 @@ class Interpreter():
         j = display_choices(actions)
         if j < 0:
             return src.cutils.get_multi_part_line(("aborted editing task", 5))
-        window = mv_front()
-        window.box()
-        try:
-            line = readline(
-                window, [], [], boxed=True, prompt=f"new {actions[j]} >", y=1
-            )
-        except KeyboardInterrupt:
-            return src.cutils.get_multi_part_line(("aborted editing task", 5))
-        finally:
-            mv_back()
+        while True:
+            try:
+                window = mv_front()
+                window.box()
+                line = readline(
+                    window, [], [],
+                    boxed=True, prompt=f"new {actions[j]} >", y=1
+                )
+            except KeyboardInterrupt:
+                return src.cutils.get_multi_part_line(
+                    ("aborted editing task", 5)
+                )
+            except ResizeError:
+                reinitialize_primary_window(top=False)
+                continue
+            else:
+                break
+            finally:
+                reinitialize_secondary_window()
+                window.clear()
+                mv_back()
         arg = (
             get_name, get_tags, get_from, get_to
         )[j](line)
