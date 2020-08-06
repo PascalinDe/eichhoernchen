@@ -451,10 +451,12 @@ class TestTiming(unittest.TestCase):
         connection.execute(sql, (tag, start))
         connection.commit()
         expected = [
-            (("foo", ()), int(2*timedelta.total_seconds())),
             (("foo", ("foobar",)), int(timedelta.total_seconds()))
         ]
-        self.assertCountEqual(timer.sum_total(from_="all"), expected)
+        self.assertCountEqual(
+            timer.sum_total(summand=FullName("foo", {"foobar"}), from_="all"),
+            expected
+        )
 
     def test_sum_total_name(self):
         """Test summing total time up.
@@ -487,7 +489,7 @@ class TestTiming(unittest.TestCase):
         connection.commit()
         expected = [(("foo", ("",)), int(3*timedelta.total_seconds()))]
         self.assertCountEqual(
-            timer.sum_total(summand="name", from_="all"),
+            timer.sum_total(summand=FullName("foo", frozenset()), from_="all"),
             expected
         )
 
@@ -522,10 +524,12 @@ class TestTiming(unittest.TestCase):
         connection.commit()
         expected = [
             (("", ("bar",)), int(2*timedelta.total_seconds())),
-            (("", ("baz",)), int(timedelta.total_seconds()))
         ]
         self.assertCountEqual(
-            timer.sum_total(summand="tag", from_="all"), expected
+            timer.sum_total(
+                summand=FullName("", {"bar"}), from_="all"
+            ),
+            expected
         )
 
     def test_edit_name(self):

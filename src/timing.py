@@ -125,12 +125,17 @@ class Timer():
         return sql
 
     def list_tasks(
-        self, full_name=FullName("", frozenset()), from_="today", to="today"
+        self,
+        full_name=FullName("", frozenset()),
+        from_="today",
+        to="today",
+        full_match=True
     ):
         """List tasks.
 
         :param str from_: start of time period
         :param str to: end of time period
+        :param bool full_match: toggle matching full name on/off
 
         :returns: task
         :rtype: Task
@@ -146,8 +151,14 @@ class Timer():
             rows, key=lambda x: x[:3]
         ):
             tags = {row[-1] for row in rows if row[-1]}
-            if full_name.name and (name, tags) != full_name:
-                continue
+            if full_match:
+                if full_name.name and (name, tags) != full_name:
+                    continue
+            else:
+                if full_name.name and name != full_name.name:
+                    continue
+                if full_name.tags and not tags == full_name.tags:
+                    continue
             end = end or datetime.datetime.now()
             yield Task(name, tags, (start, end))
 
@@ -167,7 +178,10 @@ class Timer():
         :rtype: dict_items
         """
         sum_total = collections.defaultdict(int)
-        for task in self.list_tasks(full_name=summand, from_=from_, to=to):
+        full_match = summand.name and summand.tags
+        for task in self.list_tasks(
+                full_name=summand, from_=from_, to=to, full_match=full_match
+        ):
             total = int(
                 (task.time_span[-1] - task.time_span[0]).total_seconds()
             )
@@ -177,8 +191,7 @@ class Timer():
             if summand.name:
                 sum_total[(task.name, ("",))] += total
             if summand.tags:
-                for tag in task.tags:
-                    sum_total[("", (tag,))] += total
+                sum_total[("", tuple(task.tags))] += total
         return sum_total.items()
 
     def edit(self, task, action, *args):

@@ -288,7 +288,7 @@ class Interpreter():
                 "args": {
                     "summand": {
                         "type": get_summand,
-                        "help": "full name, name or tag to sum up"
+                        "help": "full name, name or tag(s) to sum up"
                     },
                     "from_": {
                         **ARGS["from_"],
