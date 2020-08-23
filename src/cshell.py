@@ -86,6 +86,7 @@ def _loop(stdscr, config):
             except ResizeError:
                 reinitialize_primary_window()
                 reinitialize_secondary_window(top=False)
+                y, x = window.getyx()
                 max_x, max_y = window.getmaxyx()
                 upper_stack = []
                 lower_stack = []

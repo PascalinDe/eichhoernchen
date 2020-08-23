@@ -322,7 +322,7 @@ def reinitialize_primary_window(top=True):
     primary_window.clear()
     primary_window.addstr(0, 0, BANNER)
     y, _ = primary_window.getyx()
-    primary_window.move(y+1, 0)
+    primary_window.move(y+2, 0)
 
 
 def reinitialize_secondary_window(top=True):
