@@ -24,6 +24,7 @@
 import re
 import argparse
 import datetime
+import curses.panel
 from io import StringIO
 from contextlib import redirect_stderr
 
@@ -33,13 +34,12 @@ import src.parser
 import src.timing
 from src import FullName
 from src.cutils import (
-    display_choices,
-    mv_back,
-    mv_front,
+    mk_menu,
     readline,
     reinitialize_primary_window,
-    reinitialize_secondary_window,
-    ResizeError
+    ResizeError,
+    get_window_pos,
+    mk_panel
 )
 
 
@@ -444,7 +444,7 @@ class Interpreter():
         choices = [src.output_formatter.pprint_task(task) for task in tasks]
         if not choices:
             return src.cutils.get_multi_part_line(("no task", 4))
-        i = display_choices(choices)
+        i = mk_menu(choices)
         if i < 0:
             return src.cutils.get_multi_part_line(("aborted removing task", 5))
         self.timer.remove(tasks[i])
@@ -470,16 +470,19 @@ class Interpreter():
         choices = [src.output_formatter.pprint_task(task) for task in tasks]
         if not choices:
             return src.cutils.get_multi_part_line(("no task", 4))
-        i = display_choices(choices)
+        i = mk_menu(choices)
         if i < 0:
             return src.cutils.get_multi_part_line(("aborted editing task", 5))
         actions = ("name", "tags", "start", "end")
-        j = display_choices(actions)
+        j = mk_menu(actions)
         if j < 0:
             return src.cutils.get_multi_part_line(("aborted editing task", 5))
         while True:
             try:
-                window = mv_front()
+                panel = mk_panel(
+                    *get_window_pos(*curses.panel.top_panel().getmaxyx())
+                )
+                window = panel.window()
                 window.box()
                 line = readline(
                     window, [], [],
@@ -490,14 +493,14 @@ class Interpreter():
                     ("aborted editing task", 5)
                 )
             except ResizeError:
-                reinitialize_primary_window(top=False)
+                panel.bottom()
+                reinitialize_primary_window()
                 continue
             else:
                 break
             finally:
-                reinitialize_secondary_window()
-                window.clear()
-                mv_back()
+                del panel
+                curses.panel.update_panels()
         arg = (
             get_name, get_tags, get_from, get_to
         )[j](line)

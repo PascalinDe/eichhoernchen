@@ -40,7 +40,6 @@ from src.cutils import (
     mk_panel,
     readline,
     reinitialize_primary_window,
-    reinitialize_secondary_window,
     ResizeError,
     scroll_down,
     writeline
@@ -85,7 +84,6 @@ def _loop(stdscr, config):
                 line = readline(window, upper_stack, lower_stack, scroll=True)
             except ResizeError:
                 reinitialize_primary_window()
-                reinitialize_secondary_window(top=False)
                 y, x = window.getyx()
                 max_x, max_y = window.getmaxyx()
                 upper_stack = []

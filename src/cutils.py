@@ -288,61 +288,17 @@ def mk_panel(nlines, ncols, begin_y, begin_x):
     return panel
 
 
-def mv_front():
-    """Move background window to front.
-
-    :returns: window
-    :rtype: window
-    """
-    panel = curses.panel.bottom_panel()
-    window = panel.window()
-    panel.top()
-    curses.panel.update_panels()
-    curses.doupdate()
-    return window
-
-
-def mv_back():
-    """Move foreground window to back."""
-    panel = curses.panel.top_panel()
-    panel.bottom()
-    curses.panel.update_panels()
-    curses.doupdate()
-
-
-def reinitialize_primary_window(top=True):
-    """Reinitialize primary window.
-
-    :param bool top: whether primary window is on top
-    """
-    if top:
-        primary_window = curses.panel.top_panel().window()
-    else:
-        primary_window = curses.panel.bottom_panel().window()
+def reinitialize_primary_window():
+    """Reinitialize primary window."""
+    primary_window = curses.panel.top_panel().window()
     primary_window.clear()
     primary_window.addstr(0, 0, BANNER)
     y, _ = primary_window.getyx()
     primary_window.move(y+2, 0)
 
 
-def reinitialize_secondary_window(top=True):
-    """Reinitialize secondary window.
-
-    :param bool top: whether secondary window is on top
-    """
-    if top:
-        panel = curses.panel.top_panel()
-        secondary_window = curses.panel.bottom_panel().window()
-    else:
-        panel = curses.panel.bottom_panel()
-        secondary_window = curses.panel.top_panel().window()
-    window = curses.newwin(*get_window_pos(*secondary_window.getmaxyx()))
-    init(window)
-    panel.replace(window)
-
-
-def display_choices(choices):
-    """Display choices.
+def mk_menu(choices):
+    """Make menu.
 
     :param list choices: choices
 
@@ -354,8 +310,10 @@ def display_choices(choices):
     while True:
         lower_stack = []
         upper_stack = []
-        window = mv_front()
-        window.clear()
+        panel = mk_panel(
+            *get_window_pos(*curses.panel.top_panel().window().getmaxyx())
+        )
+        window = panel.window()
         window.box()
         y, _ = window.getyx()
         y += 1
@@ -396,14 +354,14 @@ def display_choices(choices):
         except KeyboardInterrupt:
             return -1
         except ResizeError:
-            reinitialize_primary_window(top=False)
+            panel.bottom()
+            reinitialize_primary_window()
             continue
         else:
             break
         finally:
-            reinitialize_secondary_window()
-            window.clear()
-            mv_back()
+            del panel
+            curses.panel.update_panels()
     return int(line)-1
 
 
