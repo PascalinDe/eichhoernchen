@@ -97,10 +97,9 @@ def _read_config(path):
     return config
 
 
-def load_config(version, path=""):
+def load_config(path=""):
     """Load configuration file.
 
-    :param str version: version
     :param str path: path to configuration file
 
     :returns: configuration
@@ -115,7 +114,4 @@ def load_config(version, path=""):
     try:
         return _read_config(path)
     except BadConfig as exception:
-        msg = f"configuration file contains errors:\t{exception}"
-        if version == "2.1":
-            msg = f"{msg} (HINT: refer to CHANGELOG to migrate config)"
-        raise SystemExit(msg)
+        raise SystemExit(f"configuration file contains errors:\t{exception}")
