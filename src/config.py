@@ -41,6 +41,7 @@ class BadConfig(Exception):
 
 class ConfigNotFound(Exception):
     """Raised when configuration file does not exist."""
+    pass
 
 
 def _create_config():
