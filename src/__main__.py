@@ -30,7 +30,6 @@ import argparse
 import src.config
 import src.cshell
 
-
 __version__ = "2.1"
 
 

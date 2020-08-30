@@ -26,7 +26,6 @@
 from src import FullName, Task
 from src.template import Template
 
-
 TEMPLATE = Template()
 
 

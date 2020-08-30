@@ -25,6 +25,7 @@ import re
 import argparse
 import datetime
 import curses.panel
+
 from io import StringIO
 from contextlib import redirect_stderr
 
@@ -32,14 +33,15 @@ from contextlib import redirect_stderr
 # library specific imports
 import src.parser
 import src.timing
+
 from src import FullName
 from src.cutils import (
+    get_window_pos,
     mk_menu,
+    mk_panel,
     readline,
     reinitialize_primary_window,
     ResizeError,
-    get_window_pos,
-    mk_panel,
 )
 
 

@@ -21,9 +21,9 @@
 
 
 # standard library imports
+import configparser
 import os
 import os.path
-import configparser
 
 # third party imports
 # library specific imports

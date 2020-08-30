@@ -32,6 +32,7 @@ import curses.panel
 # library specific imports
 import src.interpreter
 import src.output_formatter
+
 from src.cutils import (
     BANNER,
     get_window_pos,
