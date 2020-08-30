@@ -55,7 +55,6 @@ def _loop(stdscr, config):
     """
     max_y, max_x = stdscr.getmaxyx()
     nlines, ncols, begin_y, begin_x = get_window_pos(max_y, max_x)
-    subpanel = mk_panel(nlines, ncols, begin_y, begin_x)  # noqa
     panel = mk_panel(max_y, max_x, 0, 0)
     window = panel.window()
     window.addstr(0, 0, BANNER)
