@@ -33,7 +33,7 @@ import src.sqlite
 from src import FullName, Task
 
 
-class Timer():
+class Timer:
     """Timer.
 
     :ivar SQLite sqlite: SQLite database interface
@@ -61,29 +61,23 @@ class Timer():
         if self.task.name:
             raise Warning("there is already a running task")
         start = datetime.datetime.now()
+        self.sqlite.execute("INSERT INTO time_span (start) VALUES (?)", (start,))
         self.sqlite.execute(
-            "INSERT INTO time_span (start) VALUES (?)",
-            (start,)
-        )
-        self.sqlite.execute(
-            "INSERT INTO running (name,start) VALUES (?,?)",
-            (full_name.name, start)
+            "INSERT INTO running (name,start) VALUES (?,?)", (full_name.name, start)
         )
         if full_name.tags:
             self.sqlite.execute(
                 "INSERT INTO tagged (tag,start) VALUES (?,?)",
-                *[(tag, start) for tag in full_name.tags]
+                *[(tag, start) for tag in full_name.tags],
             )
-        self._reset_task(
-            task=src.Task(*full_name, (start, None))
-        )
+        self._reset_task(task=src.Task(*full_name, (start, None)))
 
     def stop(self):
         """Stop task."""
         if self.task.name:
             self.sqlite.execute(
                 "UPDATE time_span SET end = ? WHERE start = ?",
-                (datetime.datetime.now(), self.task.time_span[0])
+                (datetime.datetime.now(), self.task.time_span[0]),
             )
             self._reset_task()
 
@@ -129,7 +123,7 @@ class Timer():
         full_name=FullName("", frozenset()),
         from_="today",
         to="today",
-        full_match=True
+        full_match=True,
     ):
         """List tasks.
 
@@ -147,9 +141,7 @@ class Timer():
             {self._define_time_period(from_, to)}
             """
         )
-        for (start, end, name), rows in itertools.groupby(
-            rows, key=lambda x: x[:3]
-        ):
+        for (start, end, name), rows in itertools.groupby(rows, key=lambda x: x[:3]):
             tags = {row[-1] for row in rows if row[-1]}
             if full_match:
                 if full_name.name and (name, tags) != full_name:
@@ -162,12 +154,7 @@ class Timer():
             end = end or datetime.datetime.now()
             yield Task(name, tags, (start, end))
 
-    def sum_total(
-            self,
-            summand=FullName("", frozenset()),
-            from_="today",
-            to="today"
-    ):
+    def sum_total(self, summand=FullName("", frozenset()), from_="today", to="today"):
         """Sum total time up.
 
         :param FullName summand: full name
@@ -180,11 +167,9 @@ class Timer():
         sum_total = collections.defaultdict(int)
         full_match = summand.name and summand.tags
         for task in self.list_tasks(
-                full_name=summand, from_=from_, to=to, full_match=full_match
+            full_name=summand, from_=from_, to=to, full_match=full_match
         ):
-            total = int(
-                (task.time_span[-1] - task.time_span[0]).total_seconds()
-            )
+            total = int((task.time_span[-1] - task.time_span[0]).total_seconds())
             if summand.name and summand.tags:
                 sum_total[(task.name, tuple(task.tags))] += total
                 continue
@@ -207,9 +192,7 @@ class Timer():
         name = task.name
         start, end = task.time_span
         tags = task.tags
-        is_running = self.task == Task(
-            task.name, tags, (start, None)
-        )
+        is_running = self.task == Task(task.name, tags, (start, None))
         if is_running and action in ("start", "end"):
             raise ValueError(f"cannot edit {action} of a running task")
         if action == "name":
@@ -219,44 +202,34 @@ class Timer():
             )
         if action == "tags":
             tags = set(args[0])
-            self.sqlite.execute(
-                "DELETE FROM tagged WHERE start=?", (start,)
-            )
+            self.sqlite.execute("DELETE FROM tagged WHERE start=?", (start,))
             self.sqlite.execute(
                 "INSERT INTO tagged (tag,start) VALUES (?,?)",
-                *[(tag, start) for tag in tags]
+                *[(tag, start) for tag in tags],
             )
         if action == "end":
             if args[0] <= start:
                 raise ValueError(f"{end} is before task's start")
             self.sqlite.execute(
-                "UPDATE time_span SET end=? WHERE start=?",
-                (args[0], start)
+                "UPDATE time_span SET end=? WHERE start=?", (args[0], start)
             )
         if action == "start":
             start = args[0]
             if end <= start:
                 raise ValueError(f"{start} is after task's end")
-            if self.sqlite.execute(
-                    "SELECT start FROM running WHERE start=?", (start,)
-            ):
+            if self.sqlite.execute("SELECT start FROM running WHERE start=?", (start,)):
                 raise ValueError(f"task started at {start} already exists")
             self.sqlite.execute(
-                "UPDATE time_span SET start=? WHERE start=?",
-                (start, task.time_span[0])
+                "UPDATE time_span SET start=? WHERE start=?", (start, task.time_span[0])
             )
             self.sqlite.execute(
-                "UPDATE running SET start=? WHERE start=?",
-                (start, task.time_span[0])
+                "UPDATE running SET start=? WHERE start=?", (start, task.time_span[0])
             )
             self.sqlite.execute(
-                "UPDATE tagged SET start=? WHERE start=?",
-                (start, task.time_span[0])
+                "UPDATE tagged SET start=? WHERE start=?", (start, task.time_span[0])
             )
         for task in self.list_tasks(
-            full_name=FullName(name, tags),
-                from_=start.date(),
-                to=end.date()
+            full_name=FullName(name, tags), from_=start.date(), to=end.date()
         ):
             if task.time_span == (start, end):
                 break
@@ -271,15 +244,9 @@ class Timer():
         """
         if self.task == Task(task.name, task.tags, (task.time_span[0], None)):
             raise ValueError("cannot remove a running task")
-        self.sqlite.execute(
-            "DELETE FROM running WHERE start=?", (task.time_span[0],)
-        )
-        self.sqlite.execute(
-            "DELETE FROM tagged WHERE start=?", (task.time_span[0],)
-        )
-        self.sqlite.execute(
-            "DELETE FROM time_span WHERE start=?", (task.time_span[0],)
-        )
+        self.sqlite.execute("DELETE FROM running WHERE start=?", (task.time_span[0],))
+        self.sqlite.execute("DELETE FROM tagged WHERE start=?", (task.time_span[0],))
+        self.sqlite.execute("DELETE FROM time_span WHERE start=?", (task.time_span[0],))
 
     def add(self, full_name=FullName("", set()), start="", end=""):
         """Add task.
@@ -291,25 +258,19 @@ class Timer():
         start = datetime.datetime.strptime(start, "%Y-%m-%d %H:%M")
         end = datetime.datetime.strptime(end, "%Y-%m-%d %H:%M")
         if end <= start:
-            raise ValueError(
-                f"task's end ({end}) is before its start ({start})"
-            )
-        if self.sqlite.execute(
-                "SELECT start FROM running WHERE start=?", (start,)
-        ):
+            raise ValueError(f"task's end ({end}) is before its start ({start})")
+        if self.sqlite.execute("SELECT start FROM running WHERE start=?", (start,)):
             raise ValueError(f"task started at {start} already exists")
         self.sqlite.execute(
-            "INSERT INTO running (start,name) VALUES (?,?)",
-            (start, full_name.name)
+            "INSERT INTO running (start,name) VALUES (?,?)", (start, full_name.name)
         )
         if full_name.tags:
             self.sqlite.execute(
                 "INSERT INTO tagged (tag,start) VALUES (?,?)",
-                *[(tag, start) for tag in full_name.tags]
+                *[(tag, start) for tag in full_name.tags],
             )
         self.sqlite.execute(
-            "INSERT INTO time_span (start,end) VALUES (?,?)",
-            (start, end)
+            "INSERT INTO time_span (start,end) VALUES (?,?)", (start, end)
         )
         return Task(full_name.name, full_name.tags, (start, end))
 
@@ -325,7 +286,7 @@ class Timer():
             task.name,
             task.tags[0],
             task.time_span[0].isoformat(timespec="seconds"),
-            task.time_span[1].isoformat(timespec="seconds")
+            task.time_span[1].isoformat(timespec="seconds"),
         )
 
     def _export_csv(self, filename, tasks):
@@ -336,11 +297,14 @@ class Timer():
         """
         rows = [
             self._get_row(Task(task.name, (tag,), task.time_span))
-            for task in tasks for tag in task.tags if task.tags
+            for task in tasks
+            for tag in task.tags
+            if task.tags
         ]
         rows += [
             self._get_row(Task(task.name, ("",), task.time_span))
-            for task in tasks if not task.tags
+            for task in tasks
+            if not task.tags
         ]
         with open(filename, mode="w") as fp:
             csv.writer(fp).writerows(rows)
@@ -358,11 +322,11 @@ class Timer():
                         task.name,
                         list(task.tags),
                         task.time_span[0].isoformat(timespec="seconds"),
-                        task.time_span[1].isoformat(timespec="seconds")
+                        task.time_span[1].isoformat(timespec="seconds"),
                     )
                     for task in tasks
                 ],
-                fp
+                fp,
             )
 
     def export(self, ext="csv", from_="today", to="today"):

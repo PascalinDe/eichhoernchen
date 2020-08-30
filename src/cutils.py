@@ -35,6 +35,7 @@ BANNER = "Welcome to Eichhörnchen.\tType help or ? to list commands."
 
 class ResizeError(Exception):
     """Raised when window has been resized."""
+
     pass
 
 
@@ -47,9 +48,9 @@ def get_window_pos(max_y, max_x):
     :returns: number of lines and columns and y and x positions
     :rtype: int, int, int, int
     """
-    nlines = max_y//2
-    ncols = max_x//2
-    return nlines, ncols, (max_y-nlines)//2, (max_x-ncols)//2
+    nlines = max_y // 2
+    ncols = max_x // 2
+    return nlines, ncols, (max_y - nlines) // 2, (max_x - ncols) // 2
 
 
 def scroll_up(window, upper_stack, lower_stack, boxed=False):
@@ -70,10 +71,10 @@ def scroll_up(window, upper_stack, lower_stack, boxed=False):
     else:
         min_y = 0
         min_x = 0
-    lower_stack.append(scrapeline(window, max_y-1))
+    lower_stack.append(scrapeline(window, max_y - 1))
     window.scroll(-1)
     writeline(window, min_y, 0, upper_stack.pop())
-    window.move(max_y-1, min_x)
+    window.move(max_y - 1, min_x)
 
 
 def scroll_down(window, upper_stack, lower_stack, boxed=False):
@@ -94,26 +95,26 @@ def scroll_down(window, upper_stack, lower_stack, boxed=False):
     upper_stack.append(scrapeline(window, min_y))
     window.scroll(1)
     if boxed:
-        window.move(max_y-1, 0)
+        window.move(max_y - 1, 0)
         window.deleteln()
-    window.move(max_y-1, min_x)
+    window.move(max_y - 1, min_x)
     if not lower_stack:
         # bottom of the window
         return
-    writeline(window, max_y-1, 0, lower_stack.pop())
-    window.move(max_y-1, min_x)
+    writeline(window, max_y - 1, 0, lower_stack.pop())
+    window.move(max_y - 1, min_x)
 
 
 def readline(
-        window,
-        upper_stack,
-        lower_stack,
-        boxed=False,
-        prompt="",
-        y=-1,
-        x=-1,
-        clear=False,
-        scroll=False
+    window,
+    upper_stack,
+    lower_stack,
+    boxed=False,
+    prompt="",
+    y=-1,
+    x=-1,
+    clear=False,
+    scroll=False,
 ):
     """Read line.
 
@@ -174,19 +175,19 @@ def readline(
         if char == curses.KEY_LEFT:
             if x > min_x:
                 i -= 1
-                window.move(y, x-1)
+                window.move(y, x - 1)
                 continue
             if len(buffer) > 0 and i > 0:
                 i -= 1
                 window.insstr(y, x, buffer[i])
                 continue
         if char == curses.KEY_RIGHT:
-            if x < max_x-1:
+            if x < max_x - 1:
                 if i < len(buffer):
                     i += 1
-                    window.move(y, x+1)
+                    window.move(y, x + 1)
                 continue
-            if i < len(buffer)-1:
+            if i < len(buffer) - 1:
                 window.delch(y, min_x)
                 i += 1
                 window.insstr(y, x, buffer[i])
@@ -202,11 +203,11 @@ def readline(
                 x -= 1
                 buffer.pop(i)
                 if boxed:
-                    window.delch(y, max_x-1)
+                    window.delch(y, max_x - 1)
                 window.delch(y, x)
-                if len(buffer) > max_x-(min_x+2) and i >= x-1:
-                    window.insstr(y, min_x, buffer[(i-x)+1])
-                    window.move(y, x+1)
+                if len(buffer) > max_x - (min_x + 2) and i >= x - 1:
+                    window.insstr(y, min_x, buffer[(i - x) + 1])
+                    window.move(y, x + 1)
             continue
         if isinstance(char, int):
             continue
@@ -214,11 +215,11 @@ def readline(
             continue
         buffer.insert(i, char)
         i += 1
-        if x < max_x-1:
+        if x < max_x - 1:
             x += 1
         else:
             window.delch(y, min_x)
-            window.move(y, x-1)
+            window.move(y, x - 1)
         window.insstr(char)
         window.move(y, x)
     if clear:
@@ -294,7 +295,7 @@ def reinitialize_primary_window():
     primary_window.clear()
     primary_window.addstr(0, 0, BANNER)
     y, _ = primary_window.getyx()
-    primary_window.move(y+2, 0)
+    primary_window.move(y + 2, 0)
 
 
 def mk_menu(choices):
@@ -310,9 +311,7 @@ def mk_menu(choices):
     while True:
         lower_stack = []
         upper_stack = []
-        panel = mk_panel(
-            *get_window_pos(*curses.panel.top_panel().window().getmaxyx())
-        )
+        panel = mk_panel(*get_window_pos(*curses.panel.top_panel().window().getmaxyx()))
         window = panel.window()
         window.box()
         y, _ = window.getyx()
@@ -321,25 +320,22 @@ def mk_menu(choices):
         max_y, max_x = window.getmaxyx()
         max_y -= 1
         window.addstr(y, x, f"Pick choice 1...{len(choices)}.")
-        if y < max_y-1:
+        if y < max_y - 1:
             y += 1
         else:
             scroll_down(window, upper_stack, lower_stack, boxed=True)
         for i, choice in enumerate(choices, start=1):
             window.addstr(
-                y,
-                x,
-                f"{i}: {''.join(x[0] for x in choice)}",
-                curses.color_pair(0)
+                y, x, f"{i}: {''.join(x[0] for x in choice)}", curses.color_pair(0)
             )
             y, _ = window.getyx()
-            if y < max_y-1:
+            if y < max_y - 1:
                 y += 1
             else:
                 scroll_down(window, upper_stack, lower_stack, boxed=True)
         line = ""
         try:
-            while line not in (str(i) for i in range(1, len(choices)+1)):
+            while line not in (str(i) for i in range(1, len(choices) + 1)):
                 line = readline(
                     window,
                     upper_stack,
@@ -349,7 +345,7 @@ def mk_menu(choices):
                     x=0,
                     clear=True,
                     boxed=True,
-                    scroll=True
+                    scroll=True,
                 )
         except KeyboardInterrupt:
             return -1
@@ -362,7 +358,7 @@ def mk_menu(choices):
         finally:
             del panel
             curses.panel.update_panels()
-    return int(line)-1
+    return int(line) - 1
 
 
 def get_multi_part_line(*parts):
@@ -373,19 +369,16 @@ def get_multi_part_line(*parts):
     :returns: multi-part line
     :rtype: tuple
     """
-    return tuple(
-        (part, curses.color_pair(i))
-        for part, i in parts
-    )
+    return tuple((part, curses.color_pair(i)) for part, i in parts)
 
 
 def init_color():
     """Initialize colours."""
-    curses.init_pair(1, 2, -1)      # name
-    curses.init_pair(2, 8, -1)      # tags
-    curses.init_pair(3, 5, -1)      # time span
-    curses.init_pair(4, 11, -1)     # total
-    curses.init_pair(5, 9, -1)      # error
+    curses.init_pair(1, 2, -1)  # name
+    curses.init_pair(2, 8, -1)  # tags
+    curses.init_pair(3, 5, -1)  # time span
+    curses.init_pair(4, 11, -1)  # total
+    curses.init_pair(5, 9, -1)  # error
 
 
 def init(window):

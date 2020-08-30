@@ -63,8 +63,7 @@ def parse_from(string):
     :rtype: str
     """
     return parse_time(
-        string,
-        time_periods=("all", "year", "month", "week", "yesterday", "today")
+        string, time_periods=("all", "year", "month", "week", "yesterday", "today")
     )
 
 
@@ -77,8 +76,7 @@ def parse_to(string):
     :rtype: str
     """
     return parse_time(
-        string,
-        time_periods=("year", "month", "week", "yesterday", "today")
+        string, time_periods=("year", "month", "week", "yesterday", "today")
     )
 
 

@@ -39,7 +39,7 @@ from src.cutils import (
     reinitialize_primary_window,
     ResizeError,
     get_window_pos,
-    mk_panel
+    mk_panel,
 )
 
 
@@ -144,49 +144,43 @@ def get_end_point(args):
     try:
         return src.parser.parse_time(args)
     except ValueError:
-        raise argparse.ArgumentTypeError(
-            f"'{args}' is not ISO 8601 string"
-        )
+        raise argparse.ArgumentTypeError(f"'{args}' is not ISO 8601 string")
 
 
 ARGS = {
     "full_name": {
         "type": get_full_name,
         "help": "name followed by 0 or more tags, e.g. 'foo[bar]'",
-        "metavar": "full name"
+        "metavar": "full name",
     },
     "from_": {
         "type": get_from,
         "metavar": "from",
-        "help": "@([YYYY-MM-DD] [hh:mm]|{all,year,month,week,yesterday,today})"
+        "help": "@([YYYY-MM-DD] [hh:mm]|{all,year,month,week,yesterday,today})",
     },
     "to": {
         "type": get_to,
-        "help": "@([YYYY-MM-DD] [hh:mm]|{year,month,week,yesterday,today})"
+        "help": "@([YYYY-MM-DD] [hh:mm]|{year,month,week,yesterday,today})",
     },
-    "start": {
-        "type": get_end_point,
-        "help": "@YYYY-MM-DD [hh:mm]"
-    },
-    "end": {
-        "type": get_end_point,
-        "help": "@YYYY-MM-DD [hh:mm]"
-    }
+    "start": {"type": get_end_point, "help": "@YYYY-MM-DD [hh:mm]"},
+    "end": {"type": get_end_point, "help": "@YYYY-MM-DD [hh:mm]"},
 }
 
 
 class InterpreterError(Exception):
     """Raised when shell input cannot be parsed."""
+
     pass
 
 
-class Interpreter():
+class Interpreter:
     """Shell interpreter.
 
     :cvar str RESERVED: reserved characters
     :ivar Timer timer: timer
     :ivar ArgumentParser parser: parser
     """
+
     RESERVED = ["@"]
 
     def __init__(self, database, aliases):
@@ -202,29 +196,25 @@ class Interpreter():
                 "aliases": aliases.get("start", []),
                 "func": self.timer.start,
                 "formatter": lambda *args, **kwargs: [],
-                "args": {
-                    "full_name": ARGS["full_name"]
-                }
+                "args": {"full_name": ARGS["full_name"]},
             },
             "stop": {
                 "description": "stop task",
                 "aliases": aliases.get("stop", []),
                 "func": self.stop,
                 "formatter": lambda x: [x] if x[0][0] else [],
-                "args": {}
+                "args": {},
             },
             "add": {
                 "description": "add task",
                 "aliases": aliases.get("add", []),
                 "func": self.timer.add,
-                "formatter": lambda task: [
-                    src.output_formatter.pprint_task(task)
-                ],
+                "formatter": lambda task: [src.output_formatter.pprint_task(task)],
                 "args": {
                     "full_name": ARGS["full_name"],
                     "start": ARGS["start"],
-                    "end": ARGS["end"]
-                }
+                    "end": ARGS["end"],
+                },
             },
             "remove": {
                 "description": "remove task",
@@ -233,38 +223,25 @@ class Interpreter():
                 "formatter": lambda line: [line],
                 "args": {
                     "full_name": ARGS["full_name"],
-                    "from_": {
-                        **ARGS["from_"],
-                        **{"nargs": "?", "default": "today"}
-                    },
-                    "to": {
-                        **ARGS["to"],
-                        **{"nargs": "?", "default": "today"}
-                    }
-                }
+                    "from_": {**ARGS["from_"], **{"nargs": "?", "default": "today"}},
+                    "to": {**ARGS["to"], **{"nargs": "?", "default": "today"}},
+                },
             },
             "list": {
                 "description": "list tasks",
                 "aliases": aliases.get("list", []),
                 "func": self.timer.list_tasks,
                 "formatter": lambda tasks: [
-                    src.output_formatter.pprint_task(task, date=True)
-                    for task in tasks
+                    src.output_formatter.pprint_task(task, date=True) for task in tasks
                 ],
                 "args": {
                     "full_name": {
                         **ARGS["full_name"],
-                        **{"nargs": "?", "default": FullName("", set())}
+                        **{"nargs": "?", "default": FullName("", set())},
                     },
-                    "from_": {
-                        **ARGS["from_"],
-                        **{"nargs": "?", "default": "today"}
-                    },
-                    "to": {
-                        **ARGS["to"],
-                        **{"nargs": "?", "default": "today"}
-                    }
-                }
+                    "from_": {**ARGS["from_"], **{"nargs": "?", "default": "today"}},
+                    "to": {**ARGS["to"], **{"nargs": "?", "default": "today"}},
+                },
             },
             "edit": {
                 "description": "edit task",
@@ -273,75 +250,50 @@ class Interpreter():
                 "formatter": lambda line: [line],
                 "args": {
                     "full_name": ARGS["full_name"],
-                    "from_": {
-                        **ARGS["from_"],
-                        **{"nargs": "?", "default": "today"}
-                    },
-                    "to": {
-                        **ARGS["to"],
-                        **{"nargs": "?", "default": "today"}
-                    }
-                }
+                    "from_": {**ARGS["from_"], **{"nargs": "?", "default": "today"}},
+                    "to": {**ARGS["to"], **{"nargs": "?", "default": "today"}},
+                },
             },
             "sum": {
                 "description": "sum up total time",
                 "aliases": aliases.get("sum", []),
                 "func": self.timer.sum_total,
                 "formatter": lambda sums: [
-                    src.output_formatter.pprint_sum(
-                        FullName(*full_name), total
-                    )
+                    src.output_formatter.pprint_sum(FullName(*full_name), total)
                     for full_name, total in sums
                 ],
                 "args": {
                     "summand": {
                         "type": get_summand,
-                        "help": "full name, name or tag(s) to sum up"
+                        "help": "full name, name or tag(s) to sum up",
                     },
-                    "from_": {
-                        **ARGS["from_"],
-                        **{"nargs": "?", "default": "today"}
-                    },
-                    "to": {
-                        **ARGS["to"],
-                        **{"nargs": "?", "default": "today"}
-                    }
-                }
+                    "from_": {**ARGS["from_"], **{"nargs": "?", "default": "today"}},
+                    "to": {**ARGS["to"], **{"nargs": "?", "default": "today"}},
+                },
             },
             "aliases": {
                 "description": "list aliases",
                 "aliases": aliases.get("aliases", []),
                 "func": lambda *args, **kwargs: self.list_aliases(aliases),
                 "formatter": lambda multi_part_line: multi_part_line,
-                "args": {}
+                "args": {},
             },
             "export": {
                 "description": "export tasks",
                 "aliases": aliases.get("export", []),
                 "func": self.timer.export,
-                "formatter": lambda line: [
-                    src.cutils.get_multi_part_line((line, 4))
-                ],
+                "formatter": lambda line: [src.cutils.get_multi_part_line((line, 4))],
                 "args": {
-                    "ext": {
-                        "choices": ("csv", "json"),
-                        "metavar": "format"
-                    },
-                    "from_": {
-                        **ARGS["from_"],
-                        **{"nargs": "?", "default": "today"}
-                    },
-                    "to": {
-                        **ARGS["to"],
-                        **{"nargs": "?", "default": "today"}
-                    }
-                }
+                    "ext": {"choices": ("csv", "json"), "metavar": "format"},
+                    "from_": {**ARGS["from_"], **{"nargs": "?", "default": "today"}},
+                    "to": {**ARGS["to"], **{"nargs": "?", "default": "today"}},
+                },
             },
             "help": {
                 "description": "show help",
-                "aliases": aliases.get("help", [])+["?"],
-                "args": {}
-            }
+                "aliases": aliases.get("help", []) + ["?"],
+                "args": {},
+            },
         }
         self._init_parser(aliases)
 
@@ -366,13 +318,12 @@ class Interpreter():
                 prog,
                 description=subcommand["description"],
                 add_help=False,
-                aliases=subcommand["aliases"]
+                aliases=subcommand["aliases"],
             )
             if prog == "help":
                 continue
             subcommands[prog].set_defaults(
-                func=subcommand["func"],
-                formatter=subcommand["formatter"]
+                func=subcommand["func"], formatter=subcommand["formatter"]
             )
             for arg, kwargs in subcommand["args"].items():
                 subcommands[prog].add_argument(arg, **kwargs)
@@ -382,13 +333,13 @@ class Interpreter():
             choices=(
                 tuple(subcommands.keys())
                 + tuple(x for y in aliases.values() for x in y)
-            )
+            ),
         )
         subcommands["help"].set_defaults(
             func=lambda command: command or "",
             formatter=lambda command: self.show_help_message(
                 command, subcommands, aliases
-            )
+            ),
         )
 
     def interpret_line(self, line):
@@ -406,7 +357,7 @@ class Interpreter():
                 *[
                     split.strip()
                     for split in re.split(r"|".join(self.RESERVED), splits[1])
-                ]
+                ],
             ]
         try:
             fp = StringIO()
@@ -414,33 +365,25 @@ class Interpreter():
                 args = self._parser.parse_args(splits)
         except SystemExit:
             fp.seek(0)
-            raise InterpreterError(
-                "\t".join(line.strip() for line in fp.readlines())
-            )
+            raise InterpreterError("\t".join(line.strip() for line in fp.readlines()))
         return args.formatter(
             args.func(
                 **{
-                    k: v for k, v in vars(args).items()
+                    k: v
+                    for k, v in vars(args).items()
                     if k not in ("func", "formatter")
                 }
             )
         )
 
-    def remove(
-            self,
-            full_name=FullName("", frozenset()),
-            from_="today",
-            to="today"
-    ):
+    def remove(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """Choose task to remove.
 
         :param FullName full_name: full name
         :param str from_: from
         :param str to: to
         """
-        tasks = list(
-            self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
-        )
+        tasks = list(self.timer.list_tasks(full_name=full_name, from_=from_, to=to))
         choices = [src.output_formatter.pprint_task(task) for task in tasks]
         if not choices:
             return src.cutils.get_multi_part_line(("no task", 4))
@@ -452,21 +395,14 @@ class Interpreter():
             (f"removed {''.join(x[0] for x in choices[i])}", 4)
         )
 
-    def edit(
-            self,
-            full_name=FullName("", frozenset()),
-            from_="today",
-            to="today"
-    ):
+    def edit(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """Choose task to edit.
 
         :param FullName full_name: full name
         :param str from_: from
         :param str to: to
         """
-        tasks = list(
-            self.timer.list_tasks(full_name=full_name, from_=from_, to=to)
-        )
+        tasks = list(self.timer.list_tasks(full_name=full_name, from_=from_, to=to))
         choices = [src.output_formatter.pprint_task(task) for task in tasks]
         if not choices:
             return src.cutils.get_multi_part_line(("no task", 4))
@@ -479,19 +415,14 @@ class Interpreter():
             return src.cutils.get_multi_part_line(("aborted editing task", 5))
         while True:
             try:
-                panel = mk_panel(
-                    *get_window_pos(*curses.panel.top_panel().getmaxyx())
-                )
+                panel = mk_panel(*get_window_pos(*curses.panel.top_panel().getmaxyx()))
                 window = panel.window()
                 window.box()
                 line = readline(
-                    window, [], [],
-                    boxed=True, prompt=f"new {actions[j]} >", y=1
+                    window, [], [], boxed=True, prompt=f"new {actions[j]} >", y=1
                 )
             except KeyboardInterrupt:
-                return src.cutils.get_multi_part_line(
-                    ("aborted editing task", 5)
-                )
+                return src.cutils.get_multi_part_line(("aborted editing task", 5))
             except ResizeError:
                 panel.bottom()
                 reinitialize_primary_window()
@@ -501,14 +432,14 @@ class Interpreter():
             finally:
                 del panel
                 curses.panel.update_panels()
-        arg = (
-            get_name, get_tags, get_from, get_to
-        )[j](line)
+        arg = (get_name, get_tags, get_from, get_to)[j](line)
         if actions[j] in ("start", "end"):
             arg = datetime.datetime.strptime(arg, "%Y-%m-%d %H:%M")
-        return src.output_formatter.pprint_task(
-            self.timer.edit(tasks[i], actions[j], arg)
-        ) if tasks[i] else [src.cutils.get_multi_part_line(("no task", 0))]
+        return (
+            src.output_formatter.pprint_task(self.timer.edit(tasks[i], actions[j], arg))
+            if tasks[i]
+            else [src.cutils.get_multi_part_line(("no task", 0))]
+        )
 
     def stop(self):
         """Stop task."""
@@ -555,6 +486,7 @@ class Interpreter():
             tuple(),
             *[
                 src.cutils.get_multi_part_line((f"{alias}\t{k}", 4))
-                for k, v in aliases.items() for alias in v
-            ]
+                for k, v in aliases.items()
+                for alias in v
+            ],
         ]

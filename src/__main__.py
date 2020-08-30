@@ -37,16 +37,13 @@ __version__ = "2.1"
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(
-        prog="eichhoernchen",
-        description="Lightweight curses-based time tracking tool."
+        prog="eichhoernchen", description="Lightweight curses-based time tracking tool."
     )
     parser.add_argument("-c", "--config", help="use this configuration file")
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
     )
-    config = src.config.load_config(
-        __version__, path=parser.parse_args().config
-    )
+    config = src.config.load_config(__version__, path=parser.parse_args().config)
     try:
         curses.wrapper(src.cshell.launch, config)
     except Exception as exception:

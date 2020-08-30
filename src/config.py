@@ -31,16 +31,19 @@ import configparser
 
 class ConfigFound(Exception):
     """Raised when configuration file exists."""
+
     pass
 
 
 class BadConfig(Exception):
     """Raised when configuration file contains errors."""
+
     pass
 
 
 class ConfigNotFound(Exception):
     """Raised when configuration file does not exist."""
+
     pass
 
 
@@ -52,7 +55,7 @@ def _create_config():
     config = configparser.ConfigParser()
     config["database"] = {
         "dbname": "eichhoernchen.db",
-        "path": os.path.join(os.environ["HOME"], ".local/share")
+        "path": os.path.join(os.environ["HOME"], ".local/share"),
     }
     with open(path, "w") as fp:
         config.write(fp)
@@ -65,14 +68,11 @@ def _validate_config(config):
 
     :raises: BadConfig when required section or key(s) are missing
     """
-    check = {
-        "database": {"dbname", "path"}
-    }
+    check = {"database": {"dbname", "path"}}
     for section, required in check.items():
         try:
             missing = ",".join(
-                f"'{key}'" for key in
-                required.difference(set(config[section].keys()))
+                f"'{key}'" for key in required.difference(set(config[section].keys()))
             )
         except KeyError:
             raise BadConfig(f"required section '{section}' is missing")

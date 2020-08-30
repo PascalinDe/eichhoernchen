@@ -42,7 +42,7 @@ from src.cutils import (
     reinitialize_primary_window,
     ResizeError,
     scroll_down,
-    writeline
+    writeline,
 )
 
 
@@ -54,7 +54,7 @@ def _loop(stdscr, config):
     """
     max_y, max_x = stdscr.getmaxyx()
     nlines, ncols, begin_y, begin_x = get_window_pos(max_y, max_x)
-    subpanel = mk_panel(nlines, ncols, begin_y, begin_x)    # noqa
+    subpanel = mk_panel(nlines, ncols, begin_y, begin_x)  # noqa
     panel = mk_panel(max_y, max_x, 0, 0)
     window = panel.window()
     window.addstr(0, 0, BANNER)
@@ -64,21 +64,16 @@ def _loop(stdscr, config):
     y += 2
     max_y, max_x = window.getmaxyx()
     interpreter = src.interpreter.Interpreter(
-        os.path.join(
-            config["database"]["path"],
-            config["database"]["dbname"]
-        ),
-        {
-            k: json.loads(v) for k, v in config["aliases"].items()
-        } if "aliases" in config else {}
+        os.path.join(config["database"]["path"], config["database"]["dbname"]),
+        {k: json.loads(v) for k, v in config["aliases"].items()}
+        if "aliases" in config
+        else {},
     )
     upper_stack = []
     lower_stack = []
     while True:
         try:
-            prompt = src.output_formatter.pprint_prompt(
-                task=interpreter.timer.task
-            )
+            prompt = src.output_formatter.pprint_prompt(task=interpreter.timer.task)
             y = writeline(window, y, 0, prompt)
             try:
                 line = readline(window, upper_stack, lower_stack, scroll=True)
@@ -90,7 +85,7 @@ def _loop(stdscr, config):
                 lower_stack = []
                 continue
             if not line:
-                if y < max_y-1:
+                if y < max_y - 1:
                     y += 1
                 else:
                     scroll_down(window, upper_stack, lower_stack)
@@ -99,26 +94,21 @@ def _loop(stdscr, config):
                 output = interpreter.interpret_line(line)
                 y, x = window.getyx()
                 for line in output:
-                    if y < max_y-1:
+                    if y < max_y - 1:
                         y += 1
                     else:
                         scroll_down(window, upper_stack, lower_stack)
                     y = writeline(window, y, 0, line)
             except Exception as exception:
-                window.addstr(
-                    y,
-                    0,
-                    str(exception),
-                    curses.color_pair(5)
-                )
+                window.addstr(y, 0, str(exception), curses.color_pair(5))
             finally:
                 y, _ = window.getyx()
-                if y < max_y-1:
+                if y < max_y - 1:
                     y += 1
                 else:
                     scroll_down(window, upper_stack, lower_stack)
         except KeyboardInterrupt:
-            if y < max_y-1:
+            if y < max_y - 1:
                 y += 1
             else:
                 scroll_down(window, upper_stack, lower_stack)

@@ -27,7 +27,7 @@ import curses
 # library specific imports
 
 
-class Template():
+class Template:
     """Output formatting template."""
 
     @property

@@ -51,11 +51,8 @@ def pprint_tags(tags):
     """
     return (
         (
-            "".join(
-                TEMPLATE.tag[0].format(tag=tag)
-                for tag in sorted(tags) if tag
-            ),
-            TEMPLATE.tag[1]
+            "".join(TEMPLATE.tag[0].format(tag=tag) for tag in sorted(tags) if tag),
+            TEMPLATE.tag[1],
         ),
     )
 
@@ -90,10 +87,7 @@ def pprint_time_span(time_span, date=False):
         start = time_span[0].strftime("%H:%M")
         end = time_span[1].strftime("%H:%M")
     return (
-        (
-            TEMPLATE.time_span[0].format(start=start, end=end),
-            TEMPLATE.time_span[1]
-        ),
+        (TEMPLATE.time_span[0].format(start=start, end=end), TEMPLATE.time_span[1]),
     )
 
 
@@ -107,10 +101,7 @@ def pprint_total(total):
     """
     hours, minutes = divmod(divmod(total, 60)[0], 60)
     return (
-        (
-            TEMPLATE.total[0].format(hours=hours, minutes=minutes),
-            TEMPLATE.total[1]
-        ),
+        (TEMPLATE.total[0].format(hours=hours, minutes=minutes), TEMPLATE.total[1]),
     )
 
 
@@ -126,7 +117,7 @@ def pprint_task(task, date=False):
     return (
         *pprint_time_span(task.time_span, date=date),
         *pprint_total(task.total),
-        *pprint_full_name(FullName(task.name, task.tags))
+        *pprint_full_name(FullName(task.name, task.tags)),
     )
 
 
@@ -139,10 +130,7 @@ def pprint_sum(full_name, total):
     :returns: pretty-printed runtime
     :rtype: tuple
     """
-    return (
-        *pprint_full_name(full_name),
-        *pprint_total(total)
-    )
+    return (*pprint_full_name(full_name), *pprint_total(total))
 
 
 def pprint_running(task):
@@ -154,12 +142,7 @@ def pprint_running(task):
     :rtype: tuple
     """
     start = task.time_span[0].strftime("%H:%M")
-    return (
-        (
-            TEMPLATE.running[0].format(start=start),
-            TEMPLATE.running[1]
-        ),
-    )
+    return ((TEMPLATE.running[0].format(start=start), TEMPLATE.running[1]),)
 
 
 def pprint_prompt(task=Task("", frozenset(), ())):
@@ -171,9 +154,9 @@ def pprint_prompt(task=Task("", frozenset(), ())):
     :rtype: tuple
     """
     if task.name:
-        return(
+        return (
             *pprint_full_name(FullName(task.name, task.tags)),
             *pprint_running(task),
-            TEMPLATE.prompt
+            TEMPLATE.prompt,
         )
     return (TEMPLATE.prompt,)

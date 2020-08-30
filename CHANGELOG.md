@@ -17,6 +17,7 @@
 	* "database" key has been renamed to "dbname"
 ## Miscellaneous
 * dropped support for < Python3.7
+* used [black](https://github.com/psf/black) for code formatting
 
 # [2.0] (2020-05-28)
 ## Bug Fixes

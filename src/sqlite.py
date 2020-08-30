@@ -29,26 +29,15 @@ import collections
 
 TIME_SPAN_COLUMN_DEF = (
     "time_span",
-    (
-        "start TIMESTAMP PRIMARY KEY",
-        "end TIMESTAMP CHECK (end > start)"
-    )
+    ("start TIMESTAMP PRIMARY KEY", "end TIMESTAMP CHECK (end > start)"),
 )
 TAGGED_COLUMN_DEF = (
     "tagged",
-    (
-        "tag TEXT",
-        "start TIMESTAMP",
-        "FOREIGN KEY(start) REFERENCES time_span(start)"
-    )
+    ("tag TEXT", "start TIMESTAMP", "FOREIGN KEY(start) REFERENCES time_span(start)"),
 )
 RUNNING_COLUMN_DEF = (
     "running",
-    (
-        "name TEXT",
-        "start TIMESTAMP",
-        "FOREIGN KEY(start) REFERENCES time_span(start)"
-    )
+    ("name TEXT", "start TIMESTAMP", "FOREIGN KEY(start) REFERENCES time_span(start)"),
 )
 COLUMN_DEF = collections.OrderedDict(
     [TIME_SPAN_COLUMN_DEF, TAGGED_COLUMN_DEF, RUNNING_COLUMN_DEF]
@@ -63,10 +52,7 @@ def create_table(connection, table, close=True):
     :param bool close: toggle closing database connection on/off
     """
     try:
-        sql = (
-            f"CREATE TABLE IF NOT EXISTS {table} "
-            f"({','.join(COLUMN_DEF[table])})"
-        )
+        sql = f"CREATE TABLE IF NOT EXISTS {table} " f"({','.join(COLUMN_DEF[table])})"
         connection.execute(sql)
         connection.commit()
     except sqlite3.Error as exception:
@@ -93,7 +79,7 @@ class SQLiteError(Exception):
         self.sql = sql
 
 
-class SQLite():
+class SQLite:
     """SQLite database interface.
 
     :ivar str database: SQLite3 database name
@@ -115,12 +101,10 @@ class SQLite():
         try:
             return sqlite3.connect(
                 self.database,
-                detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
+                detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
             )
         except sqlite3.Error as exception:
-            raise SQLiteError(
-                "failed to connect to SQLite3 database"
-            ) from exception
+            raise SQLiteError("failed to connect to SQLite3 database") from exception
 
     def create_database(self):
         """Create SQLite3 database."""
@@ -146,8 +130,7 @@ class SQLite():
                 rows = connection.execute(statement, *parameters).fetchall()
         except sqlite3.Error as exception:
             raise SQLiteError(
-                "failed to execute SQLite3 statement",
-                sql=statement
+                "failed to execute SQLite3 statement", sql=statement
             ) from exception
         connection.commit()
         return rows

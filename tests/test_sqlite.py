@@ -60,6 +60,4 @@ class TestSQLite(unittest.TestCase):
         cursor = connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table'"
         )
-        self.assertEqual(
-            [row[0] for row in cursor], list(src.sqlite.COLUMN_DEF.keys())
-        )
+        self.assertEqual([row[0] for row in cursor], list(src.sqlite.COLUMN_DEF.keys()))
