@@ -42,7 +42,7 @@ def main():
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
     )
-    config = src.config.load_config(__version__, path=parser.parse_args().config)
+    config = src.config.load_config(path=parser.parse_args().config)
     try:
         curses.wrapper(src.cshell.launch, config)
     except Exception as exception:
