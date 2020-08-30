@@ -39,10 +39,10 @@ from src.cutils import (
     init,
     init_color,
     mk_panel,
+    mv_or_scroll_down,
     readline,
     reinitialize_primary_window,
     ResizeError,
-    scroll_down,
     writeline,
 )
 
@@ -85,33 +85,21 @@ def _loop(stdscr, config):
                 lower_stack = []
                 continue
             if not line:
-                if y < max_y - 1:
-                    y += 1
-                else:
-                    scroll_down(window, upper_stack, lower_stack)
+                y = mv_or_scroll_down(window, y, upper_stack, lower_stack)
                 continue
             try:
                 output = interpreter.interpret_line(line)
                 y, x = window.getyx()
                 for line in output:
-                    if y < max_y - 1:
-                        y += 1
-                    else:
-                        scroll_down(window, upper_stack, lower_stack)
+                    y = mv_or_scroll_down(window, y, upper_stack, lower_stack)
                     y = writeline(window, y, 0, line)
             except Exception as exception:
                 window.addstr(y, 0, str(exception), curses.color_pair(5))
             finally:
                 y, _ = window.getyx()
-                if y < max_y - 1:
-                    y += 1
-                else:
-                    scroll_down(window, upper_stack, lower_stack)
+                y = mv_or_scroll_down(window, y, upper_stack, lower_stack)
         except KeyboardInterrupt:
-            if y < max_y - 1:
-                y += 1
-            else:
-                scroll_down(window, upper_stack, lower_stack)
+            y = mv_or_scroll_down(window, y, upper_stack, lower_stack)
             window.addstr(y, 0, "Goodbye!")
             window.refresh()
             time.sleep(0.5)

@@ -105,6 +105,27 @@ def scroll_down(window, upper_stack, lower_stack, boxed=False):
     window.move(max_y - 1, min_x)
 
 
+def mv_or_scroll_down(window, y, upper_stack, lower_stack, boxed=False):
+    """Move cursor or scroll down.
+
+    :param window window: window
+    :param int y: y position
+    :param list upper_stack: stack (upper window)
+    :param list lower_stack: stack (lower window)
+    :param bool boxed: whether window is boxed
+
+    :returns: y position
+    :rtype: int
+    """
+    max_y, _ = window.getmaxyx()
+    if boxed:
+        max_y -= 1
+    if y < max_y - 1:
+        return y + 1
+    scroll_down(window, upper_stack, lower_stack, boxed=boxed)
+    return y
+
+
 def readline(
     window,
     upper_stack,
@@ -320,10 +341,7 @@ def mk_menu(choices):
         max_y, max_x = window.getmaxyx()
         max_y -= 1
         window.addstr(y, x, f"Pick choice 1...{len(choices)}.")
-        if y < max_y - 1:
-            y += 1
-        else:
-            scroll_down(window, upper_stack, lower_stack, boxed=True)
+        y = mv_or_scroll_down(window, y, upper_stack, lower_stack, boxed=True)
         for i, choice in enumerate(choices, start=1):
             window.addstr(
                 y, x, f"{i}: {''.join(x[0] for x in choice)}", curses.color_pair(0)
