@@ -52,6 +52,8 @@ def _loop(stdscr, config):
 
     :param window stdscr: window
     :param dict config: configuration
+
+    :raises: SystemExit when Control+C is pressed
     """
     max_y, max_x = stdscr.getmaxyx()
     nlines, ncols, begin_y, begin_x = get_window_pos(max_y, max_x)

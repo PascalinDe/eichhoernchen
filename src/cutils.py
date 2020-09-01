@@ -59,6 +59,7 @@ def scroll_up(window, upper_stack, lower_stack, boxed=False):
     :param window window: window
     :param list upper_stack: stack (upper window)
     :param list lower_stack: stack (lower window)
+    :param bool boxed: whether a box is drawn around the edges
     """
     if not upper_stack:
         # top of the window
@@ -83,6 +84,7 @@ def scroll_down(window, upper_stack, lower_stack, boxed=False):
     :param window window: window
     :param list upper_stack: stack (upper window)
     :param list lower_stack: stack (lower window)
+    :param bool boxed: whether a box is drawn around the edges
     """
     max_y, _ = window.getmaxyx()
     if boxed:
@@ -112,7 +114,7 @@ def mv_or_scroll_down(window, y, upper_stack, lower_stack, boxed=False):
     :param int y: y position
     :param list upper_stack: stack (upper window)
     :param list lower_stack: stack (lower window)
-    :param bool boxed: whether window is boxed
+    :param bool boxed: whether a box is drawn around the edges
 
     :returns: y position
     :rtype: int
@@ -255,9 +257,12 @@ def writeline(window, y, x, multi_part_line):
     """Write multi-part line.
 
     :param window window: window
-    :param int y: y
-    :param int x: x
+    :param int y: y position
+    :param int x: x position
     :param tuple multi_part_line: multi-part line
+
+    :returns: y position
+    :rtype: int
     """
     for line, attr in multi_part_line:
         window.addstr(y, x, line, attr)
@@ -269,7 +274,7 @@ def scrapeline(window, y):
     """Scrape multi-part line from the window.
 
     :param window window: window
-    :param int y: y
+    :param int y: y position
 
     :returns: multi-part line
     :rtype: tuple

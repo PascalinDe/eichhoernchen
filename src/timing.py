@@ -51,13 +51,18 @@ class Timer:
         self._reset_task()
 
     def _reset_task(self, task=Task("", frozenset(), ())):
-        """Reset currently running task."""
+        """Reset currently running task.
+
+        :param Task task: new running task
+        """
         self.task = task
 
     def start(self, full_name):
         """Start task.
 
         :param FullName full_name: full name
+
+        :raises Warning: when there is already a running task
         """
         if self.task.name:
             raise Warning("there is already a running task")
@@ -128,6 +133,7 @@ class Timer:
     ):
         """List tasks.
 
+        :param FullName full_name: full name
         :param str from_: start of time period
         :param str to: end of time period
         :param bool full_match: toggle matching full name on/off
@@ -187,6 +193,8 @@ class Timer:
         :param str action: action
         :param str args: arguments
 
+        :raises ValueError: when the task cannot be edited
+
         :returns: edited task
         :rtype: Task
         """
@@ -242,6 +250,8 @@ class Timer:
         """Remove task.
 
         :param Task task: task to remove
+
+        :raises ValueError: when the task cannot be removed
         """
         if self.task == Task(task.name, task.tags, (task.time_span[0], None)):
             raise ValueError("cannot remove a running task")
@@ -255,6 +265,11 @@ class Timer:
         :param FullName full_name: full name
         :param str start: start of time period
         :param str end: end of time period
+
+        :raises ValueError: when the task cannot be added
+
+        :returns: task
+        :rtype: Task
         """
         start = datetime.datetime.strptime(start, "%Y-%m-%d %H:%M")
         end = datetime.datetime.strptime(end, "%Y-%m-%d %H:%M")
@@ -336,6 +351,9 @@ class Timer:
         :param str ext: file format
         :param str from_: start of time period
         :param str to: end of time period
+
+        :returns: confirmation message
+        :rtype: str
         """
         tasks = self.list_tasks(from_=from_, to=to)
         filename = f"/tmp/{datetime.datetime.now().strftime('%Y%m%d')}.{ext}"

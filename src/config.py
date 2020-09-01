@@ -102,6 +102,8 @@ def load_config(path=""):
 
     :param str path: path to configuration file
 
+    :raises: SystemExit when configuration file contains errors
+
     :returns: configuration
     :rtype: dict
     """

@@ -34,6 +34,8 @@ def parse_time(string, time_periods=tuple()):
     :param str string: string
     :param tuple time_periods: time periods
 
+    :raises ValueError: when date string does not match any format
+
     :returns: time
     :rtype: str
     """
@@ -85,6 +87,8 @@ def parse_tags(string):
 
     :param str string: string
 
+    :raises ValueError: when string does not contain any tags
+
     :returns: list of tags
     :rtype: set
     """
@@ -98,6 +102,8 @@ def parse_name(string):
     """Parse string containing name.
 
     :param str string: string
+
+    :raises ValueError: when string is not name
 
     :returns: name
     :rtype: str

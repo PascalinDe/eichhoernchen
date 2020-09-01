@@ -43,7 +43,11 @@ class Task(_Task):
 
     @property
     def total(self):
-        """Run time (in seconds)."""
+        """Run time (in seconds).
+
+        :returns: run time (in seconds)
+        :rtype: int
+        """
         delta = self.time_span[1] - self.time_span[0]
         if delta.days >= 1:
             return delta.seconds + delta.days * (24 * 60 * 60)

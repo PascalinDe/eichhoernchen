@@ -50,6 +50,8 @@ def create_table(connection, table, close=True):
     :param Connection connection: SQLite3 database connection
     :param str table: table
     :param bool close: toggle closing database connection on/off
+
+    :raises ValueError: when table is not defined
     """
     try:
         sql = f"CREATE TABLE IF NOT EXISTS {table} " f"({','.join(COLUMN_DEF[table])})"
@@ -95,6 +97,8 @@ class SQLite:
     def connect(self):
         """Connect to SQLite3 database.
 
+        :raises SQLiteError: when connection to SQLite3 database fails
+
         :returns: connection
         :rtype: Connection
         """
@@ -118,6 +122,8 @@ class SQLite:
 
         :param str statement: SQLite3 statement
         :param tuple parameters: parameters
+
+        :raises SQLiteError: when SQLite3 statement execution fails
 
         :returns: rows
         :rtype: list

@@ -50,6 +50,8 @@ def get_name(args):
 
     :param str args: command-line arguments
 
+    :raises: ArgumentTypeError when an error is found
+
     :returns: name
     :rtype: str
     """
@@ -64,6 +66,8 @@ def get_tags(args):
 
     :param str args: command-line arguments
 
+    :raises: ArgumentTypeError when an error is found
+
     :returns: list of tags
     :rtype: set
     """
@@ -77,6 +81,8 @@ def get_full_name(args):
     """Get full name.
 
     :param str args: command-line arguments
+
+    :raises: ArgumentTypeError when an error is found
 
     :returns: full name
     :rtype: FullName
@@ -94,6 +100,8 @@ def get_summand(args):
 
     :param str args: command-line arguments
 
+    :raises: ArgumentTypeError when an error is found
+
     :returns: summand
     :rtype: FullName
     """
@@ -107,6 +115,8 @@ def get_from(args):
     """Get from.
 
     :param str args: command-line arguments
+
+    :raises: ArgumentTypeError when an error is found
 
     :returns: from
     :rtype: ISO 8601 datetime string or time period keyword
@@ -124,6 +134,8 @@ def get_to(args):
 
     :param str args: command-line arguments
 
+    :raises: ArgumentTypeError when an error is found
+
     :returns: to
     :rtype: datetime
     """
@@ -139,6 +151,8 @@ def get_end_point(args):
     """Get end point.
 
     :param str args: command-line arguments
+
+    :raises: ArgumentTypeError when an error is found
 
     :returns: end point
     :rtype: datetime
@@ -180,7 +194,8 @@ class Interpreter:
 
     :cvar str RESERVED: reserved characters
     :ivar Timer timer: timer
-    :ivar ArgumentParser parser: parser
+    :ivar dict subcommand_defs: subcommand definitions
+    :ivar ArgumentParser _parser: parser
     """
 
     RESERVED = ["@"]
@@ -384,6 +399,9 @@ class Interpreter:
         :param FullName full_name: full name
         :param str from_: from
         :param str to: to
+
+        :returns: confirmation/error message
+        :rtype: tuple
         """
         tasks = list(self.timer.list_tasks(full_name=full_name, from_=from_, to=to))
         choices = [src.output_formatter.pprint_task(task) for task in tasks]
@@ -403,6 +421,9 @@ class Interpreter:
         :param FullName full_name: full name
         :param str from_: from
         :param str to: to
+
+        :returns: confirmation/error message
+        :rtype: tuple
         """
         tasks = list(self.timer.list_tasks(full_name=full_name, from_=from_, to=to))
         choices = [src.output_formatter.pprint_task(task) for task in tasks]
@@ -444,7 +465,11 @@ class Interpreter:
         )
 
     def stop(self):
-        """Stop task."""
+        """Stop task.
+
+        :returns: confirmation/error message
+        :rtype: tuple
+        """
         if self.timer.task.name:
             self.timer.stop()
             return src.cutils.get_multi_part_line(("", 0))
@@ -456,6 +481,9 @@ class Interpreter:
         :param str subcommand: subcommand
         :param dict subcommands: subcommands
         :param dict aliases: aliases
+
+        :returns: help message
+        :rtype: tuple
         """
         if subcommand:
             if subcommand not in subcommands:
@@ -480,7 +508,7 @@ class Interpreter:
 
         :param dict aliases: aliases
 
-        :returns: multi-part lines
+        :returns: aliases
         :rtype: list
         """
         return [
