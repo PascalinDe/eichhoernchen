@@ -1,5 +1,5 @@
 #    This file is part of Eichhörnchen 2.0.
-#    Copyright (C) <year>  <name of author>
+#    Copyright (C) 2020  Carine Dengler
 #
 #    Eichhörnchen is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
