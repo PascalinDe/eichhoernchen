@@ -438,7 +438,9 @@ class Interpreter:
             return src.cutils.get_multi_part_line(("aborted editing task", 5))
         while True:
             try:
-                panel = mk_panel(*get_window_pos(*curses.panel.top_panel().getmaxyx()))
+                panel = mk_panel(
+                    *get_window_pos(*curses.panel.top_panel().window().getmaxyx())
+                )
                 window = panel.window()
                 window.box()
                 line = readline(
