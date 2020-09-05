@@ -36,11 +36,10 @@ import src.timing
 
 from src import FullName
 from src.cutils import (
-    get_window_pos,
+    get_menu_dims,
+    WindowManager,
     mk_menu,
     mk_panel,
-    readline,
-    reinitialize_primary_window,
     ResizeError,
 )
 
@@ -299,7 +298,7 @@ class Interpreter:
                 "description": "export tasks",
                 "aliases": aliases.get("export", []),
                 "func": self.timer.export,
-                "formatter": lambda line: [src.cutils.get_multi_part_line((line, 4))],
+                "formatter": lambda line: (((line, curses.color_pair(4)),),),
                 "args": {
                     "ext": {"choices": ("csv", "json"), "metavar": "format"},
                     "from_": {**ARGS["from_"], **{"nargs": "?", "default": "today"}},
@@ -393,6 +392,16 @@ class Interpreter:
             )
         )
 
+    def _flatten_items(self, items):
+        """Flatten menu items.
+
+        :param list items: items
+
+        :returns: flattened items
+        :rtype: str
+        """
+        return "".join(item[0] for item in items)
+
     def remove(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """Choose task to remove.
 
@@ -404,16 +413,17 @@ class Interpreter:
         :rtype: tuple
         """
         tasks = list(self.timer.list_tasks(full_name=full_name, from_=from_, to=to))
-        choices = [src.output_formatter.pprint_task(task) for task in tasks]
-        if not choices:
-            return src.cutils.get_multi_part_line(("no task", 4))
-        i = mk_menu(choices)
+        items = [
+            self._flatten_items(src.output_formatter.pprint_task(task))
+            for task in tasks
+        ]
+        if not items:
+            return (("no task", curses.color_pair(4)),)
+        i = mk_menu(items)
         if i < 0:
-            return src.cutils.get_multi_part_line(("aborted removing task", 5))
+            return (("aborted removing task", curses.color_pair(5)),)
         self.timer.remove(tasks[i])
-        return src.cutils.get_multi_part_line(
-            (f"removed {''.join(x[0] for x in choices[i])}", 4)
-        )
+        return ((f"removed {''.join(x[0] for x in items[i])}", curses.color_pair(4)),)
 
     def edit(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """Choose task to edit.
@@ -426,31 +436,32 @@ class Interpreter:
         :rtype: tuple
         """
         tasks = list(self.timer.list_tasks(full_name=full_name, from_=from_, to=to))
-        choices = [src.output_formatter.pprint_task(task) for task in tasks]
-        if not choices:
-            return src.cutils.get_multi_part_line(("no task", 4))
-        i = mk_menu(choices)
+        items = [
+            self._flatten_items(src.output_formatter.pprint_task(task))
+            for task in tasks
+        ]
+        if not items:
+            return (("no task", curses.color_pair(4)),)
+        i = mk_menu(items)
         if i < 0:
-            return src.cutils.get_multi_part_line(("aborted editing task", 5))
+            return (("aborted editing task", curses.color_pair(5)),)
         actions = ("name", "tags", "start", "end")
         j = mk_menu(actions)
         if j < 0:
-            return src.cutils.get_multi_part_line(("aborted editing task", 5))
+            return (("aborted editing task", curses.color_pair(5)),)
         while True:
             try:
                 panel = mk_panel(
-                    *get_window_pos(*curses.panel.top_panel().window().getmaxyx())
+                    *get_menu_dims(*curses.panel.top_panel().window().getmaxyx())
                 )
                 window = panel.window()
-                window.box()
-                line = readline(
-                    window, [], [], boxed=True, prompt=f"new {actions[j]} >", y=1
-                )
+                window_mgr = WindowManager(window, box=True)
+                line = window_mgr.readline(prompt=f"new {actions[j]} >", y=1)
             except KeyboardInterrupt:
-                return src.cutils.get_multi_part_line(("aborted editing task", 5))
+                return (("aborted editing task", curses.color_pair(5)),)
             except ResizeError:
                 panel.bottom()
-                reinitialize_primary_window()
+                window.reinitialize()
                 continue
             else:
                 break
@@ -463,7 +474,7 @@ class Interpreter:
         return (
             src.output_formatter.pprint_task(self.timer.edit(tasks[i], actions[j], arg))
             if tasks[i]
-            else [src.cutils.get_multi_part_line(("no task", 0))]
+            else (("no task", curses.color_pair(0)),)
         )
 
     def stop(self):
@@ -474,8 +485,8 @@ class Interpreter:
         """
         if self.timer.task.name:
             self.timer.stop()
-            return src.cutils.get_multi_part_line(("", 0))
-        return src.cutils.get_multi_part_line(("no running task", 0))
+            return (("", curses.color_pair(0)),)
+        return (("no running task", curses.color_pair(0)),)
 
     def show_help_message(self, subcommand, subcommands, aliases):
         """Show help message.
@@ -496,11 +507,11 @@ class Interpreter:
             else:
                 subparser = subcommands[subcommand]
             return [
-                src.cutils.get_multi_part_line((help, 4))
+                ((help, curses.color_pair(4)),)
                 for help in subparser.format_help().split("\n")
             ]
         return [
-            src.cutils.get_multi_part_line((usage.strip(), 4))
+            ((usage.strip(), curses.color_pair(4)),)
             for usage in self._parser.format_usage().split("\n")
             if usage
         ]
@@ -514,10 +525,10 @@ class Interpreter:
         :rtype: list
         """
         return [
-            src.cutils.get_multi_part_line(("alias\tcommand", 4)),
+            (("alias\tcommand", curses.color_pair(4)),),
             tuple(),
             *[
-                src.cutils.get_multi_part_line((f"{alias}\t{k}", 4))
+                ((f"{alias}\t{k}", curses.color_pair(4)),)
                 for k, v in aliases.items()
                 for alias in v
             ],

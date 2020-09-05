@@ -30,93 +30,77 @@ import curses.panel
 
 # third party imports
 # library specific imports
-import src.interpreter
-import src.output_formatter
+from src.interpreter import Interpreter, InterpreterError
 
+from src.output_formatter import pprint_prompt
 from src.cutils import (
-    BANNER,
-    get_window_pos,
-    init,
-    init_color,
+    initialize_colour,
     mk_panel,
-    mv_or_scroll_down,
-    readline,
-    reinitialize_primary_window,
     ResizeError,
-    writeline,
+    WindowManager,
 )
 
 
 def _loop(stdscr, config):
     """Loop through user interaction.
 
-    :param window stdscr: window
+    :param window stdscr: initial window object
     :param dict config: configuration
 
     :raises: SystemExit when Control+C is pressed
     """
-    max_y, max_x = stdscr.getmaxyx()
-    nlines, ncols, begin_y, begin_x = get_window_pos(max_y, max_x)
-    panel = mk_panel(max_y, max_x, 0, 0)
+    panel = mk_panel(*stdscr.getmaxyx(), 0, 0)
     window = panel.window()
-    window.addstr(0, 0, BANNER)
-    curses.panel.update_panels()
-    curses.doupdate()
-    y, _ = window.getyx()
-    y += 2
-    max_y, max_x = window.getmaxyx()
-    interpreter = src.interpreter.Interpreter(
+    window_mgr = WindowManager(window, banner=True)
+    interpreter = Interpreter(
         os.path.join(config["database"]["path"], config["database"]["dbname"]),
         {k: json.loads(v) for k, v in config["aliases"].items()}
         if "aliases" in config
         else {},
     )
-    upper_stack = []
-    lower_stack = []
     while True:
         try:
-            prompt = src.output_formatter.pprint_prompt(task=interpreter.timer.task)
-            y = writeline(window, y, 0, prompt)
+            y, _ = window.getyx()
+            window_mgr.writeline(
+                y, 0, pprint_prompt(task=interpreter.timer.task), move=False
+            )
             try:
-                line = readline(window, upper_stack, lower_stack, scroll=True)
+                line = window_mgr.readline(scroll=True)
             except ResizeError:
-                reinitialize_primary_window()
-                y, x = window.getyx()
-                max_x, max_y = window.getmaxyx()
-                upper_stack = []
-                lower_stack = []
+                window_mgr.reinitialize()
                 continue
             if not line:
-                y = mv_or_scroll_down(window, y, upper_stack, lower_stack)
+                window_mgr.mv_down_or_scroll_down()
                 continue
             try:
                 output = interpreter.interpret_line(line)
-                y, x = window.getyx()
-                for line in output:
-                    y = mv_or_scroll_down(window, y, upper_stack, lower_stack)
-                    y = writeline(window, y, 0, line)
-            except Exception as exception:
-                window.addstr(y, 0, str(exception), curses.color_pair(5))
-            finally:
-                y, _ = window.getyx()
-                y = mv_or_scroll_down(window, y, upper_stack, lower_stack)
+            except (InterpreterError, Warning) as exception:
+                window_mgr.mv_down_or_scroll_down()
+                window_mgr.writeline(
+                    *window_mgr.window.getyx(),
+                    ((str(exception), curses.color_pair(5)),)
+                )
+            else:
+                window_mgr.mv_down_or_scroll_down()
+                window_mgr.writelines(*window_mgr.window.getyx(), output)
         except KeyboardInterrupt:
-            y = mv_or_scroll_down(window, y, upper_stack, lower_stack)
-            window.addstr(y, 0, "Goodbye!")
+            window_mgr.mv_down_or_scroll_down()
+            window_mgr.writeline(
+                *window_mgr.window.getyx(), (("Goodbye!", curses.color_pair(0)),)
+            )
             window.refresh()
             time.sleep(0.5)
             raise SystemExit
 
 
-def launch(window, config):
+def launch(stdscr, config):
     """Launch shell.
 
-    :param window window: window
+    :param window stdscr: initial window object
     :param dict config: configuration
     """
     curses.start_color()
     curses.raw()
     curses.use_default_colors()
-    init(window)
-    init_color()
-    _loop(window, config)
+    initialize_colour()
+    _loop(stdscr, config)

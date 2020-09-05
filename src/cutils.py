@@ -39,342 +39,288 @@ class ResizeError(Exception):
     pass
 
 
-def get_window_pos(max_y, max_x):
-    """Get secondary window position.
+class WindowManager:
+    """Window manager.
 
-    :param int max_y: maximum y position
-    :param int max_x: maximum x position
-
-    :returns: number of lines and columns and y and x positions
-    :rtype: int, int, int, int
+    :ivar window window: window
+    :ivar list upper_stack: stack (upper window)
+    :ivar list lower_stack: stack (lower window)
+    :ivar bool box: whether a border is drawn around the edges
     """
-    nlines = max_y // 2
-    ncols = max_x // 2
-    return nlines, ncols, (max_y - nlines) // 2, (max_x - ncols) // 2
 
+    def __init__(self, window, box=False, banner=False):
+        """Initialize window manager.
 
-def scroll_up(window, upper_stack, lower_stack, boxed=False):
-    """Scroll up.
+        :param window window: window
+        :param bool box: toggle drawing a border around the edges on/off
+        :param bool banner: toggle adding a banner on/off
+        """
+        self.window = window
+        self.box = box
+        self.banner = banner
+        self.reinitialize()
+        self.window.idlok(True)
+        self.window.keypad(True)
+        self.window.scrollok(True)
 
-    :param window window: window
-    :param list upper_stack: stack (upper window)
-    :param list lower_stack: stack (lower window)
-    :param bool boxed: whether a box is drawn around the edges
-    """
-    if not upper_stack:
-        # top of the window
-        return
-    max_y, _ = window.getmaxyx()
-    if boxed:
-        min_y = 1
-        max_y -= 1
-        min_x = 1
-    else:
-        min_y = 0
-        min_x = 0
-    lower_stack.append(scrapeline(window, max_y - 1))
-    window.scroll(-1)
-    writeline(window, min_y, 0, upper_stack.pop())
-    window.move(max_y - 1, min_x)
+    def reinitialize(self):
+        """Reinitialize window."""
+        self.window.clear()
+        self.upper_stack = []
+        self.lower_stack = []
+        y, x = 0, 0
+        if self.box:
+            self.window.box()
+            y += 1
+        if self.banner:
+            self.window.addstr(y, x, BANNER)
+            y, _ = self.window.getyx()
+            self.window.move(y + 2, 0)
 
+    def readline(self, y=-1, prompt="", scroll=False, clear=False):
+        """Read line.
 
-def scroll_down(window, upper_stack, lower_stack, boxed=False):
-    """Scroll down.
+        :param int y: y position
+        :param str prompt: prompt
+        :param bool scroll: toggle scrolling on/off
+        :param bool clear: toggle clearing line on/off
 
-    :param window window: window
-    :param list upper_stack: stack (upper window)
-    :param list lower_stack: stack (lower window)
-    :param bool boxed: whether a box is drawn around the edges
-    """
-    max_y, _ = window.getmaxyx()
-    if boxed:
-        min_y = 1
-        max_y -= 1
-        min_x = 1
-    else:
-        min_y = 0
-        min_x = 0
-    upper_stack.append(scrapeline(window, min_y))
-    window.scroll(1)
-    if boxed:
-        window.move(max_y - 1, 0)
-        window.deleteln()
-    window.move(max_y - 1, min_x)
-    if not lower_stack:
-        # bottom of the window
-        return
-    writeline(window, max_y - 1, 0, lower_stack.pop())
-    window.move(max_y - 1, min_x)
-
-
-def mv_or_scroll_down(window, y, upper_stack, lower_stack, boxed=False):
-    """Move cursor or scroll down.
-
-    :param window window: window
-    :param int y: y position
-    :param list upper_stack: stack (upper window)
-    :param list lower_stack: stack (lower window)
-    :param bool boxed: whether a box is drawn around the edges
-
-    :returns: y position
-    :rtype: int
-    """
-    max_y, _ = window.getmaxyx()
-    if boxed:
-        max_y -= 1
-    if y < max_y - 1:
-        return y + 1
-    scroll_down(window, upper_stack, lower_stack, boxed=boxed)
-    return y
-
-
-def readline(
-    window,
-    upper_stack,
-    lower_stack,
-    boxed=False,
-    prompt="",
-    y=-1,
-    x=-1,
-    clear=False,
-    scroll=False,
-):
-    """Read line.
-
-    :param window window: window
-    :param list upper_stack: stack (upper window)
-    :param list lower_stack: stack (lower window)
-    :param bool boxed: whether a box is drawn around the edges
-    :param str prompt: prompt
-    :param int y: y position
-    :param int x: x position
-    :param bool clear: toggle clearing line on/off
-    :param bool scroll: toggle scrolling on/off
-
-    :returns: line
-    :rtype: str
-    """
-    if y < 0:
-        y, _ = window.getyx()
-    if x < 0:
-        _, x = window.getyx()
-    window.move(y, x)
-    _, min_x = window.getyx()
-    if boxed:
-        min_x += 1
-        x += 1
-    if prompt:
-        window.addstr(y, x, prompt)
-        min_x += len(prompt)
-    i = 0
-    buffer = []
-    while True:
-        if boxed:
-            window.box()
-        max_y, max_x = window.getmaxyx()
-        y, x = window.getyx()
-        char = window.get_wch()
-        if char == curses.KEY_RESIZE:
-            raise ResizeError
-        if char == "\x03":
-            raise KeyboardInterrupt
-        if char in (curses.KEY_DOWN, curses.KEY_UP):
-            if not scroll:
-                continue
-        if char == curses.KEY_DOWN:
-            if y < max_y and lower_stack:
-                scroll_down(window, upper_stack, lower_stack, boxed=boxed)
-                if not lower_stack:
-                    window.move(y, len(scrapeline(window, y)[0][0].strip()))
-            continue
-        if char == curses.KEY_UP:
-            if y > 2 or len(upper_stack) > 1:
-                scroll_up(window, upper_stack, lower_stack, boxed=boxed)
-            continue
-        if x == 0:
-            continue
-        if char in (curses.KEY_ENTER, os.linesep):
-            break
-        if char == curses.KEY_LEFT:
-            if x > min_x:
-                i -= 1
-                window.move(y, x - 1)
-                continue
-            if len(buffer) > 0 and i > 0:
-                i -= 1
-                window.insstr(y, x, buffer[i])
-                continue
-        if char == curses.KEY_RIGHT:
-            if x < max_x - 1:
-                if i < len(buffer):
-                    i += 1
-                    window.move(y, x + 1)
-                continue
-            if i < len(buffer) - 1:
-                window.delch(y, min_x)
-                i += 1
-                window.insstr(y, x, buffer[i])
-                continue
-            if window.instr(y, x, 1).decode(encoding="utf-8") == buffer[-1]:
-                window.delch(y, min_x)
-                i += 1
-                window.delch(y, x)
-                continue
-        if char in (curses.KEY_BACKSPACE, 8, 127):
-            if x > min_x:
-                i -= 1
-                x -= 1
-                buffer.pop(i)
-                if boxed:
-                    window.delch(y, max_x - 1)
-                window.delch(y, x)
-                if len(buffer) > max_x - (min_x + 2) and i >= x - 1:
-                    window.insstr(y, min_x, buffer[(i - x) + 1])
-                    window.move(y, x + 1)
-            continue
-        if isinstance(char, int):
-            continue
-        if unicodedata.category(char).startswith("C"):
-            continue
-        buffer.insert(i, char)
-        i += 1
-        if x < max_x - 1:
+        :returns: line
+        :rtype: str
+        """
+        _, x = self.window.getyx()
+        if y < 0:
+            y, _ = self.window.getyx()
+        self.window.move(y, x)
+        if self.box:
             x += 1
+        min_x = x
+        if prompt:
+            self.window.addstr(y, x, prompt)
+            min_x += len(prompt)
+        buffer = []
+        i = 0
+        while True:
+            if self.box:
+                self.window.box()
+            max_y, max_x = self.window.getmaxyx()
+            y, x = self.window.getyx()
+            ch = self.window.get_wch()
+            if ch == curses.KEY_RESIZE:
+                raise ResizeError
+            if ch == "\x03":
+                raise KeyboardInterrupt
+            if ch in (curses.KEY_DOWN, curses.KEY_UP):
+                if not scroll:
+                    continue
+            if ch == curses.KEY_DOWN:
+                if y < max_y and self.lower_stack:
+                    self.scroll_down()
+                    if not self.lower_stack:
+                        self.window.move(y, len(self.scrapeline(y)[0][0].strip()))
+                continue
+            if ch == curses.KEY_UP:
+                if y > 2 or len(self.upper_stack) > 1:
+                    self.scroll_up()
+                continue
+            if x == 0:
+                continue
+            if ch in (curses.KEY_ENTER, os.linesep):
+                break
+            if ch == curses.KEY_LEFT:
+                if x > min_x:
+                    i -= 1
+                    self.window.move(y, x - 1)
+                    continue
+                if len(buffer) > 0 and i > 0:
+                    i -= 1
+                    self.window.insstr(y, x, buffer[i])
+                    continue
+            if ch == curses.KEY_RIGHT:
+                if x < max_x - 1:
+                    if i < len(buffer):
+                        i += 1
+                        self.window.move(y, x + 1)
+                    continue
+                if i < len(buffer) - 1:
+                    self.window.delch(y, min_x)
+                    i += 1
+                    self.window.insstr(y, x, buffer[i])
+                    continue
+                if self.window.instr(y, x, 1).decode(encoding="utf-8") == buffer[-1]:
+                    self.window.delch(y, min_x)
+                    i += 1
+                    self.window.delch(y, x)
+                    continue
+            if ch in (curses.KEY_BACKSPACE, 8, 127):
+                if x > min_x:
+                    i -= 1
+                    x -= 1
+                    buffer.pop(i)
+                    if self.box:
+                        self.window.delch(y, max_x - 1)
+                    self.window.delch(y, x)
+                    if len(buffer) > max_x - (min_x + 2) and i >= x - 1:
+                        self.window.insstr(y, min_x, buffer[(i - x) + 1])
+                        self.window.move(y, x + 1)
+                continue
+            if isinstance(ch, int):
+                continue
+            if unicodedata.category(ch).startswith("C"):
+                continue
+            buffer.insert(i, ch)
+            i += 1
+            if x < max_x - 1:
+                x += 1
+            else:
+                self.window.delch(y, min_x)
+                self.window.move(y, x - 1)
+            self.window.insstr(ch)
+            self.window.move(y, x)
+        if clear:
+            self.window.move(y, 1)
+            self.window.clrtoeol()
+        if self.box:
+            self.window.box()
+        return "".join(buffer).strip()
+
+    def writeline(self, y, x, multi_part_line, move=True):
+        """Write multi-part line.
+
+        :param int y: y position
+        :param int x: x position
+        :param tuple multi_part_line: multi-part line
+        :param bool move: toggle moving cursor down on/off
+        """
+        for line, attr in multi_part_line:
+            self.window.addstr(y, x, line, attr)
+            x += len(line)
+        if move:
+            self.mv_down_or_scroll_down()
+
+    def writelines(self, y, x, multi_part_lines, move=True):
+        """Write multi_part lines.
+
+        :param int y: y position
+        :param int x: x position
+        :param tuple multi_part_lines: multi-part lines
+        :param bool move: toggle moving cursor down on/off
+        """
+        for multi_part_line in multi_part_lines:
+            self.writeline(y, x, multi_part_line, move=move)
+            y, _ = self.window.getyx()
+
+    def scrapeline(self, y):
+        """Scrape multi-part line.
+
+        :param int y: y position
+
+        :returns: multi-part line
+        :rtype: tuple
+        """
+        _, max_x = self.window.getmaxyx()
+        buffer = []
+        multi_part_line = []
+        current_attr = self.window.inch(y, 0) & curses.A_COLOR
+        for x in range(max_x):
+            ch = self.window.inch(y, x)
+            attr = ch & curses.A_COLOR
+            ch = chr(ch & curses.A_CHARTEXT)
+            if current_attr != attr:
+                multi_part_line.append(("".join(buffer), current_attr))
+                buffer = []
+                current_attr = attr
+            buffer.append(ch)
+        buffer = buffer[:-1]
+        if buffer:
+            multi_part_line.append(("".join(buffer), attr))
+        return multi_part_line
+
+    def scroll_up(self):
+        """Scroll up."""
+        if not self.upper_stack:
+            # top of the window
+            return
+        max_y, _ = self.window.getmaxyx()
+        if self.box:
+            min_y = 1
+            min_x = 1
+            max_y -= 1
         else:
-            window.delch(y, min_x)
-            window.move(y, x - 1)
-        window.insstr(char)
-        window.move(y, x)
-    if clear:
-        window.move(y, 1)
-        window.clrtoeol()
-    if boxed:
-        window.box()
-    return "".join(buffer).strip()
+            min_y = 0
+            min_x = 0
+        self.lower_stack.append(self.scrapeline(max_y - 1))
+        self.window.scroll(-1)
+        self.writeline(min_y, 0, self.upper_stack.pop())
+        self.window.move(max_y - 1, min_x)
+
+    def scroll_down(self):
+        """Scroll down."""
+        max_y, _ = self.window.getmaxyx()
+        if self.box:
+            min_y = 1
+            min_x = 1
+            max_y -= 1
+        else:
+            min_y = 0
+            min_x = 0
+        self.upper_stack.append(self.scrapeline(min_y))
+        self.window.scroll(1)
+        if self.box:
+            self.window.move(max_y - 1, 0)
+            self.window.deleteln()
+        self.window.move(max_y - 1, min_x)
+        if not self.lower_stack:
+            # bottom of the window
+            return
+        self.writeline(max_y - 1, 0, self.lower_stack.pop(), move=False)
+        self.window.move(max_y - 1, min_x)
+
+    def mv_down_or_scroll_down(self):
+        """Move cursor down or scroll down."""
+        y, _ = self.window.getyx()
+        max_y, _ = self.window.getmaxyx()
+        if self.box:
+            max_y -= 1
+        if y < max_y - 1:
+            self.window.move(y + 1, 0)
+        else:
+            self.scroll_down()
 
 
-def writeline(window, y, x, multi_part_line):
-    """Write multi-part line.
-
-    :param window window: window
-    :param int y: y position
-    :param int x: x position
-    :param tuple multi_part_line: multi-part line
-
-    :returns: y position
-    :rtype: int
-    """
-    for line, attr in multi_part_line:
-        window.addstr(y, x, line, attr)
-        y, x = window.getyx()
-    return y
-
-
-def scrapeline(window, y):
-    """Scrape multi-part line from the window.
-
-    :param window window: window
-    :param int y: y position
-
-    :returns: multi-part line
-    :rtype: tuple
-    """
-    _, max_x = window.getmaxyx()
-    multi_part_line = []
-    buffer = []
-    current_attr = window.inch(y, 0) & curses.A_COLOR
-    for x in range(max_x):
-        ch = window.inch(y, x)
-        attr = ch & curses.A_COLOR
-        ch = ch & curses.A_CHARTEXT
-        if current_attr != attr:
-            multi_part_line.append(("".join(buffer), current_attr))
-            buffer = []
-            current_attr = attr
-        buffer.append(chr(ch))
-    buffer = buffer[:-1]
-    if buffer:
-        multi_part_line.append(("".join(buffer), attr))
-    return multi_part_line
-
-
-def mk_panel(nlines, ncols, begin_y, begin_x):
-    """Make panel.
-
-    :param int nlines: number of lines
-    :param int ncols: number of columns
-    :param int begin_y: y position
-    :param int begin_x: x position
-
-    :returns: panel
-    :rtype: panel
-    """
-    window = curses.newwin(nlines, ncols, begin_y, begin_x)
-    init(window)
-    panel = curses.panel.new_panel(window)
-    return panel
-
-
-def reinitialize_primary_window():
-    """Reinitialize primary window."""
-    primary_window = curses.panel.top_panel().window()
-    primary_window.clear()
-    primary_window.addstr(0, 0, BANNER)
-    y, _ = primary_window.getyx()
-    primary_window.move(y + 2, 0)
-
-
-def mk_menu(choices):
+def mk_menu(items):
     """Make menu.
 
-    :param list choices: choices
+    :param list items: items
 
-    :returns: choice
+    :returns: item
     :rtype: int
     """
-    if len(choices) == 1:
+    if len(items) == 1:
         return 0
     while True:
-        lower_stack = []
-        upper_stack = []
-        panel = mk_panel(*get_window_pos(*curses.panel.top_panel().window().getmaxyx()))
+        panel = mk_panel(*get_menu_dims(*curses.panel.top_panel().window().getmaxyx()))
         window = panel.window()
-        window.box()
-        y, _ = window.getyx()
-        y += 1
-        x = 1
-        max_y, max_x = window.getmaxyx()
-        max_y -= 1
-        window.addstr(y, x, f"Pick choice 1...{len(choices)}.")
-        y = mv_or_scroll_down(window, y, upper_stack, lower_stack, boxed=True)
-        for i, choice in enumerate(choices, start=1):
-            window.addstr(
-                y, x, f"{i}: {''.join(x[0] for x in choice)}", curses.color_pair(0)
-            )
-            y, _ = window.getyx()
-            if y < max_y - 1:
-                y += 1
-            else:
-                scroll_down(window, upper_stack, lower_stack, boxed=True)
+        window_mgr = WindowManager(window, box=True)
+        y, x = window.getyx()
+        multi_part_lines = (
+            ((f"Pick choice 1...{len(items)}.", curses.color_pair(0)),),
+            *tuple(
+                ((f"{i}: {item}", curses.color_pair(0)),)
+                for i, item in enumerate(items, start=1)
+            ),
+        )
+        window_mgr.writelines(y + 1, x + 1, multi_part_lines)
+        y, _ = window_mgr.window.getyx()
         line = ""
         try:
-            while line not in (str(i) for i in range(1, len(choices) + 1)):
-                line = readline(
-                    window,
-                    upper_stack,
-                    lower_stack,
-                    prompt=">",
-                    y=y,
-                    x=0,
-                    clear=True,
-                    boxed=True,
-                    scroll=True,
-                )
+            while line not in (str(i) for i in range(1, len(items) + 1)):
+                line = window_mgr.readline(y=y, prompt=">", scroll=True, clear=True)
         except KeyboardInterrupt:
             return -1
         except ResizeError:
             panel.bottom()
-            reinitialize_primary_window()
+            window_mgr.reinitialize()
             continue
         else:
             break
@@ -384,32 +330,45 @@ def mk_menu(choices):
     return int(line) - 1
 
 
-def get_multi_part_line(*parts):
-    """Get multi-part line.
+def get_menu_dims(max_y, max_x):
+    """Get menu window dimensions.
 
-    :param tuple parts: tuples of part and color pair index
+    :param int max_y: maximum y position
+    :param int max_x: maximum x position
 
-    :returns: multi-part line
+    :returns: height, width and initial x, y cursor positions
     :rtype: tuple
     """
-    return tuple((part, curses.color_pair(i)) for part, i in parts)
+    nlines = max_y // 2
+    ncols = max_x // 2
+    return nlines, ncols, (max_y - nlines) // 2, (max_x - ncols) // 2
 
 
-def init_color():
-    """Initialize colours."""
-    curses.init_pair(1, 2, -1)  # name
-    curses.init_pair(2, 8, -1)  # tags
-    curses.init_pair(3, 5, -1)  # time span
-    curses.init_pair(4, 11, -1)  # total
-    curses.init_pair(5, 9, -1)  # error
+def mk_panel(nlines, ncols, begin_y, begin_x):
+    """Make panel.
 
+    :param int nlines: number of lines
+    :param int ncols: number of columns
+    :param int begin_y: initial y position
+    :param int begin_x: initial x position
 
-def init(window):
-    """Initialize shell.
-
-    :param window window: window
+    :returns: panel
+    :rtype: panel
     """
-    window.clear()
-    window.idlok(True)
-    window.keypad(True)
-    window.scrollok(True)
+    panel = curses.panel.new_panel(curses.newwin(nlines, ncols, begin_y, begin_x))
+    curses.panel.update_panels()
+    curses.doupdate()
+    return panel
+
+
+def initialize_colour():
+    """Initialize colour pairs."""
+    colour_pairs = (
+        (1, 2, -1),  # name
+        (2, 8, -1),  # tags
+        (3, 5, -1),  # time span
+        (4, 11, -1),  # total
+        (5, 9, -1),  # error
+    )
+    for colour_pair in colour_pairs:
+        curses.init_pair(*colour_pair)
