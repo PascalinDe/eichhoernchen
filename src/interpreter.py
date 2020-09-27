@@ -37,10 +37,11 @@ import src.timing
 from src import FullName
 from src.cutils import (
     get_menu_dims,
-    WindowManager,
     mk_menu,
     mk_panel,
+    mk_stats,
     ResizeError,
+    WindowManager,
 )
 
 
@@ -255,6 +256,16 @@ class Interpreter:
                         **ARGS["full_name"],
                         **{"nargs": "?", "default": FullName("", set())},
                     },
+                    "from_": {**ARGS["from_"], **{"nargs": "?", "default": "today"}},
+                    "to": {**ARGS["to"], **{"nargs": "?", "default": "today"}},
+                },
+            },
+            "show_stats": {
+                "description": "show statistics",
+                "aliases": aliases.get("show_stats", []),
+                "func": self.show_stats,
+                "formatter": lambda *args, **kwargs: [],
+                "args": {
                     "from_": {**ARGS["from_"], **{"nargs": "?", "default": "today"}},
                     "to": {**ARGS["to"], **{"nargs": "?", "default": "today"}},
                 },
@@ -533,3 +544,112 @@ class Interpreter:
                 for alias in v
             ],
         ]
+
+    def _get_date(self, endpoint):
+        """Get date.
+
+        :param str endpoint: endpoint
+
+        :returns: date
+        :rtype: str
+        """
+        today = datetime.datetime.today()
+        if endpoint == "today":
+            return today.strftime("%Y-%m-%d")
+        if endpoint == "yesterday":
+            return (today - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+        if endpoint == "week":
+            return (today - datetime.timedelta(days=today.weekday())).strftime(
+                "%Y-%m-%d"
+            )
+        if endpoint == "month":
+            return f"{today.year}-{today.month:02}-01"
+
+    def _get_heading(self, from_, to):
+        """Get heading.
+
+        :param str from_: from
+        :param str to: to
+
+        :returns: heading
+        :rtype: tuple
+        """
+        ranges = ("today", "yesterday", "week", "month")
+        if from_ in ranges:
+            from_ = self._get_date(from_)
+        if to in ranges:
+            to = self._get_date(to)
+        from_ = datetime.datetime.strptime(from_, "%Y-%m-%d").strftime("%a %d %b %Y")
+        to = datetime.datetime.strptime(to, "%Y-%m-%d").strftime("%a %d %b %Y")
+        if from_ != to:
+            return ((f"overview {from_} - {to}".upper(), curses.color_pair(0)),)
+        return ((f"overview {from_}".upper(), curses.color_pair(0)),)
+
+    def show_stats(self, from_="today", to="today"):
+        """Show statistics.
+
+        :param str from_: from
+        :param str to: to
+        """
+        heading = self._get_heading(from_, to)
+        stats = [
+            heading,
+            ((f"{'—'*len(heading[0][0])}", curses.color_pair(0)),),
+            (("", curses.color_pair(0)),),
+        ]
+        tasks = list(self.timer.list_tasks(from_=from_, to=to))
+        stats += [
+            ((f"{len(tasks)} task(s)", curses.color_pair(0)),),
+            *(
+                src.output_formatter.pprint_task(task, date=(from_ != to))
+                for task in tasks
+            ),
+        ]
+        unique_tags = {tuple(task.tags) for task in tasks if task.tags}
+        pprinted_tags = [
+            src.output_formatter.pprint_tags(tags)
+            for tags in sorted(unique_tags, key=lambda x: len(x))
+        ]
+        stats += [
+            ((f"{len(pprinted_tags)} tag(s)", curses.color_pair(0)),),
+            *pprinted_tags,
+            (("", curses.color_pair(0)),),
+        ]
+        unique_tasks = {(task.name, tuple(task.tags)) for task in tasks}
+        sums = sorted(
+            (
+                sum_
+                for name, tags in unique_tasks
+                for sum_ in self.timer.sum_total(
+                    summand=FullName(name, set(tags)), from_=from_, to=to
+                )
+            ),
+            key=lambda x: x[1],
+            reverse=True,
+        )
+        stats += [
+            (("Total runtime task(s)", curses.color_pair(0)),),
+            *(
+                src.output_formatter.pprint_sum(FullName(*full_name), total)
+                for full_name, total in sums
+            ),
+        ]
+        sums = sorted(
+            (
+                sum_
+                for tags in unique_tags
+                for sum_ in self.timer.sum_total(
+                    summand=FullName("", set(tags)), from_=from_, to=to
+                )
+            ),
+            key=lambda x: x[1],
+            reverse=True,
+        )
+        stats += [
+            (("Total runtime tag(s)", curses.color_pair(0)),),
+            *(
+                src.output_formatter.pprint_sum(FullName(*full_name), total)
+                for full_name, total in sums
+            ),
+        ]
+        mk_stats(stats)

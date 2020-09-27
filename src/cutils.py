@@ -330,6 +330,44 @@ def mk_menu(items):
     return int(line) - 1
 
 
+def mk_stats(stats):
+    """Make statistics.
+
+    :param tuple stats: statistics
+    """
+    while True:
+        stats += [
+            (("", curses.color_pair(0)),),
+            (
+                (
+                    "Enter 'q' or press Ctrl+C to return to main window",
+                    curses.color_pair(0),
+                ),
+            ),
+        ]
+        panel = mk_panel(*curses.panel.top_panel().window().getmaxyx(), 0, 0)
+        window = panel.window()
+        window_mgr = WindowManager(window)
+        window_mgr.writelines(*window.getyx(), stats)
+        y, _ = window_mgr.window.getyx()
+        try:
+            line = ""
+            while line != "q":
+                line = window_mgr.readline(y=y, prompt=">", scroll=True, clear=True)
+        except KeyboardInterrupt:
+            return
+        except ResizeError:
+            panel.bottom()
+            window_mgr.reinitialize()
+            continue
+        else:
+            break
+        finally:
+            del panel
+            curses.panel.update_panels()
+    return
+
+
 def get_menu_dims(max_y, max_x):
     """Get menu window dimensions.
 
