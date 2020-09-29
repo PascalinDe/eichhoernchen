@@ -384,6 +384,7 @@ class Interpreter:
                 *[
                     split.strip()
                     for split in re.split(r"|".join(self.RESERVED), splits[1])
+                    if split.strip()
                 ],
             ]
         try:
