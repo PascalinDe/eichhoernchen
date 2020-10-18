@@ -435,6 +435,9 @@ class Interpreter:
                     for split in re.split(r"|".join(self.RESERVED), splits[1])
                 ],
             ]
+        # FIXME
+        if splits[0] == "show_stats":
+            splits = [split for split in splits if split]
         try:
             fp = StringIO()
             with redirect_stderr(fp):
