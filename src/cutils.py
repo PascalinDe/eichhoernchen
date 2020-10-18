@@ -330,6 +330,33 @@ def mk_menu(items):
     return int(line) - 1
 
 
+def readline(prompt=""):
+    """Read line.
+
+    :param str prompt: prompt
+
+    :returns: line
+    :rtype: str
+    """
+    while True:
+        try:
+            panel = mk_panel(
+                *get_menu_dims(*curses.panel.top_panel().window().getmaxyx())
+            )
+            window = panel.window()
+            window_mgr = WindowManager(window, box=True)
+            line = window_mgr.readline(prompt=prompt, y=1)
+        except ResizeError:
+            panel.bottom()
+            window.reinitialize()
+            continue
+        else:
+            return line
+        finally:
+            del panel
+            curses.panel.update_panels()
+
+
 def mk_stats(stats):
     """Make statistics.
 

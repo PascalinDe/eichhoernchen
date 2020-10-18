@@ -1,7 +1,7 @@
-#    This file is part of Eichhörnchen 2.0.
-#    Copyright (C) 2019  Carine Dengler
+#    This file is part of Eichhoernchen 2.0.
+#    Copyright (C) 2020  Carine Dengler
 #
-#    Eichhörnchen is free software: you can redistribute it and/or modify
+#    Eichhoernchen is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
@@ -16,309 +16,360 @@
 
 
 """
-:synopsis: Shell interpreter.
+:synopsis: Command-line interpreter.
 """
 
 
 # standard library imports
 import re
+import curses
 import argparse
 import datetime
-import curses.panel
 
 from io import StringIO
 from contextlib import redirect_stderr
 
 # third party imports
 # library specific imports
-import src.parser
 import src.timing
 
 from src import FullName
-from src.cutils import (
-    get_menu_dims,
-    mk_menu,
-    mk_panel,
-    mk_stats,
-    ResizeError,
-    WindowManager,
-)
+from src.cutils import mk_menu, mk_stats, readline
 
 
-def get_name(args):
-    """Get name.
+def _name(name):
+    """Name.
 
-    :param str args: command-line arguments
+    :param str name: string containing name
 
-    :raises: ArgumentTypeError when an error is found
+    :raises ArgumentTypeError: when string does not contain name
 
     :returns: name
     :rtype: str
     """
-    try:
-        return src.parser.parse_name(args)
-    except ValueError as exception:
-        raise argparse.ArgumentTypeError(str(exception))
+    match = re.match(r"(?:\w|\s|[!#+-?])+", name)
+    if match:
+        return match.group(0).strip()
+    raise argparse.ArgumentTypeError(f"'{name}' does not contain name")
 
 
-def get_tags(args):
-    """Get list of tags.
+def _tags(tags):
+    """Tags.
 
-    :param str args: command-line arguments
+    :param str tags: string containing tags
 
-    :raises: ArgumentTypeError when an error is found
+    :raises ArgumentTypeError: when string does not contain tags
 
-    :returns: list of tags
+    :returns: tags
     :rtype: set
     """
-    try:
-        return src.parser.parse_tags(args)
-    except ValueError as exception:
-        raise argparse.ArgumentTypeError(str(exception))
+    matches = re.findall(r"\[((?:\w|\s|[!#+-?])+)\]", tags)
+    if matches:
+        return set(tag.strip() for tag in matches)
+    raise argparse.ArgumentTypeError(f"'{tags}' does not contain any tags")
 
 
-def get_full_name(args):
-    """Get full name.
+def _full_name(full_name):
+    """Full name.
 
-    :param str args: command-line arguments
+    :param str full_name: string containing full name
 
-    :raises: ArgumentTypeError when an error is found
+    :raises ArgumentTypeError: when string does not contain full name
 
     :returns: full name
     :rtype: FullName
     """
-    if not args:
+    if not full_name:
         return FullName("", frozenset())
     try:
-        return FullName(get_name(args), get_tags(args))
+        return FullName(_name(full_name), _tags(full_name))
     except argparse.ArgumentTypeError:
-        return FullName(get_name(args), frozenset())
+        return FullName(_name(full_name), frozenset())
 
 
-def get_summand(args):
-    """Get summand.
+def _summand(summand):
+    """Summand.
 
-    :param str args: command-line arguments
+    :param str summand: string containing summand
 
-    :raises: ArgumentTypeError when an error is found
+    :raises ArgumentTypeError: when string does not contain summand
 
     :returns: summand
     :rtype: FullName
     """
     try:
-        return get_full_name(args)
+        return _full_name(summand)
     except argparse.ArgumentTypeError:
-        return FullName("", get_tags(args))
+        return FullName("", _tags(summand))
 
 
-def get_from(args):
-    """Get from.
+def _from(from_):
+    """From.
 
-    :param str args: command-line arguments
+    :param str from_: string containing from
 
-    :raises: ArgumentTypeError when an error is found
+    :raises ArgumentTypeError: when string does not contain from
 
     :returns: from
-    :rtype: ISO 8601 datetime string or time period keyword
+    :rtype: str
     """
     try:
-        return src.parser.parse_from(args)
-    except ValueError:
-        raise argparse.ArgumentTypeError(
-            f"'{args}' is not ISO 8601 string or time period keyword"
+        return parse_datetime(
+            from_, keywords=("all", "year", "month", "week", "yesterday", "today")
         )
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"'{from_}' does not contain from")
 
 
-def get_to(args):
-    """Get to.
+def _to(to):
+    """To.
 
-    :param str args: command-line arguments
-
-    :raises: ArgumentTypeError when an error is found
+    :param str to: string containing to
 
     :returns: to
-    :rtype: datetime
+    :rtype: str
     """
     try:
-        return src.parser.parse_to(args)
-    except ValueError:
-        raise argparse.ArgumentTypeError(
-            f"'{args}' is not ISO 8601 string or time period keyword"
+        return parse_datetime(
+            to, keywords=("year", "month", "week", "yesterday", "today")
         )
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"'{to}' does not contain to")
 
 
-def get_end_point(args):
-    """Get end point.
+def _start(start):
+    """Start.
 
-    :param str args: command-line arguments
+    :param str start: string containing start
 
-    :raises: ArgumentTypeError when an error is found
+    :raises ArgumentTypeError: when string does not contain start
 
-    :returns: end point
-    :rtype: datetime
+    :returns: start
+    :rtype: str
     """
     try:
-        return src.parser.parse_time(args)
+        return parse_datetime(start)
     except ValueError:
-        raise argparse.ArgumentTypeError(f"'{args}' is not ISO 8601 string")
+        raise argparse.ArgumentTypeError(f"'{start}' does not contain start")
 
 
-ARGS = {
-    "full_name": {
-        "type": get_full_name,
-        "help": "name followed by 0 or more tags, e.g. 'foo[bar]'",
-        "metavar": "full name",
-    },
-    "from_": {
-        "type": get_from,
-        "metavar": "from",
-        "help": "@([YYYY-MM-DD] [hh:mm]|{all,year,month,week,yesterday,today})",
-    },
-    "to": {
-        "type": get_to,
-        "help": "@([YYYY-MM-DD] [hh:mm]|{year,month,week,yesterday,today})",
-    },
-    "start": {"type": get_end_point, "help": "@YYYY-MM-DD [hh:mm]"},
-    "end": {"type": get_end_point, "help": "@YYYY-MM-DD [hh:mm]"},
-}
+def _end(end):
+    """End.
+
+    :param str end: string containing end
+
+    :raises ArgumentTypeError: when string does not contain end
+
+    :returns: end
+    :rtype: str
+    """
+    return _start(end)
+
+
+def parse_datetime(date_string, keywords=tuple()):
+    """Parse date string.
+
+    :param str date_string: date string
+    :param tuple keywords: keywords
+
+    :raises ValueError: when date string does not match any format
+
+    :returns: date string
+    :rtype: str
+    """
+    if keywords:
+        match = re.match(r"|".join(keywords), date_string)
+        if match:
+            return match.group(0)
+    for format_string in ("%Y-%m-%d %H:%M", "%Y-%m-%d", "%H:%M"):
+        try:
+            datetime.datetime.strptime(date_string, format_string)
+        except ValueError:
+            continue
+        if format_string == "%H:%M":
+            now = datetime.datetime.now()
+            date_string = f"{now.year}-{now.month}-{now.day} {date_string}"
+        return date_string
+    else:
+        raise ValueError(f"'{date_string}' does not match any format")
 
 
 class InterpreterError(Exception):
-    """Raised when shell input cannot be parsed."""
+    """Raised when command-line input cannot be parsed."""
 
     pass
 
 
 class Interpreter:
-    """Shell interpreter.
+    """Command-line interpreter.
 
-    :cvar str RESERVED: reserved characters
+    :cvar dict ARGS: ArgumentParser arguments
+    :cvar tuple RESERVED: reserved characters
+    :ivar dict subcommands: subcommands
     :ivar Timer timer: timer
-    :ivar dict subcommand_defs: subcommand definitions
-    :ivar ArgumentParser _parser: parser
     """
 
-    RESERVED = ["@"]
+    ARGS = {
+        "full_name": {
+            "type": _full_name,
+            "help": "name followed by 0 or more tags, e.g. 'foo[bar]'",
+            "metavar": "full name",
+        },
+        "from_": {
+            "type": _from,
+            "help": "@([YYYY-MM-DD] [hh:mm]|{all,year,month,week,yesterday,today})",
+            "metavar": "from",
+        },
+        "to": {
+            "type": _to,
+            "help": "@([YYYY-MM-DD] [hh:mm]|{year,month,week,yesterday,today})",
+        },
+        "start": {"type": _start, "help": "@YYYY-MM-DD [hh:mm]"},
+        "end": {"type": _end, "help": "@YYYY-MM-DD [hh:mm]"},
+    }
+    RESERVED = ("@",)
 
     def __init__(self, database, aliases):
-        """Initialize shell interpreter.
+        """Initialize command-line interpreter.
 
-        :param str database: Eichhörnchen SQLite3 database
+        :param str database: pathname of the database
         :param dict aliases: aliases
         """
         self.timer = src.timing.Timer(database)
-        self.subcommand_defs = {
+        self.subcommands = {
             "start": {
                 "description": "start task",
-                "aliases": aliases.get("start", []),
+                "aliases": aliases.get("start", tuple()),
                 "func": self.timer.start,
-                "formatter": lambda *args, **kwargs: [],
-                "args": {"full_name": ARGS["full_name"]},
+                "formatter": lambda *args, **kwargs: tuple(),
+                "args": {"full_name": self.ARGS["full_name"]},
             },
             "stop": {
                 "description": "stop task",
-                "aliases": aliases.get("stop", []),
+                "aliases": aliases.get("stop", tuple()),
                 "func": self.stop,
-                "formatter": lambda x: [x] if x[0][0] else [],
+                "formatter": lambda x: (x,) if x[0][0] else tuple(),
                 "args": {},
             },
             "add": {
                 "description": "add task",
-                "aliases": aliases.get("add", []),
+                "aliases": aliases.get("add", tuple()),
                 "func": self.timer.add,
-                "formatter": lambda task: [src.output_formatter.pprint_task(task)],
+                "formatter": lambda x: (src.output_formatter.pprint_task(x),),
                 "args": {
-                    "full_name": ARGS["full_name"],
-                    "start": ARGS["start"],
-                    "end": ARGS["end"],
+                    "full_name": self.ARGS["full_name"],
+                    "start": self.ARGS["start"],
+                    "end": self.ARGS["end"],
                 },
             },
             "remove": {
                 "description": "remove task",
-                "aliases": aliases.get("remove", []),
+                "aliases": aliases.get("remove", tuple()),
                 "func": self.remove,
-                "formatter": lambda line: [line],
+                "formatter": lambda x: (x,),
                 "args": {
-                    "full_name": ARGS["full_name"],
-                    "from_": {**ARGS["from_"], **{"nargs": "?", "default": "today"}},
-                    "to": {**ARGS["to"], **{"nargs": "?", "default": "today"}},
+                    "full_name": self.ARGS["full_name"],
+                    "from_": {
+                        **self.ARGS["from_"],
+                        **{"nargs": "?", "default": "today"},
+                    },
                 },
             },
             "list": {
                 "description": "list tasks",
-                "aliases": aliases.get("list", []),
+                "aliases": aliases.get("list", tuple()),
                 "func": self.timer.list_tasks,
-                "formatter": lambda tasks: [
-                    src.output_formatter.pprint_task(task, date=True) for task in tasks
-                ],
+                "formatter": lambda x: (
+                    src.output_formatter.pprint_task(y, date=False) for y in x
+                ),
                 "args": {
                     "full_name": {
-                        **ARGS["full_name"],
+                        **self.ARGS["full_name"],
                         **{"nargs": "?", "default": FullName("", set())},
                     },
-                    "from_": {**ARGS["from_"], **{"nargs": "?", "default": "today"}},
-                    "to": {**ARGS["to"], **{"nargs": "?", "default": "today"}},
+                    "from_": {
+                        **self.ARGS["from_"],
+                        **{"nargs": "?", "default": "today"},
+                    },
+                    "to": {**self.ARGS["to"], **{"nargs": "?", "default": "today"}},
                 },
             },
             "show_stats": {
                 "description": "show statistics",
-                "aliases": aliases.get("show_stats", []),
+                "aliases": aliases.get("show_stats", tuple()),
                 "func": self.show_stats,
-                "formatter": lambda *args, **kwargs: [],
+                "formatter": lambda *args, **kwargs: tuple(),
                 "args": {
-                    "from_": {**ARGS["from_"], **{"nargs": "?", "default": "today"}},
-                    "to": {**ARGS["to"], **{"nargs": "?", "default": "today"}},
+                    "from_": {
+                        **self.ARGS["from_"],
+                        **{"nargs": "?", "default": "today"},
+                    },
+                    "to": {**self.ARGS["to"], **{"nargs": "?", "default": "today"}},
                 },
             },
             "edit": {
                 "description": "edit task",
-                "aliases": aliases.get("edit", []),
+                "aliases": aliases.get("edit", tuple()),
                 "func": self.edit,
-                "formatter": lambda line: [line],
+                "formatter": lambda x: (x,),
                 "args": {
-                    "full_name": ARGS["full_name"],
-                    "from_": {**ARGS["from_"], **{"nargs": "?", "default": "today"}},
-                    "to": {**ARGS["to"], **{"nargs": "?", "default": "today"}},
+                    "full_name": self.ARGS["full_name"],
+                    "from_": {
+                        **self.ARGS["from_"],
+                        **{"nargs": "?", "default": "today"},
+                    },
+                    "to": {
+                        **self.ARGS["to"],
+                        **{"nargs": "?", "default": "today"},
+                    },
                 },
             },
             "sum": {
                 "description": "sum up total time",
-                "aliases": aliases.get("sum", []),
+                "aliases": aliases.get("sum", tuple()),
                 "func": self.timer.sum_total,
-                "formatter": lambda sums: [
-                    src.output_formatter.pprint_sum(FullName(*full_name), total)
-                    for full_name, total in sums
-                ],
+                "formatter": lambda x: (
+                    src.output_formatter.pprint_sum(FullName(*y), z) for y, z in x
+                ),
                 "args": {
                     "summand": {
-                        "type": get_summand,
+                        "type": _summand,
                         "help": "full name, name or tag(s) to sum up",
                     },
-                    "from_": {**ARGS["from_"], **{"nargs": "?", "default": "today"}},
-                    "to": {**ARGS["to"], **{"nargs": "?", "default": "today"}},
+                    "from_": {
+                        **self.ARGS["from_"],
+                        **{"nargs": "?", "default": "today"},
+                    },
+                    "to": {
+                        **self.ARGS["to"],
+                        **{"nargs": "?", "default": "today"},
+                    },
                 },
             },
             "aliases": {
                 "description": "list aliases",
-                "aliases": aliases.get("aliases", []),
-                "func": lambda *args, **kwargs: self.list_aliases(aliases),
-                "formatter": lambda multi_part_line: multi_part_line,
+                "aliases": aliases.get("aliases", tuple()),
+                "func": lambda *args, **kwargs: self.aliases(aliases),
+                "formatter": lambda x: x,
                 "args": {},
             },
             "export": {
                 "description": "export tasks",
-                "aliases": aliases.get("export", []),
+                "aliases": aliases.get("export", tuple()),
                 "func": self.timer.export,
-                "formatter": lambda line: (((line, curses.color_pair(4)),),),
+                "formatter": lambda x: (((x, curses.color_pair(4)),),),
                 "args": {
                     "ext": {"choices": ("csv", "json"), "metavar": "format"},
-                    "from_": {**ARGS["from_"], **{"nargs": "?", "default": "today"}},
-                    "to": {**ARGS["to"], **{"nargs": "?", "default": "today"}},
+                    "from_": {
+                        **self.ARGS["from_"],
+                        **{"nargs": "?", "default": "today"},
+                    },
+                    "to": {**self.ARGS["to"], **{"nargs": "?", "default": "today"}},
                 },
             },
             "help": {
                 "description": "show help",
-                "aliases": aliases.get("help", []) + ["?"],
+                "aliases": aliases.get("help", tuple()) + ("?",),
                 "args": {},
             },
         }
@@ -335,12 +386,12 @@ class Interpreter:
     def _init_subparsers(self, parser, aliases):
         """Initialize subparsers.
 
-        :param ArgumentParser parser: command-line parser
+        :param ArgumentParser parser: command-line interpreter
         :param dict aliases: aliases
         """
         subparsers = parser.add_subparsers()
         subcommands = {}
-        for prog, subcommand in self.subcommand_defs.items():
+        for prog, subcommand in self.subcommands.items():
             subcommands[prog] = subparsers.add_parser(
                 prog,
                 description=subcommand["description"],
@@ -363,10 +414,8 @@ class Interpreter:
             ),
         )
         subcommands["help"].set_defaults(
-            func=lambda command: command or "",
-            formatter=lambda command: self.show_help_message(
-                command, subcommands, aliases
-            ),
+            func=lambda *args, **kwargs: kwargs["command"] or "",
+            formatter=lambda x: self.help(x, subcommands, aliases),
         )
 
     def interpret_line(self, line):
@@ -374,8 +423,8 @@ class Interpreter:
 
         :param str line: line
 
-        :returns: formatted output
-        :rtype: str
+        :returns:
+        :rtype:
         """
         splits = line.split(maxsplit=1)
         if len(splits) > 1:
@@ -384,7 +433,6 @@ class Interpreter:
                 *[
                     split.strip()
                     for split in re.split(r"|".join(self.RESERVED), splits[1])
-                    if split.strip()
                 ],
             ]
         try:
@@ -414,6 +462,30 @@ class Interpreter:
         """
         return "".join(item[0] for item in items)
 
+    def _pick_task(
+        self, full_name=FullName("", frozenset()), from_="today", to="today"
+    ):
+        """Pick task.
+
+        :param FullName full_name: full name
+        :param str from_: from
+        :param str to: to
+
+        :returns: task and pretty-printed task
+        :rtype: tuple
+        """
+        tasks = list(self.timer.list_tasks(full_name=full_name, from_=from_, to=to))
+        if not tasks:
+            raise RuntimeError("no task")
+        items = list(
+            self._flatten_items(src.output_formatter.pprint_task(task))
+            for task in tasks
+        )
+        i = mk_menu(items)
+        if i < 0:
+            raise RuntimeError("aborted removing task")
+        return tasks[i], items[i]
+
     def remove(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """Choose task to remove.
 
@@ -421,21 +493,15 @@ class Interpreter:
         :param str from_: from
         :param str to: to
 
-        :returns: confirmation/error message
+        :returns: confirmation or error message
         :rtype: tuple
         """
-        tasks = list(self.timer.list_tasks(full_name=full_name, from_=from_, to=to))
-        items = [
-            self._flatten_items(src.output_formatter.pprint_task(task))
-            for task in tasks
-        ]
-        if not items:
-            return (("no task", curses.color_pair(4)),)
-        i = mk_menu(items)
-        if i < 0:
-            return (("aborted removing task", curses.color_pair(5)),)
-        self.timer.remove(tasks[i])
-        return ((f"removed {''.join(x[0] for x in items[i])}", curses.color_pair(4)),)
+        try:
+            task, item = self._pick_task(full_name=full_name, from_=from_, to=to)
+        except RuntimeError as exception:
+            return ((exception, curses.color_pair(5)),)
+        self.timer.remove(task)
+        return ((f"removed {item}", curses.color_pair(4)),)
 
     def edit(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """Choose task to edit.
@@ -444,55 +510,28 @@ class Interpreter:
         :param str from_: from
         :param str to: to
 
-        :returns: confirmation/error message
+        :returns: confirmation or error message
         :rtype: tuple
         """
-        tasks = list(self.timer.list_tasks(full_name=full_name, from_=from_, to=to))
-        items = [
-            self._flatten_items(src.output_formatter.pprint_task(task))
-            for task in tasks
-        ]
-        if not items:
-            return (("no task", curses.color_pair(4)),)
-        i = mk_menu(items)
+        try:
+            task, item = self._pick_task(full_name=full_name, from_=from_, to=to)
+        except RuntimeError as exception:
+            return ((exception, curses.color_pair(5)),)
+        if not task:
+            return (("no task", curses.color_pair(0)),)
+        actions = ("name", "tags", "start", "end")
+        i = mk_menu(actions)
         if i < 0:
             return (("aborted editing task", curses.color_pair(5)),)
-        actions = ("name", "tags", "start", "end")
-        j = mk_menu(actions)
-        if j < 0:
-            return (("aborted editing task", curses.color_pair(5)),)
-        while True:
-            try:
-                panel = mk_panel(
-                    *get_menu_dims(*curses.panel.top_panel().window().getmaxyx())
-                )
-                window = panel.window()
-                window_mgr = WindowManager(window, box=True)
-                line = window_mgr.readline(prompt=f"new {actions[j]} >", y=1)
-            except KeyboardInterrupt:
-                return (("aborted editing task", curses.color_pair(5)),)
-            except ResizeError:
-                panel.bottom()
-                window.reinitialize()
-                continue
-            else:
-                break
-            finally:
-                del panel
-                curses.panel.update_panels()
-        arg = (get_name, get_tags, get_from, get_to)[j](line)
-        if actions[j] in ("start", "end"):
+        arg = (_name, _tags, _from, _to)[i](readline(prompt=f"new {actions[i]} >"))
+        if actions[i] in ("start", "end"):
             arg = datetime.datetime.strptime(arg, "%Y-%m-%d %H:%M")
-        return (
-            src.output_formatter.pprint_task(self.timer.edit(tasks[i], actions[j], arg))
-            if tasks[i]
-            else (("no task", curses.color_pair(0)),)
-        )
+        return src.output_formatter.pprint_task(self.timer.edit(task, actions[i], arg))
 
     def stop(self):
         """Stop task.
 
-        :returns: confirmation/error message
+        :returns: confirmation or error message
         :rtype: tuple
         """
         if self.timer.task.name:
@@ -500,7 +539,7 @@ class Interpreter:
             return (("", curses.color_pair(0)),)
         return (("no running task", curses.color_pair(0)),)
 
-    def show_help_message(self, subcommand, subcommands, aliases):
+    def help(self, subcommand, subcommands, aliases):
         """Show help message.
 
         :param str subcommand: subcommand
@@ -518,17 +557,17 @@ class Interpreter:
                         break
             else:
                 subparser = subcommands[subcommand]
-            return [
+            return (
                 ((help, curses.color_pair(4)),)
                 for help in subparser.format_help().split("\n")
-            ]
-        return [
+            )
+        return (
             ((usage.strip(), curses.color_pair(4)),)
             for usage in self._parser.format_usage().split("\n")
             if usage
-        ]
+        )
 
-    def list_aliases(self, aliases):
+    def aliases(self, aliases):
         """List aliases.
 
         :param dict aliases: aliases
@@ -536,22 +575,22 @@ class Interpreter:
         :returns: aliases
         :rtype: list
         """
-        return [
+        return (
             (("alias\tcommand", curses.color_pair(4)),),
             tuple(),
-            *[
+            *(
                 ((f"{alias}\t{k}", curses.color_pair(4)),)
                 for k, v in aliases.items()
                 for alias in v
-            ],
-        ]
+            ),
+        )
 
-    def _get_date(self, endpoint):
-        """Get date.
+    def convert_to_date_string(self, endpoint):
+        """Convert to date string.
 
         :param str endpoint: endpoint
 
-        :returns: date
+        :returns: date string
         :rtype: str
         """
         today = datetime.datetime.today()
@@ -566,20 +605,20 @@ class Interpreter:
         if endpoint == "month":
             return f"{today.year}-{today.month:02}-01"
 
-    def _get_heading(self, from_, to):
-        """Get heading.
+    def pprint_heading(self, from_, to):
+        """Pretty-print heading.
 
         :param str from_: from
         :param str to: to
 
         :returns: heading
-        :rtype: tuple
+        :rtype: str
         """
-        ranges = ("today", "yesterday", "week", "month")
+        ranges = ("month", "week", "yesterday", "today")
         if from_ in ranges:
-            from_ = self._get_date(from_)
+            from_ = self.convert_to_date_string(from_)
         if to in ranges:
-            to = self._get_date(to)
+            to = self.convert_to_date_string(to)
         from_ = datetime.datetime.strptime(from_, "%Y-%m-%d").strftime("%a %d %b %Y")
         to = datetime.datetime.strptime(to, "%Y-%m-%d").strftime("%a %d %b %Y")
         if from_ != to:
@@ -592,35 +631,35 @@ class Interpreter:
         :param str from_: from
         :param str to: to
         """
-        heading = self._get_heading(from_, to)
-        stats = [
+        heading = self.pprint_heading(from_, to)
+        stats = (
             heading,
             ((f"{'—'*len(heading[0][0])}", curses.color_pair(0)),),
             (("", curses.color_pair(0)),),
-        ]
-        tasks = list(self.timer.list_tasks(from_=from_, to=to))
-        stats += [
+        )
+        tasks = tuple(self.timer.list_tasks(from_=from_, to=to))
+        stats += (
             ((f"{len(tasks)} task(s)", curses.color_pair(0)),),
             *(
                 src.output_formatter.pprint_task(task, date=(from_ != to))
                 for task in tasks
             ),
-        ]
-        unique_tags = {tuple(task.tags) for task in tasks if task.tags}
-        pprinted_tags = [
-            src.output_formatter.pprint_tags(tags)
-            for tags in sorted(unique_tags, key=lambda x: len(x))
-        ]
-        stats += [
+        )
+        tags = {tuple(task.tags) for task in tasks if task.tags}
+        pprinted_tags = tuple(
+            src.output_formatter.pprint_tags(tuple_)
+            for tuple_ in sorted(tags, key=lambda x: len(x))
+        )
+        stats += (
             ((f"{len(pprinted_tags)} tag(s)", curses.color_pair(0)),),
             *pprinted_tags,
             (("", curses.color_pair(0)),),
-        ]
-        unique_tasks = {(task.name, tuple(task.tags)) for task in tasks}
+        )
+        tasks = {(task.name, tuple(task.tags)) for task in tasks}
         sums = sorted(
             (
                 sum_
-                for name, tags in unique_tasks
+                for name, tags in tasks
                 for sum_ in self.timer.sum_total(
                     summand=FullName(name, set(tags)), from_=from_, to=to
                 )
@@ -628,29 +667,29 @@ class Interpreter:
             key=lambda x: x[1],
             reverse=True,
         )
-        stats += [
+        stats += (
             (("Total runtime task(s)", curses.color_pair(0)),),
             *(
                 src.output_formatter.pprint_sum(FullName(*full_name), total)
                 for full_name, total in sums
             ),
-        ]
+        )
         sums = sorted(
             (
                 sum_
-                for tags in unique_tags
+                for tuple_ in tags
                 for sum_ in self.timer.sum_total(
-                    summand=FullName("", set(tags)), from_=from_, to=to
+                    summand=FullName("", frozenset(tuple_)), from_=from_, to=to
                 )
             ),
             key=lambda x: x[1],
             reverse=True,
         )
-        stats += [
+        stats += (
             (("Total runtime tag(s)", curses.color_pair(0)),),
             *(
                 src.output_formatter.pprint_sum(FullName(*full_name), total)
                 for full_name, total in sums
             ),
-        ]
-        mk_stats(stats)
+        )
+        mk_stats(list(stats))
