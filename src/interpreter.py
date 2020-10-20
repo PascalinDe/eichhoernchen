@@ -607,6 +607,8 @@ class Interpreter:
             )
         if endpoint == "month":
             return f"{today.year}-{today.month:02}-01"
+        if endpoint == "year":
+            return f"{today.year}-01-01"
 
     def pprint_heading(self, from_, to):
         """Pretty-print heading.
@@ -617,7 +619,15 @@ class Interpreter:
         :returns: heading
         :rtype: str
         """
-        ranges = ("month", "week", "yesterday", "today")
+        if from_ == "all":
+            from_ = (
+                sorted(
+                    self.timer.list_tasks(from_=from_), key=lambda x: x.time_span[0]
+                )[0]
+                .time_span[0]
+                .strftime("%Y-%m-%d")
+            )
+        ranges = ("year", "month", "week", "yesterday", "today")
         if from_ in ranges:
             from_ = self.convert_to_date_string(from_)
         if to in ranges:
