@@ -31,7 +31,7 @@ from contextlib import redirect_stderr
 
 # third party imports
 # library specific imports
-import src.timing
+import src.timer
 
 from src import FullName
 from src.cutils import mk_menu, mk_stats, readline
@@ -235,7 +235,7 @@ class Interpreter:
         :param str database: pathname of the database
         :param dict aliases: aliases
         """
-        self.timer = src.timing.Timer(database)
+        self.timer = src.timer.Timer(database)
         self.subcommands = {
             "start": {
                 "description": "start task",

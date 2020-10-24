@@ -16,7 +16,7 @@
 
 
 """
-:synopsis: Timing test cases.
+:synopsis: Timer test cases.
 """
 
 
@@ -29,12 +29,12 @@ import os.path
 # third party imports
 # library specific imports
 import src.sqlite
-import src.timing
+import src.timer
 from src import FullName, Task
 
 
-class TestTiming(unittest.TestCase):
-    """Timing test cases.
+class TestTimer(unittest.TestCase):
+    """Timer test cases.
 
     :cvar str DATABASE: Eichhörnchen SQLite3 database
     """
@@ -53,7 +53,7 @@ class TestTiming(unittest.TestCase):
         Expecting: task is initialized and 'time_span' contains start and
         'running' table contains task name
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         full_name = FullName("foo", set())
         timer.start(full_name)
@@ -78,7 +78,7 @@ class TestTiming(unittest.TestCase):
         Expecting: task is initialized and 'running' table contains
         task name and 'tagged' table contains tag(s)
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         full_name = FullName("foo", {"bar"})
         timer.start(full_name)
@@ -96,7 +96,7 @@ class TestTiming(unittest.TestCase):
         Trying: starting task when there is a running task
         Expecting: Warning
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         timer.start(FullName("foo", set()))
         with self.assertRaises(Warning):
             timer.start("bar")
@@ -107,7 +107,7 @@ class TestTiming(unittest.TestCase):
         Trying: stopping task
         Expecting: table 'time_span' has been updated
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         full_name = FullName("foo", set())
         timer.start(full_name)
@@ -128,7 +128,7 @@ class TestTiming(unittest.TestCase):
         Trying: listing today's tasks
         Expecting: list of today's tasks
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         maxdatetime = datetime.datetime(datetime.MAXYEAR, 12, 31)
@@ -153,7 +153,7 @@ class TestTiming(unittest.TestCase):
         Trying: listing all tasks since yesterday
         Expecting: list of all tasks since yesterday
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         maxdatetime = datetime.datetime(datetime.MAXYEAR, 12, 31)
@@ -179,7 +179,7 @@ class TestTiming(unittest.TestCase):
         Trying: listing all tasks since the beginning of the week
         Expecting: list of all tasks since the beginning of the week
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         maxdatetime = datetime.datetime(datetime.MAXYEAR, 12, 31)
@@ -209,7 +209,7 @@ class TestTiming(unittest.TestCase):
         Trying: listing all tasks since the beginning of the month
         Expecting: list of all tasks since the beginning of the month
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         start_of_month = now.replace(day=1)
@@ -240,7 +240,7 @@ class TestTiming(unittest.TestCase):
         Trying: listing all tasks since the beginning of the year
         Expecting: list of all tasks since the beginning of the year
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         start_of_year = now.replace(month=1, day=1)
@@ -271,7 +271,7 @@ class TestTiming(unittest.TestCase):
         Trying: listing all tasks
         Expecting: list of all tasks
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         start_of_month = now.replace(day=1)
@@ -297,7 +297,7 @@ class TestTiming(unittest.TestCase):
         Trying: listing tasks up to date
         Expecting: list of tasks up to date (included)
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         yesterday = now - datetime.timedelta(days=1)
@@ -327,7 +327,7 @@ class TestTiming(unittest.TestCase):
         Trying: listing tasks having given full name
         Expecting: list of tasks having given full name
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         maxdatetime = datetime.datetime(datetime.MAXYEAR, 12, 31)
@@ -361,7 +361,7 @@ class TestTiming(unittest.TestCase):
         Trying: summing total time up
         Expecting: list of sums of total time (full name)
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         timedelta = datetime.timedelta(minutes=1)
@@ -391,7 +391,7 @@ class TestTiming(unittest.TestCase):
         Trying: summing total time up
         Expecting: list of sums of total time (name)
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         timedelta = datetime.timedelta(minutes=1)
@@ -419,7 +419,7 @@ class TestTiming(unittest.TestCase):
         Trying: summing total time up
         Expecting: list of sums of total time (tag)
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         timedelta = datetime.timedelta(minutes=1)
@@ -449,7 +449,7 @@ class TestTiming(unittest.TestCase):
         Trying: editing name
         Expecting: updated name
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         task = Task("foo", set(), (now, now + datetime.timedelta(minutes=1)))
@@ -475,7 +475,7 @@ class TestTiming(unittest.TestCase):
         Trying: editing tags
         Expecting: updated tags
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         task = Task("foo", {"bar"}, (now, now + datetime.timedelta(minutes=1)))
@@ -506,7 +506,7 @@ class TestTiming(unittest.TestCase):
         Trying: editing start
         Expecting: updated start
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         task = Task("foo", set(), (now, now + datetime.timedelta(minutes=1)))
@@ -543,7 +543,7 @@ class TestTiming(unittest.TestCase):
         Trying: editing end
         Expecting: updated end
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         task = Task("foo", set(), (now, now + datetime.timedelta(minutes=1)))
@@ -570,7 +570,7 @@ class TestTiming(unittest.TestCase):
         Trying: editing start of a running task
         Expecting: ValueError
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         timer.start(FullName("foo", set()))
         now = datetime.datetime.now()
         with self.assertRaises(ValueError):
@@ -582,7 +582,7 @@ class TestTiming(unittest.TestCase):
         Trying: editing start so that start is after end
         Expecting: ValueError
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         task = Task("foo", set(), (now, now + datetime.timedelta(minutes=1)))
@@ -604,7 +604,7 @@ class TestTiming(unittest.TestCase):
         Trying: editing end so that end is before start
         Expecting: ValueError
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         now = datetime.datetime.now()
         task = Task("foo", set(), (now, now + datetime.timedelta(minutes=1)))
@@ -626,7 +626,7 @@ class TestTiming(unittest.TestCase):
         Trying: removing task
         Expecting: task is removed
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         timer.start(FullName("foo", set()))
         task = timer.task
         start, _ = task.time_span
@@ -648,7 +648,7 @@ class TestTiming(unittest.TestCase):
         Trying: removing running task
         Expecting: ValueError
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         timer.start(FullName("foo", set()))
         with self.assertRaises(ValueError):
             timer.remove(timer.task)
@@ -659,7 +659,7 @@ class TestTiming(unittest.TestCase):
         Trying: adding task
         Expecting: task is added
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
         start = datetime.datetime.strptime(
             datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "%Y-%m-%d %H:%M"
@@ -685,7 +685,7 @@ class TestTiming(unittest.TestCase):
         Trying: add task started at same time as existing task
         Expecting: ValueError
         """
-        timer = src.timing.Timer(self.DATABASE)
+        timer = src.timer.Timer(self.DATABASE)
         timer.start(FullName("foo", set()))
         start, _ = timer.task.time_span
         end = datetime.timedelta(days=1)
