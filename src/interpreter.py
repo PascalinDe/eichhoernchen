@@ -254,8 +254,8 @@ class Interpreter:
             "add": {
                 "description": "add task",
                 "aliases": aliases.get("add", tuple()),
-                "func": self.timer.add,
-                "formatter": lambda x: (src.output_formatter.pprint_task(x),),
+                "func": self.add,
+                "formatter": lambda x: (x,),
                 "args": {
                     "full_name": self.ARGS["full_name"],
                     "start": self.ARGS["start"],
@@ -489,6 +489,22 @@ class Interpreter:
             raise RuntimeError("aborted removing task")
         return tasks[i], items[i]
 
+    def add(self, full_name=FullName("", frozenset()), start="", end=""):
+        """Add task.
+
+        :param FullName full_name: full name
+        :param str from_: from
+        :param str to: to
+
+        :returns: confirmation or error message
+        :rtype: tuple
+        """
+        try:
+            task = self.timer.add(full_name=full_name, start=start, end=end)
+            return src.output_formatter.pprint_task(task)
+        except ValueError as exception:
+            return ((str(exception), curses.color_pair(5)),)
+
     def remove(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """Choose task to remove.
 
@@ -502,7 +518,7 @@ class Interpreter:
         try:
             task, item = self._pick_task(full_name=full_name, from_=from_, to=to)
         except RuntimeError as exception:
-            return ((exception, curses.color_pair(5)),)
+            return ((str(exception), curses.color_pair(5)),)
         self.timer.remove(task)
         return ((f"removed {item}", curses.color_pair(4)),)
 
@@ -519,7 +535,7 @@ class Interpreter:
         try:
             task, item = self._pick_task(full_name=full_name, from_=from_, to=to)
         except RuntimeError as exception:
-            return ((exception, curses.color_pair(5)),)
+            return ((str(exception), curses.color_pair(5)),)
         if not task:
             return (("no task", curses.color_pair(0)),)
         actions = ("name", "tags", "start", "end")
