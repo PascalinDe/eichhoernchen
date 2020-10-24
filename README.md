@@ -4,6 +4,15 @@
 
 Lightweight curses-based time tracking tool.
 
+## Table of Contents
+
+1. [Table of Contents](#table-of-contents)
+2. [Features](#features)
+3. [Installation](#installation)
+4. [Usage](#usage)
+5. [Configuring Eichhörnchen](#configuring-eichhörnchen)
+6. [Exporting tasks](#exporting-tasks)
+
 ## Features
 
 * curses-based user interface
