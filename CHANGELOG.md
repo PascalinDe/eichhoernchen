@@ -10,6 +10,7 @@
 * sum up by specific full name, name or tag(s) instead of summing up and listing all of them
 * added command aliases
 * export tasks to CSV or JSON files
+* show summary of tasks
 ## Migrations
 * configuration file
 	* "DEFAULT" section has been dropped

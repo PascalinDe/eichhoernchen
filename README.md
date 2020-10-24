@@ -16,12 +16,14 @@ Lightweight curses-based time tracking tool.
 ## Features
 
 * curses-based user interface
-* basic time tracking functionality
+* time tracking functionality
 	* starting/stopping tasks
 	* adding/removing tasks
 	* editing tasks
 	* listing tasks
 	* summing up of run time
+	* summary of tasks
+	* exporting tasks to CSV or JSON
 * standard library only
 
 ## Installation
