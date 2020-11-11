@@ -23,9 +23,12 @@
 # standard library imports
 import csv
 import json
+import pathlib
 import datetime
+import tempfile
 import itertools
 import collections
+
 # third party imports
 # library specific imports
 import src.sqlite
@@ -36,7 +39,7 @@ from src import FullName, Task
 class Timer:
     """Timer.
 
-    :ivar SQLite sqlite: SQLite database interface
+    :ivar SQLite sqlite: SQLite3 database interface
     :ivar Task task: currently running task
     """
 
@@ -49,10 +52,10 @@ class Timer:
         self.sqlite.create_database()
         self._reset_task()
 
-    def _reset_task(self, task=Task("", frozenset(), ())):
+    def _reset_task(self, task=Task("", frozenset(), tuple())):
         """Reset currently running task.
 
-        :param Task task: new running task
+        :param Task task: new task
         """
         self.task = task
 
@@ -60,20 +63,17 @@ class Timer:
         """Start task.
 
         :param FullName full_name: full name
-
-        :raises Warning: when there is already a running task
         """
-        if self.task.name:
-            raise Warning("there is already a running task")
         start = datetime.datetime.now()
         self.sqlite.execute("INSERT INTO time_span (start) VALUES (?)", (start,))
         self.sqlite.execute(
-            "INSERT INTO running (name,start) VALUES (?,?)", (full_name.name, start)
+            "INSERT INTO running (name,start) VALUES (?,?)",
+            (full_name.name, start)
         )
         if full_name.tags:
             self.sqlite.execute(
                 "INSERT INTO tagged (tag,start) VALUES (?,?)",
-                *[(tag, start) for tag in full_name.tags],
+                *((tag, start) for tag in full_name.tags),
             )
         self._reset_task(task=src.Task(*full_name, (start, None)))
 
@@ -86,164 +86,36 @@ class Timer:
             )
             self._reset_task()
 
-    @staticmethod
-    def _get_date(endpoint):
-        """Get date.
-
-        :param str endpoint: endpoint
-
-        :returns: date
-        :rtype: str
-        """
-        if endpoint == "year":
-            return "date('now','localtime','start of year')"
-        if endpoint == "month":
-            return "date('now','localtime','start of month')"
-        if endpoint == "week":
-            return "date('now','weekday 0','-7 day')"
-        if endpoint == "yesterday":
-            return "date('now','start of day','-1 day')"
-        if endpoint == "today":
-            return "date('now','localtime','start of day')"
-        return f"date('{endpoint}','localtime','start of day')"
-
-    def _define_time_period(self, from_, to):
-        """Define time period.
-
-        :param str from_: start of time period
-        :param str to: end of time period
-
-        :returns: time period
-        :rtype: str
-        """
-        sql = f"WHERE date(time_span.start)<={self._get_date(to)}"
-        if from_ == "week":
-            return f"{sql} AND date(time_span.start)>{self._get_date(from_)}"
-        if from_ != "all":
-            return f"{sql} AND date(time_span.start)>={self._get_date(from_)}"
-        return sql
-
-    def list_tasks(
-        self,
-        full_name=FullName("", frozenset()),
-        from_="today",
-        to="today",
-        full_match=True,
-    ):
-        """List tasks.
+    def add(self, full_name, start, end):
+        """Add task.
 
         :param FullName full_name: full name
-        :param str from_: start of time period
-        :param str to: end of time period
-        :param bool full_match: toggle matching full name on/off
+        :param datetime start: start of time period
+        :param datetime end: end of time period
 
-        :returns: task
+        :raises ValueError: when the task cannot be added
+
+        :returns: added task
         :rtype: Task
         """
-        rows = self.sqlite.execute(
-            f"""SELECT time_span.start,end,name,tag FROM time_span
-            JOIN running ON time_span.start=running.start
-            LEFT JOIN tagged ON time_span.start=tagged.start
-            {self._define_time_period(from_, to)}
-            """
+        if end <= start:
+            raise ValueError(f"new task's end ({end}) is before its start ({start})")
+        if self.sqlite.execute("SELECT start FROM running WHERE start=?", (start,)):
+            raise ValueError(f"there is already a task started at {start}")
+        self.sqlite.execute(
+            "INSERT INTO running (start,name) VALUES (?,?)",
+            (start, full_name.name)
         )
-        for (start, end, name), rows in itertools.groupby(rows, key=lambda x: x[:3]):
-            tags = {row[-1] for row in rows if row[-1]}
-            if full_match:
-                if full_name.name and (name, tags) != full_name:
-                    continue
-            else:
-                if full_name.name and name != full_name.name:
-                    continue
-                if full_name.tags and not tags == full_name.tags:
-                    continue
-            end = end or datetime.datetime.now()
-            yield Task(name, tags, (start, end))
-
-    def sum_total(self, summand=FullName("", frozenset()), from_="today", to="today"):
-        """Sum total time up.
-
-        :param FullName summand: full name
-        :param str from_: start of time period
-        :param str to: end of time period
-
-        :returns: summed up time per task
-        :rtype: dict_items
-        """
-        sum_total = collections.defaultdict(int)
-        full_match = summand.name and summand.tags
-        for task in self.list_tasks(
-            full_name=summand, from_=from_, to=to, full_match=full_match
-        ):
-            total = int((task.time_span[-1] - task.time_span[0]).total_seconds())
-            if summand.name and summand.tags:
-                sum_total[(task.name, tuple(task.tags))] += total
-                continue
-            if summand.name:
-                sum_total[(task.name, ("",))] += total
-            if summand.tags:
-                sum_total[("", tuple(task.tags))] += total
-        return sum_total.items()
-
-    def edit(self, task, action, *args):
-        """Edit task.
-
-        :param Task task: task to edit
-        :param str action: action
-        :param str args: arguments
-
-        :raises ValueError: when the task cannot be edited
-
-        :returns: edited task
-        :rtype: Task
-        """
-        name = task.name
-        start, end = task.time_span
-        tags = task.tags
-        is_running = self.task == Task(task.name, tags, (start, None))
-        if is_running and action in ("start", "end"):
-            raise ValueError(f"cannot edit {action} of a running task")
-        if action == "name":
-            name = args[0]
-            self.sqlite.execute(
-                "UPDATE running SET name=? WHERE start=?", (name, start)
-            )
-        if action == "tags":
-            tags = set(args[0])
-            self.sqlite.execute("DELETE FROM tagged WHERE start=?", (start,))
+        self.sqlite.execute(
+            "INSERT INTO time_span (start,end) VALUES (?,?)",
+            (start, end)
+        )
+        if full_name.tags:
             self.sqlite.execute(
                 "INSERT INTO tagged (tag,start) VALUES (?,?)",
-                *[(tag, start) for tag in tags],
+                *((tag, start) for tag in full_name.tags)
             )
-        if action == "end":
-            if args[0] <= start:
-                raise ValueError(f"{end} is before task's start")
-            self.sqlite.execute(
-                "UPDATE time_span SET end=? WHERE start=?", (args[0], start)
-            )
-        if action == "start":
-            start = args[0]
-            if end <= start:
-                raise ValueError(f"{start} is after task's end")
-            if self.sqlite.execute("SELECT start FROM running WHERE start=?", (start,)):
-                raise ValueError(f"task started at {start} already exists")
-            self.sqlite.execute(
-                "UPDATE time_span SET start=? WHERE start=?", (start, task.time_span[0])
-            )
-            self.sqlite.execute(
-                "UPDATE running SET start=? WHERE start=?", (start, task.time_span[0])
-            )
-            self.sqlite.execute(
-                "UPDATE tagged SET start=? WHERE start=?", (start, task.time_span[0])
-            )
-        for task in self.list_tasks(
-            full_name=FullName(name, tags), from_=start.date(), to=end.date()
-        ):
-            if task.time_span == (start, end):
-                break
-            if is_running:
-                self._reset_task(task=task)
-        return task
+        return Task(full_name.name, full_name.tags, (start, end))
 
     def remove(self, task):
         """Remove task.
@@ -252,112 +124,224 @@ class Timer:
 
         :raises ValueError: when the task cannot be removed
         """
-        if self.task == Task(task.name, task.tags, (task.time_span[0], None)):
+        if self.task == task:
             raise ValueError("cannot remove a running task")
-        self.sqlite.execute("DELETE FROM running WHERE start=?", (task.time_span[0],))
-        self.sqlite.execute("DELETE FROM tagged WHERE start=?", (task.time_span[0],))
-        self.sqlite.execute("DELETE FROM time_span WHERE start=?", (task.time_span[0],))
+        for table in ("running", "tagged", "time_span"):
+            self.sqlite.execute(
+                f"DELETE FROM {table} WHERE start=?",
+                (task.time_span[0],)
+            )
 
-    def add(self, full_name=FullName("", set()), start="", end=""):
-        """Add task.
+    def edit(self, task, action, *args):
+        """Edit task.
 
-        :param FullName full_name: full name
-        :param str start: start of time period
-        :param str end: end of time period
+        :param Task task: task to edit
+        :param str action: editing action
+        :param str args: arguments
 
-        :raises ValueError: when the task cannot be added
+        :raises ValueError: when task cannot be edited
 
-        :returns: task
+        :returns: edited task
         :rtype: Task
         """
-        start = datetime.datetime.strptime(start, "%Y-%m-%d %H:%M")
-        end = datetime.datetime.strptime(end, "%Y-%m-%d %H:%M")
-        if end <= start:
-            raise ValueError(f"task's end ({end}) is before its start ({start})")
-        if self.sqlite.execute("SELECT start FROM running WHERE start=?", (start,)):
-            raise ValueError(f"task started at {start} already exists")
-        self.sqlite.execute(
-            "INSERT INTO running (start,name) VALUES (?,?)", (start, full_name.name)
-        )
-        if full_name.tags:
+        start, end = task.time_span
+        reset = False
+        if self.task == Task(task.name, task.tags, (start, None)):
+            if action in ("start", "end"):
+                raise ValueError(f"cannot edit {action} of a running task")
+            reset = True
+        if action == "name":
+            name = args[0]
+            self.sqlite.execute(
+                "UPDATE running SET name=? WHERE start=?",
+                (name, start)
+            )
+        if action == "tags":
+            tags = set(args[0])
+            self.sqlite.execute(
+                "DELETE FROM tagged WHERE start=?",
+                (start,)
+            )
             self.sqlite.execute(
                 "INSERT INTO tagged (tag,start) VALUES (?,?)",
-                *[(tag, start) for tag in full_name.tags],
+                *((tag, start) for tag in tags),
             )
-        self.sqlite.execute(
-            "INSERT INTO time_span (start,end) VALUES (?,?)", (start, end)
-        )
-        return Task(full_name.name, full_name.tags, (start, end))
+        if action == "end":
+            if args[0] <= start:
+                raise ValueError(f"new end '{end}' is before task's start")
+            self.sqlite.execute(
+                "UPDATE time_span SET end=? WHERE start=?",
+                (args[0], start)
+            )
+        if action == "start":
+            start = args[0]
+            if end <= start:
+                raise ValueError(f"new start {start} is after the task's end")
+            if self.sqlite.execute("SELECT start FROM running WHERE start=?", (start,)):
+                raise ValueError(
+                    f"there is already a task started at new start {start}"
+                )
+            for table in ("time_span", "running", "tagged"):
+                self.sqlite.execute(
+                    f"UPDATE {table} SET start=? WHERE start=?",
+                    (start, task.time_span[0])
+                )
+        for task in self.list(
+                full_name=FullName(task.name, task.tags),
+                from_=start,
+                to=end
+        ):
+            if task.time_span == (start, end):
+                break
+        if reset:
+            self._reset_task(task=task)
+        return task
 
-    def _get_row(self, task):
-        """Get row.
+    def list(self, from_, to, full_name=FullName("", frozenset()), full_match=True):
+        """List tasks.
 
-        :param Task task: task
+        :param str from_: start of time period
+        :param str to: end of time period
+        :param FullName full_name: full name
+        :param bool full_match: toggle matching full name on/off
 
-        :returns: row
-        :rtype: tuple
+        :returns: tasks
+        :rtype: list
         """
-        return (
-            task.name,
-            task.tags[0],
-            task.time_span[0].isoformat(timespec="seconds"),
-            task.time_span[1].isoformat(timespec="seconds"),
+        rows = self.sqlite.execute(
+            f"""SELECT time_span.start,end,name,tag
+            FROM time_span
+            JOIN running ON time_span.start=running.start
+            LEFT JOIN tagged ON time_span.start=tagged.start
+            {_get_time_period(from_, to)}
+            """
         )
+        tasks = []
+        for (start, end, name), rows in itertools.groupby(rows, key=lambda x: x[:3]):
+            tags = {row[-1] for row in rows if row[-1]}
+            if full_match:
+                if (name, tags) != full_name:
+                    continue
+            elif any(full_name):
+                if not (
+                    False
+                    or (full_name.name and full_name.name == name)
+                    or (full_name.tags and full_name.tags == tags)
+                ):
+                    continue
+            end = end or datetime.datetime.now()
+            tasks.append(Task(name, tags, (start, end)))
+        return tasks
 
-    def _export_csv(self, filename, tasks):
-        """Export tasks to CSV file.
+    def sum(self, from_, to, full_name=FullName("", frozenset()), full_match=True):
+        """Sum total time up.
+
+        :param str from_: start of time period
+        :param str to: end of time period
+        :param FullName full_name: full name
+        :param bool full_match: toggle matching full name on/off
+
+        :returns: summed up total time per task
+        :rtype: list
+        """
+        total_time = collections.defaultdict(int)
+        for task in self.list(
+            from_, to, full_name=full_name, full_match=full_match
+        ):
+            runtime = int((task.time_span[-1] - task.time_span[0]).total_seconds())
+            if all(full_name):
+                total_time[(task.name, tuple(task.tags))] += runtime
+                continue
+            if full_name.name:
+                total_time[(task.name, ("",))] += runtime
+                continue
+            if full_name.tags:
+                total_time[("", tuple(task.tags))] += runtime
+        return list(total_time.items())
+
+    def _export_to_csv(self, filename, tasks):
+        """Export to CSV file.
 
         :param str filename: filename
         :param list tasks: list of tasks
         """
-        rows = [
-            self._get_row(Task(task.name, (tag,), task.time_span))
-            for task in tasks
-            for tag in task.tags
-            if task.tags
-        ]
-        rows += [
-            self._get_row(Task(task.name, ("",), task.time_span))
-            for task in tasks
-            if not task.tags
-        ]
+        rows = (
+            *(
+                _row(Task(task.name, (tag,), task.time_span))
+                for task in tasks
+                for tag in task.tags if task.tags
+            ),
+            *(
+                _row(Task(task.name, ("",), task.time_span))
+                for task in tasks if not task.tags
+            )
+        )
         with open(filename, mode="w") as fp:
             csv.writer(fp).writerows(rows)
 
-    def _export_json(self, filename, tasks):
-        """Export tasks to JSON file.
+    def _export_to_json(self, filename, tasks):
+        """Export to JSON file.
 
         :param str filename: filename
         :param list tasks: list of tasks
         """
         with open(filename, mode="w") as fp:
             json.dump(
-                [
+                (
                     (
                         task.name,
-                        list(task.tags),
+                        tuple(task.tags),
                         task.time_span[0].isoformat(timespec="seconds"),
-                        task.time_span[1].isoformat(timespec="seconds"),
+                        task.time_span[1].isoformat(timespec="seconds")
                     )
                     for task in tasks
-                ],
-                fp,
+                ),
+                fp
             )
 
-    def export(self, ext="csv", from_="today", to="today"):
+    def export(self, ext, from_, to):
         """Export tasks.
 
         :param str ext: file format
         :param str from_: start of time period
-        :param str to: end of time period
-
-        :returns: confirmation message
-        :rtype: str
+        :param str end: end of time period
         """
-        tasks = self.list_tasks(from_=from_, to=to)
-        filename = f"/tmp/{datetime.datetime.now().strftime('%Y%m%d')}.{ext}"
+        tasks = self.list(from_=from_, to=to)
+        filename = (
+            pathlib.Path(tempfile.gettempdir())
+            / f"{datetime.datetime.now().strftime('%Y%m%d')}.{ext}"
+        )
         if ext == "csv":
             self._export_csv(filename, tasks)
         if ext == "json":
             self._export_json(filename, tasks)
-        return f"exported tasks from {from_} to {to} to {filename}"
+
+
+def _get_time_period(from_, to):
+    """Get time period part.
+
+    :param str from_: start of time period
+    :param str to: end of time period
+
+    :returns: time period part
+    :rtype: str
+    """
+    return f"""WHERE date(time_span.start,'localtime')
+BETWEEN date('{from_}','localtime','start of day')
+AND date('{to}','localtime','start of day','+1 day')"""
+
+
+def _row(task):
+    """Row.
+
+    :param Task task: task
+
+    :returns: row
+    :rtype: tuple
+    """
+    return (
+        task.name,
+        task.tags[0],
+        task.time_span[0].isoformat(timespec="seconds"),
+        task.time_span[1].isoformat(timespec="seconds")
+    )
