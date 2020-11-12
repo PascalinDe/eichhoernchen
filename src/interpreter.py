@@ -275,6 +275,23 @@ class Interpreter:
                     },
                 },
             },
+            "edit": {
+                "description": "edit task",
+                "aliases": aliases.get("edit", tuple()),
+                "func": self.edit,
+                "formatter": lambda x: (x,),
+                "args": {
+                    "full_name": self.ARGS["full_name"],
+                    "from_": {
+                        **self.ARGS["from_"],
+                        **{"nargs": "?", "default": "today"},
+                    },
+                    "to": {
+                        **self.ARGS["to"],
+                        **{"nargs": "?", "default": "today"},
+                    },
+                },
+            },
             "list": {
                 "description": "list tasks",
                 "aliases": aliases.get("list", tuple()),
@@ -292,36 +309,6 @@ class Interpreter:
                         **{"nargs": "?", "default": "today"},
                     },
                     "to": {**self.ARGS["to"], **{"nargs": "?", "default": "today"}},
-                },
-            },
-            "show_stats": {
-                "description": "show statistics",
-                "aliases": aliases.get("show_stats", tuple()),
-                "func": self.show_stats,
-                "formatter": lambda *args, **kwargs: tuple(),
-                "args": {
-                    "from_": {
-                        **self.ARGS["from_"],
-                        **{"nargs": "?", "default": "today"},
-                    },
-                    "to": {**self.ARGS["to"], **{"nargs": "?", "default": "today"}},
-                },
-            },
-            "edit": {
-                "description": "edit task",
-                "aliases": aliases.get("edit", tuple()),
-                "func": self.edit,
-                "formatter": lambda x: (x,),
-                "args": {
-                    "full_name": self.ARGS["full_name"],
-                    "from_": {
-                        **self.ARGS["from_"],
-                        **{"nargs": "?", "default": "today"},
-                    },
-                    "to": {
-                        **self.ARGS["to"],
-                        **{"nargs": "?", "default": "today"},
-                    },
                 },
             },
             "sum": {
@@ -346,13 +333,6 @@ class Interpreter:
                     },
                 },
             },
-            "aliases": {
-                "description": "list aliases",
-                "aliases": aliases.get("aliases", tuple()),
-                "func": lambda *args, **kwargs: self.aliases(aliases),
-                "formatter": lambda x: x,
-                "args": {},
-            },
             "export": {
                 "description": "export tasks",
                 "aliases": aliases.get("export", tuple()),
@@ -367,9 +347,29 @@ class Interpreter:
                     "to": {**self.ARGS["to"], **{"nargs": "?", "default": "today"}},
                 },
             },
+            "show_stats": {
+                "description": "show statistics",
+                "aliases": aliases.get("show_stats", tuple()),
+                "func": self.show_stats,
+                "formatter": lambda *args, **kwargs: tuple(),
+                "args": {
+                    "from_": {
+                        **self.ARGS["from_"],
+                        **{"nargs": "?", "default": "today"},
+                    },
+                    "to": {**self.ARGS["to"], **{"nargs": "?", "default": "today"}},
+                },
+            },
             "help": {
                 "description": "show help",
                 "aliases": aliases.get("help", tuple()) + ("?",),
+                "args": {},
+            },
+            "aliases": {
+                "description": "list aliases",
+                "aliases": aliases.get("aliases", tuple()),
+                "func": lambda *args, **kwargs: self.aliases(aliases),
+                "formatter": lambda x: x,
                 "args": {},
             },
         }
@@ -455,6 +455,33 @@ class Interpreter:
             )
         )
 
+    def stop(self):
+        """Stop task.
+
+        :returns: confirmation or error message
+        :rtype: tuple
+        """
+        if self.timer.task.name:
+            self.timer.stop()
+            return (("", curses.color_pair(0)),)
+        return (("no running task", curses.color_pair(0)),)
+
+    def add(self, full_name=FullName("", frozenset()), start="", end=""):
+        """Add task.
+
+        :param FullName full_name: full name
+        :param str from_: from
+        :param str to: to
+
+        :returns: confirmation or error message
+        :rtype: tuple
+        """
+        try:
+            task = self.timer.add(full_name=full_name, start=start, end=end)
+            return src.output_formatter.pprint_task(task)
+        except ValueError as exception:
+            return ((str(exception), curses.color_pair(5)),)
+
     def _flatten_items(self, items):
         """Flatten menu items.
 
@@ -488,22 +515,6 @@ class Interpreter:
         if i < 0:
             raise RuntimeError("aborted removing task")
         return tasks[i], items[i]
-
-    def add(self, full_name=FullName("", frozenset()), start="", end=""):
-        """Add task.
-
-        :param FullName full_name: full name
-        :param str from_: from
-        :param str to: to
-
-        :returns: confirmation or error message
-        :rtype: tuple
-        """
-        try:
-            task = self.timer.add(full_name=full_name, start=start, end=end)
-            return src.output_formatter.pprint_task(task)
-        except ValueError as exception:
-            return ((str(exception), curses.color_pair(5)),)
 
     def remove(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """Choose task to remove.
@@ -547,16 +558,74 @@ class Interpreter:
             arg = datetime.datetime.strptime(arg, "%Y-%m-%d %H:%M")
         return src.output_formatter.pprint_task(self.timer.edit(task, actions[i], arg))
 
-    def stop(self):
-        """Stop task.
+    def show_stats(self, from_="today", to="today"):
+        """Show statistics.
 
-        :returns: confirmation or error message
-        :rtype: tuple
+        :param str from_: from
+        :param str to: to
         """
-        if self.timer.task.name:
-            self.timer.stop()
-            return (("", curses.color_pair(0)),)
-        return (("no running task", curses.color_pair(0)),)
+        heading = self.pprint_heading(from_, to)
+        stats = (
+            heading,
+            ((f"{'—'*len(heading[0][0])}", curses.color_pair(0)),),
+            (("", curses.color_pair(0)),),
+        )
+        tasks = tuple(self.timer.list_tasks(from_=from_, to=to))
+        stats += (
+            ((f"{len(tasks)} task(s)", curses.color_pair(0)),),
+            *(
+                src.output_formatter.pprint_task(task, date=(from_ != to))
+                for task in tasks
+            ),
+        )
+        tags = {tuple(task.tags) for task in tasks if task.tags}
+        pprinted_tags = tuple(
+            src.output_formatter.pprint_tags(tuple_)
+            for tuple_ in sorted(tags, key=lambda x: len(x))
+        )
+        stats += (
+            ((f"{len(pprinted_tags)} tag(s)", curses.color_pair(0)),),
+            *pprinted_tags,
+            (("", curses.color_pair(0)),),
+        )
+        tasks = {(task.name, tuple(task.tags)) for task in tasks}
+        sums = sorted(
+            (
+                sum_
+                for name, tags in tasks
+                for sum_ in self.timer.sum_total(
+                    summand=FullName(name, set(tags)), from_=from_, to=to
+                )
+            ),
+            key=lambda x: x[1],
+            reverse=True,
+        )
+        stats += (
+            (("Total runtime task(s)", curses.color_pair(0)),),
+            *(
+                src.output_formatter.pprint_sum(FullName(*full_name), total)
+                for full_name, total in sums
+            ),
+        )
+        sums = sorted(
+            (
+                sum_
+                for tuple_ in tags
+                for sum_ in self.timer.sum_total(
+                    summand=FullName("", frozenset(tuple_)), from_=from_, to=to
+                )
+            ),
+            key=lambda x: x[1],
+            reverse=True,
+        )
+        stats += (
+            (("Total runtime tag(s)", curses.color_pair(0)),),
+            *(
+                src.output_formatter.pprint_sum(FullName(*full_name), total)
+                for full_name, total in sums
+            ),
+        )
+        mk_stats(list(stats))
 
     def help(self, subcommand, subcommands, aliases):
         """Show help message.
@@ -653,72 +722,3 @@ class Interpreter:
         if from_ != to:
             return ((f"overview {from_} - {to}".upper(), curses.color_pair(0)),)
         return ((f"overview {from_}".upper(), curses.color_pair(0)),)
-
-    def show_stats(self, from_="today", to="today"):
-        """Show statistics.
-
-        :param str from_: from
-        :param str to: to
-        """
-        heading = self.pprint_heading(from_, to)
-        stats = (
-            heading,
-            ((f"{'—'*len(heading[0][0])}", curses.color_pair(0)),),
-            (("", curses.color_pair(0)),),
-        )
-        tasks = tuple(self.timer.list_tasks(from_=from_, to=to))
-        stats += (
-            ((f"{len(tasks)} task(s)", curses.color_pair(0)),),
-            *(
-                src.output_formatter.pprint_task(task, date=(from_ != to))
-                for task in tasks
-            ),
-        )
-        tags = {tuple(task.tags) for task in tasks if task.tags}
-        pprinted_tags = tuple(
-            src.output_formatter.pprint_tags(tuple_)
-            for tuple_ in sorted(tags, key=lambda x: len(x))
-        )
-        stats += (
-            ((f"{len(pprinted_tags)} tag(s)", curses.color_pair(0)),),
-            *pprinted_tags,
-            (("", curses.color_pair(0)),),
-        )
-        tasks = {(task.name, tuple(task.tags)) for task in tasks}
-        sums = sorted(
-            (
-                sum_
-                for name, tags in tasks
-                for sum_ in self.timer.sum_total(
-                    summand=FullName(name, set(tags)), from_=from_, to=to
-                )
-            ),
-            key=lambda x: x[1],
-            reverse=True,
-        )
-        stats += (
-            (("Total runtime task(s)", curses.color_pair(0)),),
-            *(
-                src.output_formatter.pprint_sum(FullName(*full_name), total)
-                for full_name, total in sums
-            ),
-        )
-        sums = sorted(
-            (
-                sum_
-                for tuple_ in tags
-                for sum_ in self.timer.sum_total(
-                    summand=FullName("", frozenset(tuple_)), from_=from_, to=to
-                )
-            ),
-            key=lambda x: x[1],
-            reverse=True,
-        )
-        stats += (
-            (("Total runtime tag(s)", curses.color_pair(0)),),
-            *(
-                src.output_formatter.pprint_sum(FullName(*full_name), total)
-                for full_name, total in sums
-            ),
-        )
-        mk_stats(list(stats))
