@@ -67,8 +67,7 @@ class Timer:
         start = datetime.datetime.now()
         self.sqlite.execute("INSERT INTO time_span (start) VALUES (?)", (start,))
         self.sqlite.execute(
-            "INSERT INTO running (name,start) VALUES (?,?)",
-            (full_name.name, start)
+            "INSERT INTO running (name,start) VALUES (?,?)", (full_name.name, start)
         )
         if full_name.tags:
             self.sqlite.execute(
@@ -103,17 +102,15 @@ class Timer:
         if self.sqlite.execute("SELECT start FROM running WHERE start=?", (start,)):
             raise ValueError(f"there is already a task started at {start}")
         self.sqlite.execute(
-            "INSERT INTO running (start,name) VALUES (?,?)",
-            (start, full_name.name)
+            "INSERT INTO running (start,name) VALUES (?,?)", (start, full_name.name)
         )
         self.sqlite.execute(
-            "INSERT INTO time_span (start,end) VALUES (?,?)",
-            (start, end)
+            "INSERT INTO time_span (start,end) VALUES (?,?)", (start, end)
         )
         if full_name.tags:
             self.sqlite.execute(
                 "INSERT INTO tagged (tag,start) VALUES (?,?)",
-                *((tag, start) for tag in full_name.tags)
+                *((tag, start) for tag in full_name.tags),
             )
         return Task(full_name.name, full_name.tags, (start, end))
 
@@ -128,8 +125,7 @@ class Timer:
             raise ValueError("cannot remove a running task")
         for table in ("running", "tagged", "time_span"):
             self.sqlite.execute(
-                f"DELETE FROM {table} WHERE start=?",
-                (task.time_span[0],)
+                f"DELETE FROM {table} WHERE start=?", (task.time_span[0],)
             )
 
     def edit(self, task, action, *args):
@@ -153,15 +149,11 @@ class Timer:
         if action == "name":
             name = args[0]
             self.sqlite.execute(
-                "UPDATE running SET name=? WHERE start=?",
-                (name, start)
+                "UPDATE running SET name=? WHERE start=?", (name, start)
             )
         if action == "tags":
             tags = set(args[0])
-            self.sqlite.execute(
-                "DELETE FROM tagged WHERE start=?",
-                (start,)
-            )
+            self.sqlite.execute("DELETE FROM tagged WHERE start=?", (start,))
             self.sqlite.execute(
                 "INSERT INTO tagged (tag,start) VALUES (?,?)",
                 *((tag, start) for tag in tags),
@@ -170,8 +162,7 @@ class Timer:
             if args[0] <= start:
                 raise ValueError(f"new end '{end}' is before task's start")
             self.sqlite.execute(
-                "UPDATE time_span SET end=? WHERE start=?",
-                (args[0], start)
+                "UPDATE time_span SET end=? WHERE start=?", (args[0], start)
             )
         if action == "start":
             start = args[0]
@@ -184,12 +175,10 @@ class Timer:
             for table in ("time_span", "running", "tagged"):
                 self.sqlite.execute(
                     f"UPDATE {table} SET start=? WHERE start=?",
-                    (start, task.time_span[0])
+                    (start, task.time_span[0]),
                 )
         for task in self.list(
-                full_name=FullName(task.name, task.tags),
-                from_=start,
-                to=end
+            full_name=FullName(task.name, task.tags), from_=start, to=end
         ):
             if task.time_span == (start, end):
                 break
@@ -245,9 +234,7 @@ class Timer:
         :rtype: list
         """
         total_time = collections.defaultdict(int)
-        for task in self.list(
-            from_, to, full_name=full_name, full_match=full_match
-        ):
+        for task in self.list(from_, to, full_name=full_name, full_match=full_match):
             runtime = int((task.time_span[-1] - task.time_span[0]).total_seconds())
             if all(full_name):
                 total_time[(task.name, tuple(task.tags))] += runtime
@@ -269,12 +256,14 @@ class Timer:
             *(
                 _row(Task(task.name, (tag,), task.time_span))
                 for task in tasks
-                for tag in task.tags if task.tags
+                for tag in task.tags
+                if task.tags
             ),
             *(
                 _row(Task(task.name, ("",), task.time_span))
-                for task in tasks if not task.tags
-            )
+                for task in tasks
+                if not task.tags
+            ),
         )
         with open(filename, mode="w") as fp:
             csv.writer(fp).writerows(rows)
@@ -287,16 +276,16 @@ class Timer:
         """
         with open(filename, mode="w") as fp:
             json.dump(
-                (
+                list(
                     (
                         task.name,
                         tuple(task.tags),
                         task.time_span[0].isoformat(timespec="seconds"),
-                        task.time_span[1].isoformat(timespec="seconds")
+                        task.time_span[1].isoformat(timespec="seconds"),
                     )
                     for task in tasks
                 ),
-                fp
+                fp,
             )
 
     def export(self, ext, from_, to):
@@ -306,15 +295,16 @@ class Timer:
         :param str from_: start of time period
         :param str end: end of time period
         """
-        tasks = self.list(from_=from_, to=to)
+        tasks = self.list(from_=from_, to=to, full_match=False)
         filename = (
             pathlib.Path(tempfile.gettempdir())
             / f"{datetime.datetime.now().strftime('%Y%m%d')}.{ext}"
         )
         if ext == "csv":
-            self._export_csv(filename, tasks)
+            self._export_to_csv(filename, tasks)
         if ext == "json":
-            self._export_json(filename, tasks)
+            self._export_to_json(filename, tasks)
+        return filename
 
 
 def _get_time_period(from_, to):
@@ -343,5 +333,5 @@ def _row(task):
         task.name,
         task.tags[0],
         task.time_span[0].isoformat(timespec="seconds"),
-        task.time_span[1].isoformat(timespec="seconds")
+        task.time_span[1].isoformat(timespec="seconds"),
     )

@@ -21,6 +21,8 @@
 
 
 # standard library imports
+import csv
+import json
 import datetime
 import unittest
 import os
@@ -39,6 +41,7 @@ class TestTimer(unittest.TestCase):
 
     :cvar str DATABASE: SQLite3 database
     """
+
     DATABASE = "test.db"
 
     def tearDown(self):
@@ -67,14 +70,12 @@ class TestTimer(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0], timer.task.time_span)
         rows = connection.execute(
-            "SELECT name FROM running WHERE start = ?",
-            (timer.task.time_span[0],)
+            "SELECT name FROM running WHERE start = ?", (timer.task.time_span[0],)
         ).fetchall()
         self.assertEqual(len(rows), 1)
         self.assertEqual(*rows[0], full_name.name)
         rows = connection.execute(
-            "SELECT tag FROM tagged WHERE start = ?",
-            (timer.task.time_span[0],)
+            "SELECT tag FROM tagged WHERE start = ?", (timer.task.time_span[0],)
         ).fetchall()
         self.assertEqual(len(rows), 2)
         self.assertEqual({x for row in rows for x in row}, timer.task.tags)
@@ -96,7 +97,7 @@ class TestTimer(unittest.TestCase):
             FROM time_span
             JOIN running ON time_span.start=running.start
             WHERE name = ?""",
-            (name,)
+            (name,),
         ).fetchall()
         start, end = rows.pop(0)
         self.assertTrue(end > start)
@@ -110,18 +111,18 @@ class TestTimer(unittest.TestCase):
         connection = timer.sqlite.connect()
         connection.executemany(
             "INSERT INTO time_span (start,end) VALUES (?,?)",
-            ((start, end) for _, _, (start, end) in values)
+            ((start, end) for _, _, (start, end) in values),
         )
         connection.commit()
         connection.executemany(
             "INSERT INTO running (name,start) VALUES (?,?)",
-            ((name, start) for name, _, (start, _) in values)
+            ((name, start) for name, _, (start, _) in values),
         )
         connection.commit()
         for _, tags, (start, _) in values:
             connection.executemany(
                 "INSERT INTO tagged (tag,start) VALUES (?,?)",
-                ((tag, start) for tag in tags)
+                ((tag, start) for tag in tags),
             )
         connection.commit()
 
@@ -136,21 +137,18 @@ class TestTimer(unittest.TestCase):
         from_ = now - datetime.timedelta(days=now.weekday())
         values = (
             ("foo", {"bar"}, (now, now + datetime.timedelta(hours=1))),
-            ("baz", set(), (from_, now)),
+            ("baz", frozenset(), (from_, now)),
             ("foobar", {"toto", "tata"}, (from_ - datetime.timedelta(days=1), now)),
         )
         self._insert(values)
         expected = (
-            Task(name, tags, (start, end)) for name, tags, (start, end)
-            in values[:2]
+            Task(name, tags, (start, end)) for name, tags, (start, end) in values[:2]
         )
         self.assertCountEqual(
             timer.list(
-                from_.strftime("%Y-%m-%d"),
-                now.strftime("%Y-%m-%d"),
-                full_match=False
+                from_.strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), full_match=False
             ),
-            expected
+            expected,
         )
 
     def test_sum_name(self):
@@ -165,20 +163,18 @@ class TestTimer(unittest.TestCase):
         values = (
             ("foo", {"bar"}, (now, now + timedelta)),
             ("foo", {}, (now + timedelta, now + 2 * timedelta)),
-            ("bar", {}, (now + 2 * timedelta, now + 3 * timedelta))
+            ("bar", {}, (now + 2 * timedelta, now + 3 * timedelta)),
         )
         self._insert(values)
-        expected = (
-            (("foo", ("",)), int(2 * timedelta.total_seconds())),
-        )
+        expected = ((("foo", ("",)), int(2 * timedelta.total_seconds())),)
         self.assertCountEqual(
             timer.sum(
                 now.strftime("%Y-%m-%d"),
                 now.strftime("%Y-%m-%d"),
-                full_name=FullName("foo", set()),
-                full_match=False
+                full_name=FullName("foo", frozenset()),
+                full_match=False,
             ),
-            expected
+            expected,
         )
 
     def test_sum_tags(self):
@@ -193,20 +189,18 @@ class TestTimer(unittest.TestCase):
         values = (
             ("foo", {"bar"}, (now, now + timedelta)),
             ("baz", {"bar"}, (now + timedelta, now + 2 * timedelta)),
-            ("foobar", {"toto"}, (now + 2 * timedelta, now + 3 * timedelta))
+            ("foobar", {"toto"}, (now + 2 * timedelta, now + 3 * timedelta)),
         )
         self._insert(values)
-        expected = (
-            (("", ("bar",)), int(2 * timedelta.total_seconds())),
-        )
+        expected = ((("", ("bar",)), int(2 * timedelta.total_seconds())),)
         self.assertCountEqual(
             timer.sum(
                 now.strftime("%Y-%m-%d"),
                 now.strftime("%Y-%m-%d"),
                 full_name=FullName("", {"bar"}),
-                full_match=False
+                full_match=False,
             ),
-            expected
+            expected,
         )
 
     def test_sum_full_name(self):
@@ -219,22 +213,20 @@ class TestTimer(unittest.TestCase):
         now = datetime.datetime.now()
         timedelta = datetime.timedelta(minutes=1)
         values = (
-            ("foo", set(), (now, now + timedelta)),
-            ("foo", set(), (now + timedelta, now + 2 * timedelta)),
-            ("foo", {"foobar"}, (now + 2 * timedelta, now + 3 * timedelta))
+            ("foo", frozenset(), (now, now + timedelta)),
+            ("foo", frozenset(), (now + timedelta, now + 2 * timedelta)),
+            ("foo", {"foobar"}, (now + 2 * timedelta, now + 3 * timedelta)),
         )
         self._insert(values)
-        expected = (
-            (("foo", ("foobar",)), int(timedelta.total_seconds())),
-        )
+        expected = ((("foo", ("foobar",)), int(timedelta.total_seconds())),)
         self.assertCountEqual(
             timer.sum(
                 now.strftime("%Y-%m-%d"),
                 now.strftime("%Y-%m-%d"),
                 full_name=FullName("foo", {"foobar"}),
-                full_match=True
+                full_match=True,
             ),
-            expected
+            expected,
         )
 
     def test_edit_name(self):
@@ -252,10 +244,9 @@ class TestTimer(unittest.TestCase):
         timer.edit(task, "name", name)
         self.assertEqual(
             *connection.execute(
-                "SELECT name FROM running WHERE start=?",
-                (task.time_span[0],)
+                "SELECT name FROM running WHERE start=?", (task.time_span[0],)
             ).fetchone(),
-            name
+            name,
         )
 
     def test_edit_tags(self):
@@ -273,13 +264,13 @@ class TestTimer(unittest.TestCase):
         timer.edit(task, "tags", tags)
         self.assertCountEqual(
             (
-                x for row in connection.execute(
-                    "SELECT tag FROM tagged WHERE start=?",
-                    (task.time_span[0],)
+                x
+                for row in connection.execute(
+                    "SELECT tag FROM tagged WHERE start=?", (task.time_span[0],)
                 )
                 for x in row
             ),
-            tags
+            tags,
         )
 
     def test_edit_start(self):
@@ -295,9 +286,7 @@ class TestTimer(unittest.TestCase):
         timer.stop()
         timedelta = datetime.timedelta(minutes=1)
         task = Task(
-            task.name,
-            task.tags,
-            (task.time_span[0], task.time_span[0] + timedelta)
+            task.name, task.tags, (task.time_span[0], task.time_span[0] + timedelta)
         )
         start = task.time_span[0] - timedelta
         timer.edit(task, "start", start)
@@ -319,18 +308,15 @@ class TestTimer(unittest.TestCase):
         timer.stop()
         timedelta = datetime.timedelta(minutes=1)
         task = Task(
-            task.name,
-            task.tags,
-            (task.time_span[0], task.time_span[0] + timedelta)
+            task.name, task.tags, (task.time_span[0], task.time_span[0] + timedelta)
         )
         end = task.time_span[1] + timedelta
         timer.edit(task, "end", end)
         self.assertEqual(
             *connection.execute(
-                "SELECT end FROM time_span WHERE start=?",
-                (task.time_span[0],)
+                "SELECT end FROM time_span WHERE start=?", (task.time_span[0],)
             ).fetchall(),
-            (end,)
+            (end,),
         )
 
     def test_edit_start_running(self):
@@ -384,11 +370,7 @@ class TestTimer(unittest.TestCase):
         timer.stop()
         now = datetime.datetime.now()
         timedelta = datetime.timedelta(minutes=1)
-        task = Task(
-            task.name,
-            task.tags,
-            (task.time_span[0], now)
-        )
+        task = Task(task.name, task.tags, (task.time_span[0], now))
         end = task.time_span[0] - timedelta
         with self.assertRaises(ValueError):
             timer.edit(task, "end", end)
@@ -408,8 +390,7 @@ class TestTimer(unittest.TestCase):
         for table in ("time_span", "running", "tagged"):
             self.assertFalse(
                 connection.execute(
-                    f"SELECT 1 FROM {table} WHERE start=?",
-                    (task.time_span[0],)
+                    f"SELECT 1 FROM {table} WHERE start=?", (task.time_span[0],)
                 ).fetchall()
             )
 
@@ -479,3 +460,66 @@ class TestTimer(unittest.TestCase):
         end = start - datetime.timedelta(days=1)
         with self.assertRaises(ValueError):
             timer.add(FullName("foo", {"bar"}), start, end)
+
+    def test_export_to_csv(self):
+        """Test exporting tasks.
+
+        Trying: export to CSV file
+        Expecting: tasks have been exported to CSV file
+        """
+        timer = src.timer.Timer(self.DATABASE)
+        now = datetime.datetime.now()
+        timedelta = datetime.timedelta(minutes=1)
+        values = (
+            ("foo", {"bar", "baz"}, (now, now + timedelta)),
+            ("foobar", frozenset(), (now + timedelta, now + 2 * timedelta)),
+        )
+        self._insert(values)
+        filename = timer.export(
+            "csv", now.strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d")
+        )
+        with open(filename) as fp:
+            self.assertCountEqual(
+                (row for row in csv.reader(fp)),
+                (
+                    [
+                        name,
+                        tag,
+                        start.isoformat(timespec="seconds"),
+                        end.isoformat(timespec="seconds"),
+                    ]
+                    for name, tags, (start, end) in values
+                    for tag in tags or {""}
+                ),
+            )
+
+    def test_export_to_json(self):
+        """Test exporting tasks.
+
+        Trying: export to JSON file
+        Expecting: tasks have been exported to JSON file
+        """
+        timer = src.timer.Timer(self.DATABASE)
+        now = datetime.datetime.now()
+        timedelta = datetime.timedelta(minutes=1)
+        values = (
+            ("foo", {"bar", "baz"}, (now, now + timedelta)),
+            ("foobar", frozenset(), (now + timedelta, now + 2 * timedelta)),
+        )
+        self._insert(values)
+        filename = timer.export(
+            "json", now.strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d")
+        )
+        with open(filename) as fp:
+            self.assertEqual(
+                json.load(fp),
+                [
+                    [
+                        name,
+                        list(tags),
+                        start.isoformat(timespec="seconds"),
+                        end.isoformat(timespec="seconds"),
+                    ]
+                    for name, tags, (start, end) in values
+                ],
+            )
