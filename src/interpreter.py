@@ -240,7 +240,7 @@ class Interpreter:
             "start": {
                 "description": "start task",
                 "aliases": aliases.get("start", tuple()),
-                "func": self.timer.start,
+                "func": self.start,
                 "formatter": lambda *args, **kwargs: tuple(),
                 "args": {"full_name": self.ARGS["full_name"]},
             },
@@ -295,7 +295,7 @@ class Interpreter:
             "list": {
                 "description": "list tasks",
                 "aliases": aliases.get("list", tuple()),
-                "func": self.timer.list_tasks,
+                "func": self.list,
                 "formatter": lambda x: (
                     src.output_formatter.pprint_task(y, date=False) for y in x
                 ),
@@ -314,7 +314,7 @@ class Interpreter:
             "sum": {
                 "description": "sum up total time",
                 "aliases": aliases.get("sum", tuple()),
-                "func": self.timer.sum_total,
+                "func": self.sum,
                 "formatter": lambda x: (
                     src.output_formatter.pprint_sum(FullName(*y), z) for y, z in x
                 ),
@@ -336,8 +336,8 @@ class Interpreter:
             "export": {
                 "description": "export tasks",
                 "aliases": aliases.get("export", tuple()),
-                "func": self.timer.export,
-                "formatter": lambda x: (((x, curses.color_pair(4)),),),
+                "func": self.export,
+                "formatter": lambda x: (x,),
                 "args": {
                     "ext": {"choices": ("csv", "json"), "metavar": "format"},
                     "from_": {
@@ -455,6 +455,19 @@ class Interpreter:
             )
         )
 
+    def start(self, full_name=FullName("", frozenset())):
+        """Start task.
+
+        :param FullName full_name: full name
+
+        :returns: empty line or error message
+        :rtype: tuple
+        """
+        if self.timer.task.name:
+            return (("a task is already running", curses.color_pair(0)),)
+        self.timer.start(full_name)
+        return (("", curses.color_pair(0)),)
+
     def stop(self):
         """Stop task.
 
@@ -516,6 +529,28 @@ class Interpreter:
             raise RuntimeError("aborted removing task")
         return tasks[i], items[i]
 
+    def _convert_to_date_string(self, endpoint):
+        """Convert to date string.
+
+        :param str endpoint: endpoint
+
+        :returns: date string
+        :rtype: str
+        """
+        today = datetime.datetime.today()
+        if endpoint == "today":
+            return today.strftime("%Y-%m-%d")
+        if endpoint == "yesterday":
+            return (today - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+        if endpoint == "week":
+            return (today - datetime.timedelta(days=today.weekday())).strftime(
+                "%Y-%m-%d"
+            )
+        if endpoint == "month":
+            return f"{today.year}-{today.month:02}-01"
+        if endpoint == "year":
+            return f"{today.year}-01-01"
+
     def remove(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """Choose task to remove.
 
@@ -557,6 +592,59 @@ class Interpreter:
         if actions[i] in ("start", "end"):
             arg = datetime.datetime.strptime(arg, "%Y-%m-%d %H:%M")
         return src.output_formatter.pprint_task(self.timer.edit(task, actions[i], arg))
+
+    def list(self, full_name=FullName("", frozenset()), from_="today", to="today"):
+        """List tasks.
+
+        :param FullName full_name: full name
+        :param str from_: start of time period
+        :param str to: end of time period
+        :param bool full_match: toggle matching full name on/off
+
+        :returns: tasks
+        :rtype: tuple
+        """
+        return self.timer.list(
+            self._convert_to_date_string(from_),
+            self._convert_to_date_string(to),
+            full_name=full_name,
+            full_match=any(full_name),
+        )
+
+    def sum(self, summand=FullName("", frozenset()), from_="today", to="today"):
+        """Sum total time up.
+
+        :param FullName full_name: full name
+        :param str from_: start of time period
+        :param str to: end of time period
+        :param bool full_match: toggle matching full name on/off
+
+        :returns: summed up total time per task
+        :rtype: tuple
+        """
+        return self.timer.sum(
+            self._convert_to_date_string(from_),
+            self._convert_to_date_string(to),
+            full_name=summand,
+            full_match=any(summand),
+        )
+
+    def export(self, ext="", from_="today", to="today"):
+        """Export tasks.
+
+        :param str ext: file format
+        :param str from_: start of time period
+        :param str to: end of time period
+
+        :returns: confirmation or error message
+        :rtype: tuple
+        """
+        filename = self.timer.export(
+            ext,
+            self._convert_to_date_string(from_),
+            self._convert_to_date_string(to),
+        )
+        return ((f"exported tasks to {filename}", curses.color_pair(4)),)
 
     def show_stats(self, from_="today", to="today"):
         """Show statistics.
@@ -673,28 +761,6 @@ class Interpreter:
             ),
         )
 
-    def convert_to_date_string(self, endpoint):
-        """Convert to date string.
-
-        :param str endpoint: endpoint
-
-        :returns: date string
-        :rtype: str
-        """
-        today = datetime.datetime.today()
-        if endpoint == "today":
-            return today.strftime("%Y-%m-%d")
-        if endpoint == "yesterday":
-            return (today - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-        if endpoint == "week":
-            return (today - datetime.timedelta(days=today.weekday())).strftime(
-                "%Y-%m-%d"
-            )
-        if endpoint == "month":
-            return f"{today.year}-{today.month:02}-01"
-        if endpoint == "year":
-            return f"{today.year}-01-01"
-
     def pprint_heading(self, from_, to):
         """Pretty-print heading.
 
@@ -714,9 +780,9 @@ class Interpreter:
             )
         ranges = ("year", "month", "week", "yesterday", "today")
         if from_ in ranges:
-            from_ = self.convert_to_date_string(from_)
+            from_ = self._convert_to_date_string(from_)
         if to in ranges:
-            to = self.convert_to_date_string(to)
+            to = self._convert_to_date_string(to)
         from_ = datetime.datetime.strptime(from_, "%Y-%m-%d").strftime("%a %d %b %Y")
         to = datetime.datetime.strptime(to, "%Y-%m-%d").strftime("%a %d %b %Y")
         if from_ != to:
