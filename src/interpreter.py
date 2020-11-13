@@ -517,7 +517,13 @@ class Interpreter:
         :returns: task and pretty-printed task
         :rtype: tuple
         """
-        tasks = list(self.timer.list_tasks(full_name=full_name, from_=from_, to=to))
+        tasks = list(
+            self.timer.list(
+                self._convert_to_date_string(from_),
+                self._convert_to_date_string(to),
+                full_name=full_name,
+            )
+        )
         if not tasks:
             raise RuntimeError("no task")
         items = list(
@@ -658,7 +664,13 @@ class Interpreter:
             ((f"{'—'*len(heading[0][0])}", curses.color_pair(0)),),
             (("", curses.color_pair(0)),),
         )
-        tasks = tuple(self.timer.list_tasks(from_=from_, to=to))
+        tasks = tuple(
+            self.timer.list(
+                self._convert_to_date_string(from_),
+                self._convert_to_date_string(to),
+                full_match=False
+            )
+        )
         stats += (
             ((f"{len(tasks)} task(s)", curses.color_pair(0)),),
             *(
@@ -681,8 +693,10 @@ class Interpreter:
             (
                 sum_
                 for name, tags in tasks
-                for sum_ in self.timer.sum_total(
-                    summand=FullName(name, set(tags)), from_=from_, to=to
+                for sum_ in self.timer.sum(
+                    self._convert_to_date_string(from_),
+                    self._convert_to_date_string(to),
+                    full_name=FullName(name, set(tags)),
                 )
             ),
             key=lambda x: x[1],
@@ -699,8 +713,11 @@ class Interpreter:
             (
                 sum_
                 for tuple_ in tags
-                for sum_ in self.timer.sum_total(
-                    summand=FullName("", frozenset(tuple_)), from_=from_, to=to
+                for sum_ in self.timer.sum(
+                    self._convert_to_date_string(from_),
+                    self._convert_to_date_string(to),
+                    full_name=FullName("", frozenset(tuple_)),
+                    full_match=False
                 )
             ),
             key=lambda x: x[1],
@@ -773,7 +790,10 @@ class Interpreter:
         if from_ == "all":
             from_ = (
                 sorted(
-                    self.timer.list_tasks(from_=from_), key=lambda x: x.time_span[0]
+                    self.timer.list(
+                        self._convert_to_date_string(from_),
+                        self._convert_to_date_string(to),
+                    ), key=lambda x: x.time_span[0]
                 )[0]
                 .time_span[0]
                 .strftime("%Y-%m-%d")
