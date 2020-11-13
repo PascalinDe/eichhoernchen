@@ -53,3 +53,11 @@ class Template:
     @property
     def prompt(self):
         return ("~>", curses.color_pair(0))
+
+    @property
+    def info(self):
+        return ("{info}", curses.color_pair(4))
+
+    @property
+    def error(self):
+        return ("{error}", curses.color_pair(5))

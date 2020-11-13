@@ -241,21 +241,18 @@ class Interpreter:
                 "description": "start task",
                 "aliases": aliases.get("start", tuple()),
                 "func": self.start,
-                "formatter": lambda *args, **kwargs: tuple(),
                 "args": {"full_name": self.ARGS["full_name"]},
             },
             "stop": {
                 "description": "stop task",
                 "aliases": aliases.get("stop", tuple()),
                 "func": self.stop,
-                "formatter": lambda x: (x,) if x[0][0] else tuple(),
                 "args": {},
             },
             "add": {
                 "description": "add task",
                 "aliases": aliases.get("add", tuple()),
                 "func": self.add,
-                "formatter": lambda x: (x,),
                 "args": {
                     "full_name": self.ARGS["full_name"],
                     "start": self.ARGS["start"],
@@ -266,7 +263,6 @@ class Interpreter:
                 "description": "remove task",
                 "aliases": aliases.get("remove", tuple()),
                 "func": self.remove,
-                "formatter": lambda x: (x,),
                 "args": {
                     "full_name": self.ARGS["full_name"],
                     "from_": {
@@ -279,7 +275,6 @@ class Interpreter:
                 "description": "edit task",
                 "aliases": aliases.get("edit", tuple()),
                 "func": self.edit,
-                "formatter": lambda x: (x,),
                 "args": {
                     "full_name": self.ARGS["full_name"],
                     "from_": {
@@ -296,9 +291,6 @@ class Interpreter:
                 "description": "list tasks",
                 "aliases": aliases.get("list", tuple()),
                 "func": self.list,
-                "formatter": lambda x: (
-                    src.output_formatter.pprint_task(y, date=False) for y in x
-                ),
                 "args": {
                     "full_name": {
                         **self.ARGS["full_name"],
@@ -315,9 +307,6 @@ class Interpreter:
                 "description": "sum up total time",
                 "aliases": aliases.get("sum", tuple()),
                 "func": self.sum,
-                "formatter": lambda x: (
-                    src.output_formatter.pprint_sum(FullName(*y), z) for y, z in x
-                ),
                 "args": {
                     "summand": {
                         "type": _summand,
@@ -337,7 +326,6 @@ class Interpreter:
                 "description": "export tasks",
                 "aliases": aliases.get("export", tuple()),
                 "func": self.export,
-                "formatter": lambda x: (x,),
                 "args": {
                     "ext": {"choices": ("csv", "json"), "metavar": "format"},
                     "from_": {
@@ -351,7 +339,6 @@ class Interpreter:
                 "description": "show statistics",
                 "aliases": aliases.get("show_stats", tuple()),
                 "func": self.show_stats,
-                "formatter": lambda *args, **kwargs: tuple(),
                 "args": {
                     "from_": {
                         **self.ARGS["from_"],
@@ -369,7 +356,6 @@ class Interpreter:
                 "description": "list aliases",
                 "aliases": aliases.get("aliases", tuple()),
                 "func": lambda *args, **kwargs: self.aliases(aliases),
-                "formatter": lambda x: x,
                 "args": {},
             },
         }
@@ -400,9 +386,7 @@ class Interpreter:
             )
             if prog == "help":
                 continue
-            subcommands[prog].set_defaults(
-                func=subcommand["func"], formatter=subcommand["formatter"]
-            )
+            subcommands[prog].set_defaults(func=subcommand["func"])
             for arg, kwargs in subcommand["args"].items():
                 subcommands[prog].add_argument(arg, **kwargs)
         subcommands["help"].add_argument(
@@ -414,8 +398,9 @@ class Interpreter:
             ),
         )
         subcommands["help"].set_defaults(
-            func=lambda *args, **kwargs: kwargs["command"] or "",
-            formatter=lambda x: self.help(x, subcommands, aliases),
+            func=lambda *args, **kwargs: self.help(
+                kwargs["command"], subcommands, aliases
+            )
         )
 
     def interpret_line(self, line):
@@ -445,15 +430,7 @@ class Interpreter:
         except SystemExit:
             fp.seek(0)
             raise InterpreterError("\t".join(line.strip() for line in fp.readlines()))
-        return args.formatter(
-            args.func(
-                **{
-                    k: v
-                    for k, v in vars(args).items()
-                    if k not in ("func", "formatter")
-                }
-            )
-        )
+        return args.func(**{k: v for k, v in vars(args).items() if k != "func"})
 
     def start(self, full_name=FullName("", frozenset())):
         """Start task.
@@ -464,9 +441,9 @@ class Interpreter:
         :rtype: tuple
         """
         if self.timer.task.name:
-            return (("a task is already running", curses.color_pair(0)),)
+            return (src.output_formatter.pprint_error("a task is already running"),)
         self.timer.start(full_name)
-        return (("", curses.color_pair(0)),)
+        return tuple()
 
     def stop(self):
         """Stop task.
@@ -476,8 +453,8 @@ class Interpreter:
         """
         if self.timer.task.name:
             self.timer.stop()
-            return (("", curses.color_pair(0)),)
-        return (("no running task", curses.color_pair(0)),)
+            return tuple()
+        return (src.output_formatter.pprint_error("no task is running"),)
 
     def add(self, full_name=FullName("", frozenset()), start="", end=""):
         """Add task.
@@ -490,10 +467,14 @@ class Interpreter:
         :rtype: tuple
         """
         try:
-            task = self.timer.add(full_name=full_name, start=start, end=end)
-            return src.output_formatter.pprint_task(task)
+            task = self.timer.add(
+                full_name,
+                datetime.datetime.strptime(start, "%Y-%m-%d %H:%M"),
+                datetime.datetime.strptime(end, "%Y-%m-%d %H:%M"),
+            )
+            return (src.output_formatter.pprint_task(task),)
         except ValueError as exception:
-            return ((str(exception), curses.color_pair(5)),)
+            return (src.output_formatter.pprint_error(str(exception)),)
 
     def _flatten_items(self, items):
         """Flatten menu items.
@@ -524,15 +505,18 @@ class Interpreter:
                 full_name=full_name,
             )
         )
+        pprint_full_name = "".join(
+            x[0] for x in src.output_formatter.pprint_full_name(full_name)
+        )
         if not tasks:
-            raise RuntimeError("no task")
+            raise RuntimeError(f"no task '{pprint_full_name}'")
         items = list(
             self._flatten_items(src.output_formatter.pprint_task(task))
             for task in tasks
         )
         i = mk_menu(items)
         if i < 0:
-            raise RuntimeError("aborted removing task")
+            raise RuntimeError(f"abort removing task '{pprint_full_name}'")
         return tasks[i], items[i]
 
     def _convert_to_date_string(self, endpoint):
@@ -556,6 +540,9 @@ class Interpreter:
             return f"{today.year}-{today.month:02}-01"
         if endpoint == "year":
             return f"{today.year}-01-01"
+        if endpoint == "all":
+            return "0000-01-01"
+        return endpoint
 
     def remove(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """Choose task to remove.
@@ -570,9 +557,9 @@ class Interpreter:
         try:
             task, item = self._pick_task(full_name=full_name, from_=from_, to=to)
         except RuntimeError as exception:
-            return ((str(exception), curses.color_pair(5)),)
+            return (src.output_formatter.pprint_error(str(exception)),)
         self.timer.remove(task)
-        return ((f"removed {item}", curses.color_pair(4)),)
+        return (src.output_formatter.pprint_info(f"removed {item}"),)
 
     def edit(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """Choose task to edit.
@@ -584,20 +571,34 @@ class Interpreter:
         :returns: confirmation or error message
         :rtype: tuple
         """
+        pprint_full_name = "".join(
+            x[0] for x in src.output_formatter.pprint_full_name(full_name)
+        )
         try:
             task, item = self._pick_task(full_name=full_name, from_=from_, to=to)
         except RuntimeError as exception:
-            return ((str(exception), curses.color_pair(5)),)
+            return (src.output_formatter.pprint_error(exception),)
         if not task:
-            return (("no task", curses.color_pair(0)),)
+            return (src.output_formatter.pprint_error(f"no task '{pprint_full_name}'"),)
         actions = ("name", "tags", "start", "end")
         i = mk_menu(actions)
         if i < 0:
-            return (("aborted editing task", curses.color_pair(5)),)
+            return (
+                src.output_formatter.pprint_error(
+                    f"abort editing task '{pprint_full_name}'"
+                ),
+            )
         arg = (_name, _tags, _from, _to)[i](readline(prompt=f"new {actions[i]} >"))
         if actions[i] in ("start", "end"):
             arg = datetime.datetime.strptime(arg, "%Y-%m-%d %H:%M")
-        return src.output_formatter.pprint_task(self.timer.edit(task, actions[i], arg))
+        try:
+            return (
+                src.output_formatter.pprint_task(
+                    self.timer.edit(task, actions[i], arg)
+                ),
+            )
+        except ValueError as exception:
+            return (src.output_formatter.pprint_error(exception),)
 
     def list(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """List tasks.
@@ -610,11 +611,16 @@ class Interpreter:
         :returns: tasks
         :rtype: tuple
         """
-        return self.timer.list(
-            self._convert_to_date_string(from_),
-            self._convert_to_date_string(to),
-            full_name=full_name,
-            full_match=any(full_name),
+        return tuple(
+            src.output_formatter.pprint_task(
+                task, date=from_ not in ("today", self._convert_to_date_string("today"))
+            )
+            for task in self.timer.list(
+                self._convert_to_date_string(from_),
+                self._convert_to_date_string(to),
+                full_name=full_name,
+                full_match=any(full_name),
+            )
         )
 
     def sum(self, summand=FullName("", frozenset()), from_="today", to="today"):
@@ -628,11 +634,14 @@ class Interpreter:
         :returns: summed up total time per task
         :rtype: tuple
         """
-        return self.timer.sum(
-            self._convert_to_date_string(from_),
-            self._convert_to_date_string(to),
-            full_name=summand,
-            full_match=any(summand),
+        return tuple(
+            src.output_formatter.pprint_sum(FullName(*x), y)
+            for x, y in self.timer.sum(
+                self._convert_to_date_string(from_),
+                self._convert_to_date_string(to),
+                full_name=summand,
+                full_match=any(summand),
+            )
         )
 
     def export(self, ext="", from_="today", to="today"):
@@ -650,7 +659,35 @@ class Interpreter:
             self._convert_to_date_string(from_),
             self._convert_to_date_string(to),
         )
-        return ((f"exported tasks to {filename}", curses.color_pair(4)),)
+        return (src.output_formatter.pprint_info(f"exported tasks to {filename}"),)
+
+    def pprint_heading(self, from_, to):
+        """Pretty-print heading.
+
+        :param str from_: from
+        :param str to: to
+
+        :returns: heading
+        :rtype: str
+        """
+        if from_ == "all":
+            from_ = (
+                sorted(
+                    self.timer.list_tasks(from_=from_), key=lambda x: x.time_span[0]
+                )[0]
+                .time_span[0]
+                .strftime("%Y-%m-%d")
+            )
+        ranges = ("year", "month", "week", "yesterday", "today")
+        if from_ in ranges:
+            from_ = self._convert_to_date_string(from_)
+        if to in ranges:
+            to = self._convert_to_date_string(to)
+        from_ = datetime.datetime.strptime(from_, "%Y-%m-%d").strftime("%a %d %b %Y")
+        to = datetime.datetime.strptime(to, "%Y-%m-%d").strftime("%a %d %b %Y")
+        if from_ != to:
+            return ((f"overview {from_} - {to}".upper(), curses.color_pair(0)),)
+        return ((f"overview {from_}".upper(), curses.color_pair(0)),)
 
     def show_stats(self, from_="today", to="today"):
         """Show statistics.
@@ -658,18 +695,19 @@ class Interpreter:
         :param str from_: from
         :param str to: to
         """
+        tasks = tuple(
+            self.timer.list(
+                self._convert_to_date_string(from_),
+                self._convert_to_date_string(to),
+                full_match=False,
+            )
+        )
+        from_ = tasks[0].time_span[0].strftime("%Y-%m-%d")
         heading = self.pprint_heading(from_, to)
         stats = (
             heading,
             ((f"{'—'*len(heading[0][0])}", curses.color_pair(0)),),
             (("", curses.color_pair(0)),),
-        )
-        tasks = tuple(
-            self.timer.list(
-                self._convert_to_date_string(from_),
-                self._convert_to_date_string(to),
-                full_match=False
-            )
         )
         stats += (
             ((f"{len(tasks)} task(s)", curses.color_pair(0)),),
@@ -717,7 +755,7 @@ class Interpreter:
                     self._convert_to_date_string(from_),
                     self._convert_to_date_string(to),
                     full_name=FullName("", frozenset(tuple_)),
-                    full_match=False
+                    full_match=False,
                 )
             ),
             key=lambda x: x[1],
@@ -731,6 +769,7 @@ class Interpreter:
             ),
         )
         mk_stats(list(stats))
+        return tuple()
 
     def help(self, subcommand, subcommands, aliases):
         """Show help message.
@@ -750,12 +789,12 @@ class Interpreter:
                         break
             else:
                 subparser = subcommands[subcommand]
-            return (
-                ((help, curses.color_pair(4)),)
+            return tuple(
+                src.output_formatter.pprint_info(help)
                 for help in subparser.format_help().split("\n")
             )
-        return (
-            ((usage.strip(), curses.color_pair(4)),)
+        return tuple(
+            src.output_formatter.pprint_info(usage.strip())
             for usage in self._parser.format_usage().split("\n")
             if usage
         )
@@ -769,42 +808,11 @@ class Interpreter:
         :rtype: list
         """
         return (
-            (("alias\tcommand", curses.color_pair(4)),),
+            src.output_formatter.pprint_info("alias\tcommand"),
             tuple(),
             *(
-                ((f"{alias}\t{k}", curses.color_pair(4)),)
+                src.output_formatter.pprint_info(f"{alias}\t{k}")
                 for k, v in aliases.items()
                 for alias in v
             ),
         )
-
-    def pprint_heading(self, from_, to):
-        """Pretty-print heading.
-
-        :param str from_: from
-        :param str to: to
-
-        :returns: heading
-        :rtype: str
-        """
-        if from_ == "all":
-            from_ = (
-                sorted(
-                    self.timer.list(
-                        self._convert_to_date_string(from_),
-                        self._convert_to_date_string(to),
-                    ), key=lambda x: x.time_span[0]
-                )[0]
-                .time_span[0]
-                .strftime("%Y-%m-%d")
-            )
-        ranges = ("year", "month", "week", "yesterday", "today")
-        if from_ in ranges:
-            from_ = self._convert_to_date_string(from_)
-        if to in ranges:
-            to = self._convert_to_date_string(to)
-        from_ = datetime.datetime.strptime(from_, "%Y-%m-%d").strftime("%a %d %b %Y")
-        to = datetime.datetime.strptime(to, "%Y-%m-%d").strftime("%a %d %b %Y")
-        if from_ != to:
-            return ((f"overview {from_} - {to}".upper(), curses.color_pair(0)),)
-        return ((f"overview {from_}".upper(), curses.color_pair(0)),)

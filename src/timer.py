@@ -140,9 +140,10 @@ class Timer:
         :returns: edited task
         :rtype: Task
         """
+        name, tags = task.name, task.tags
         start, end = task.time_span
         reset = False
-        if self.task == Task(task.name, task.tags, (start, None)):
+        if self.task == Task(name, tags, (start, None)):
             if action in ("start", "end"):
                 raise ValueError(f"cannot edit {action} of a running task")
             reset = True
@@ -159,10 +160,11 @@ class Timer:
                 *((tag, start) for tag in tags),
             )
         if action == "end":
+            end = args[0]
             if args[0] <= start:
                 raise ValueError(f"new end '{end}' is before task's start")
             self.sqlite.execute(
-                "UPDATE time_span SET end=? WHERE start=?", (args[0], start)
+                "UPDATE time_span SET end=? WHERE start=?", (end, start)
             )
         if action == "start":
             start = args[0]
@@ -177,10 +179,8 @@ class Timer:
                     f"UPDATE {table} SET start=? WHERE start=?",
                     (start, task.time_span[0]),
                 )
-        for task in self.list(
-            full_name=FullName(task.name, task.tags), from_=start, to=end
-        ):
-            if task.time_span == (start, end):
+        for task in self.list(start, end, full_name=FullName(name, tags)):
+            if task.time_span[0] == start:
                 break
         if reset:
             self._reset_task(task=task)

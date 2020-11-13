@@ -159,3 +159,25 @@ def pprint_prompt(task=Task("", frozenset(), ())):
             TEMPLATE.prompt,
         )
     return (TEMPLATE.prompt,)
+
+
+def pprint_info(info):
+    """Pretty-print info.
+
+    :param str info: info
+
+    :returns: pretty-printed info
+    :rtype: tuple
+    """
+    return ((TEMPLATE.info[0].format(info=info), TEMPLATE.info[1]),)
+
+
+def pprint_error(error):
+    """Pretty-print error.
+
+    :param str error: error
+
+    :returns: pretty-printed error
+    :rtype: tuple
+    """
+    return ((TEMPLATE.error[0].format(error=error), TEMPLATE.error[1]),)

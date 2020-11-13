@@ -1,3 +1,9 @@
+# [2.2] ()
+## Bug Fixes
+## Features
+## Miscellaneous
+* include date when listing tasks from day other than today
+
 # [2.1] ()
 ## Bug Fixes
 * take resizing into account (closes [#5](https://github.com/PascalinDe/eichhoernchen/issues/5))
