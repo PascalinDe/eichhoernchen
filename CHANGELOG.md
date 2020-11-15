@@ -4,7 +4,7 @@
 ## Miscellaneous
 * include date when listing tasks from day other than today
 
-# [2.1] ()
+# [2.1] (2020-10-24)
 ## Bug Fixes
 * take resizing into account (closes [#5](https://github.com/PascalinDe/eichhoernchen/issues/5))
 * fixed inserting non-ASCII characters (closes [#14](https://github.com/PascalinDe/eichhoernchen/issues/14))
