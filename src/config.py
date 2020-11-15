@@ -91,12 +91,15 @@ def _validate_config(config):
         "help",
         "aliases",
     }
-    unknown = ",".join(
-        f"'{command}'"
-        for command in set(config["aliases"].keys()).difference(subcommands)
-    )
-    if unknown:
-        raise BadConfig(f"unknown command(s) {unknown}")
+    try:
+        unknown = ",".join(
+            f"'{command}'"
+            for command in set(config["aliases"].keys()).difference(subcommands)
+        )
+        if unknown:
+            raise BadConfig(f"unknown command(s) {unknown}")
+    except KeyError:
+        pass
 
 
 def _read_config(path):
