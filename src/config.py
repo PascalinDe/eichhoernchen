@@ -78,6 +78,25 @@ def _validate_config(config):
             raise BadConfig(f"required section '{section}' is missing")
         if missing:
             raise BadConfig(f"required key(s) {missing} are missing")
+    subcommands = {
+        "start",
+        "stop",
+        "add",
+        "remove",
+        "edit",
+        "list",
+        "sum",
+        "show_stats",
+        "export",
+        "help",
+        "aliases",
+    }
+    unknown = ",".join(
+        f"'{command}'"
+        for command in set(config["aliases"].keys()).difference(subcommands)
+    )
+    if unknown:
+        raise BadConfig(f"unknown command(s) {unknown}")
 
 
 def _read_config(path):
