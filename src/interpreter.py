@@ -807,6 +807,10 @@ class Interpreter:
         :returns: aliases
         :rtype: list
         """
+        if not aliases:
+            return (
+                src.output_formatter.pprint_error("no aliases have been defined"),
+            )
         return (
             src.output_formatter.pprint_info("alias\tcommand"),
             tuple(),
