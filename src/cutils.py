@@ -110,6 +110,8 @@ class WindowManager:
                 raise ResizeError
             if ch == "\x03":
                 raise KeyboardInterrupt
+            if ch == "\x04":
+                raise EOFError
             if ch in (curses.KEY_DOWN, curses.KEY_UP):
                 if not scroll:
                     continue
@@ -316,7 +318,7 @@ def mk_menu(items):
         try:
             while line not in (str(i) for i in range(1, len(items) + 1)):
                 line = window_mgr.readline(y=y, prompt=">", scroll=True, clear=True)
-        except KeyboardInterrupt:
+        except EOFError:
             return -1
         except ResizeError:
             panel.bottom()
@@ -367,7 +369,7 @@ def mk_stats(stats):
             (("", curses.color_pair(0)),),
             (
                 (
-                    "Enter 'q' or press Ctrl+C to return to main window",
+                    "Enter 'q' or press Ctrl+D to return to main window",
                     curses.color_pair(0),
                 ),
             ),
@@ -381,7 +383,7 @@ def mk_stats(stats):
             line = ""
             while line != "q":
                 line = window_mgr.readline(y=y, prompt=">", scroll=True, clear=True)
-        except KeyboardInterrupt:
+        except EOFError:
             return
         except ResizeError:
             panel.bottom()

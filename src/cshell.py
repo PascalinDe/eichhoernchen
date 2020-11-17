@@ -77,7 +77,7 @@ def _loop(stdscr, config):
             else:
                 window_mgr.mv_down_or_scroll_down()
                 window_mgr.writelines(*window_mgr.window.getyx(), output)
-        except KeyboardInterrupt:
+        except (EOFError, KeyboardInterrupt):
             window_mgr.mv_down_or_scroll_down()
             window_mgr.writeline(*window_mgr.window.getyx(), pprint_info("Goodbye!"))
             window.refresh()

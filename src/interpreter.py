@@ -590,7 +590,7 @@ class Interpreter:
             )
         try:
             arg = (_name, _tags, _from, _to)[i](readline(prompt=f"new {actions[i]} >"))
-        except KeyboardInterrupt:
+        except EOFError:
             return (
                 src.output_formatter.pprint_error(
                     f"abort editing task '{pprint_full_name}'"
