@@ -588,7 +588,14 @@ class Interpreter:
                     f"abort editing task '{pprint_full_name}'"
                 ),
             )
-        arg = (_name, _tags, _from, _to)[i](readline(prompt=f"new {actions[i]} >"))
+        try:
+            arg = (_name, _tags, _from, _to)[i](readline(prompt=f"new {actions[i]} >"))
+        except KeyboardInterrupt:
+            return (
+                src.output_formatter.pprint_error(
+                    f"abort editing task '{pprint_full_name}'"
+                ),
+            )
         if actions[i] in ("start", "end"):
             arg = datetime.datetime.strptime(arg, "%Y-%m-%d %H:%M")
         try:
