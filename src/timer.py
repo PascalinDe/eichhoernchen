@@ -143,7 +143,7 @@ class Timer:
         name, tags = task.name, task.tags
         start, end = task.time_span
         reset = False
-        if self.task == Task(name, tags, (start, None)):
+        if any(self.task) and self.task.time_span[0] == start:
             if action in ("start", "end"):
                 raise ValueError(f"cannot edit {action} of a running task")
             reset = True
