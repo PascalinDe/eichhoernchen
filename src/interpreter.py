@@ -47,7 +47,7 @@ def _name(name):
     :returns: name
     :rtype: str
     """
-    match = re.match(r"(?:\w|\s|[!#+-?])+", name)
+    match = re.match(r"(?:\w|\s|[!#'+-?])+", name)
     if match:
         return match.group(0).strip()
     raise argparse.ArgumentTypeError(f"'{name}' does not contain name")
@@ -63,7 +63,7 @@ def _tags(tags):
     :returns: tags
     :rtype: set
     """
-    matches = re.findall(r"\[((?:\w|\s|[!#+-?])+)\]", tags)
+    matches = re.findall(r"\[((?:\w|\s|[!#'+-?])+)\]", tags)
     if matches:
         return set(tag.strip() for tag in matches)
     raise argparse.ArgumentTypeError(f"'{tags}' does not contain any tags")
