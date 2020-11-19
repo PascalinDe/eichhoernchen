@@ -126,7 +126,11 @@ class WindowManager:
                     self.scroll_up()
                 continue
             if x == 0:
-                continue
+                while y < max_y and self.lower_stack:
+                    self.scroll_down()
+                    y, _ = self.window.getyx()
+                x = len(self.scrapeline(y)[0][0].strip())
+                self.window.move(y, x)
             if ch in (curses.KEY_ENTER, os.linesep):
                 break
             if ch == curses.KEY_LEFT:
