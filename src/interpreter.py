@@ -328,6 +328,10 @@ class Interpreter:
                 "func": self.export,
                 "args": {
                     "ext": {"choices": ("csv", "json"), "metavar": "format"},
+                    "full_name": {
+                        **self.ARGS["full_name"],
+                        **{"nargs": "?", "default": FullName("", set())},
+                    },
                     "from_": {
                         **self.ARGS["from_"],
                         **{"nargs": "?", "default": "today"},
@@ -421,6 +425,12 @@ class Interpreter:
                 ],
             ]
         # FIXME
+        if splits[0] == "export":
+            splits = [
+                splits[0],
+                *splits[1].split(maxsplit=1),
+                *splits[2:]
+            ]
         if splits[0] == "show_stats":
             splits = [split for split in splits if split]
         try:
@@ -651,10 +661,17 @@ class Interpreter:
             )
         )
 
-    def export(self, ext="", from_="today", to="today"):
+    def export(
+            self,
+            ext="",
+            full_name=FullName("", frozenset()),
+            from_="today",
+            to="today"
+    ):
         """Export tasks.
 
         :param str ext: file format
+        :param FullName full_name: full name
         :param str from_: start of time period
         :param str to: end of time period
 
@@ -665,6 +682,7 @@ class Interpreter:
             ext,
             self._convert_to_date_string(from_),
             self._convert_to_date_string(to),
+            full_name=full_name,
         )
         return (src.output_formatter.pprint_info(f"exported tasks to {filename}"),)
 

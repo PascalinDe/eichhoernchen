@@ -493,7 +493,7 @@ class TestTimer(unittest.TestCase):
                         for name, tags, (start, end) in values
                         for tag in sorted(tags) or {""}
                     ),
-                    key=lambda x: x[2]
+                    key=lambda x: x[2],
                 ),
             )
 
@@ -528,6 +528,46 @@ class TestTimer(unittest.TestCase):
                         ]
                         for name, tags, (start, end) in values
                     ),
-                    key=lambda x: x[2]
-                )
+                    key=lambda x: x[2],
+                ),
+            )
+
+    def test_export_to_csv_full_name(self):
+        """Test exporting tasks.
+
+        Trying: export tasks with given full name to CSV file
+        Expecting: tasks with given full name have been exported to CSV file
+        """
+        timer = src.timer.Timer(self.DATABASE)
+        now = datetime.datetime.now()
+        timedelta = datetime.timedelta(minutes=1)
+        values = (
+            ("foo", {"bar", "baz"}, (now, now + timedelta)),
+            ("foobar", frozenset(), (now + timedelta, now + 2 * timedelta)),
+            ("toto", frozenset(), (now - timedelta, now)),
+            ("toto", frozenset(), (now + 2 * timedelta, now + 3 * timedelta)),
+        )
+        self._insert(values)
+        filename = timer.export(
+            "csv",
+            now.strftime("%Y-%m-%d"),
+            now.strftime("%Y-%m-%d"),
+            full_name=FullName("toto", frozenset())
+        )
+        with open(filename) as fp:
+            self.assertEqual(
+                list(row for row in csv.reader(fp)),
+                sorted(
+                    (
+                        [
+                            name,
+                            tag,
+                            start.isoformat(timespec="seconds"),
+                            end.isoformat(timespec="seconds"),
+                        ]
+                        for name, tags, (start, end) in values[2:]
+                        for tag in sorted(tags) or {""}
+                    ),
+                    key=lambda x: x[2],
+                ),
             )

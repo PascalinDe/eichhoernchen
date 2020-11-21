@@ -286,19 +286,25 @@ class Timer:
                         )
                         for task in tasks
                     ),
-                    key=lambda x: x[2]
+                    key=lambda x: x[2],
                 ),
                 fp,
             )
 
-    def export(self, ext, from_, to):
+    def export(self, ext, from_, to, full_name=FullName("", frozenset())):
         """Export tasks.
 
         :param str ext: file format
         :param str from_: start of time period
         :param str end: end of time period
+        :param FullName full_name: full_name
         """
-        tasks = self.list(from_=from_, to=to, full_match=False)
+        tasks = self.list(
+            from_=from_,
+            to=to,
+            full_name=full_name,
+            full_match=any(full_name)
+        )
         filename = (
             pathlib.Path(tempfile.gettempdir())
             / f"{datetime.datetime.now().strftime('%Y%m%d')}.{ext}"
