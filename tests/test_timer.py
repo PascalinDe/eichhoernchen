@@ -473,23 +473,27 @@ class TestTimer(unittest.TestCase):
         values = (
             ("foo", {"bar", "baz"}, (now, now + timedelta)),
             ("foobar", frozenset(), (now + timedelta, now + 2 * timedelta)),
+            ("toto", frozenset(), (now - timedelta, now)),
         )
         self._insert(values)
         filename = timer.export(
             "csv", now.strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d")
         )
         with open(filename) as fp:
-            self.assertCountEqual(
-                (row for row in csv.reader(fp)),
-                (
-                    [
-                        name,
-                        tag,
-                        start.isoformat(timespec="seconds"),
-                        end.isoformat(timespec="seconds"),
-                    ]
-                    for name, tags, (start, end) in values
-                    for tag in tags or {""}
+            self.assertEqual(
+                list(row for row in csv.reader(fp)),
+                sorted(
+                    (
+                        [
+                            name,
+                            tag,
+                            start.isoformat(timespec="seconds"),
+                            end.isoformat(timespec="seconds"),
+                        ]
+                        for name, tags, (start, end) in values
+                        for tag in sorted(tags) or {""}
+                    ),
+                    key=lambda x: x[2]
                 ),
             )
 
@@ -505,6 +509,7 @@ class TestTimer(unittest.TestCase):
         values = (
             ("foo", {"bar", "baz"}, (now, now + timedelta)),
             ("foobar", frozenset(), (now + timedelta, now + 2 * timedelta)),
+            ("toto", frozenset(), (now - timedelta, now)),
         )
         self._insert(values)
         filename = timer.export(
@@ -513,13 +518,16 @@ class TestTimer(unittest.TestCase):
         with open(filename) as fp:
             self.assertEqual(
                 json.load(fp),
-                [
-                    [
-                        name,
-                        list(tags),
-                        start.isoformat(timespec="seconds"),
-                        end.isoformat(timespec="seconds"),
-                    ]
-                    for name, tags, (start, end) in values
-                ],
+                sorted(
+                    (
+                        [
+                            name,
+                            list(tags),
+                            start.isoformat(timespec="seconds"),
+                            end.isoformat(timespec="seconds"),
+                        ]
+                        for name, tags, (start, end) in values
+                    ),
+                    key=lambda x: x[2]
+                )
             )

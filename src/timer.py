@@ -256,7 +256,7 @@ class Timer:
             *(
                 _row(Task(task.name, (tag,), task.time_span))
                 for task in tasks
-                for tag in task.tags
+                for tag in sorted(task.tags)
                 if task.tags
             ),
             *(
@@ -266,7 +266,7 @@ class Timer:
             ),
         )
         with open(filename, mode="w") as fp:
-            csv.writer(fp).writerows(rows)
+            csv.writer(fp).writerows(sorted(rows, key=lambda x: x[2]))
 
     def _export_to_json(self, filename, tasks):
         """Export to JSON file.
@@ -276,14 +276,17 @@ class Timer:
         """
         with open(filename, mode="w") as fp:
             json.dump(
-                list(
+                sorted(
                     (
-                        task.name,
-                        tuple(task.tags),
-                        task.time_span[0].isoformat(timespec="seconds"),
-                        task.time_span[1].isoformat(timespec="seconds"),
-                    )
-                    for task in tasks
+                        (
+                            task.name,
+                            tuple(task.tags),
+                            task.time_span[0].isoformat(timespec="seconds"),
+                            task.time_span[1].isoformat(timespec="seconds"),
+                        )
+                        for task in tasks
+                    ),
+                    key=lambda x: x[2]
                 ),
                 fp,
             )
