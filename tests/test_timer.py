@@ -552,7 +552,7 @@ class TestTimer(unittest.TestCase):
             "csv",
             now.strftime("%Y-%m-%d"),
             now.strftime("%Y-%m-%d"),
-            full_name=FullName("toto", frozenset())
+            full_name=FullName("toto", frozenset()),
         )
         with open(filename) as fp:
             self.assertEqual(

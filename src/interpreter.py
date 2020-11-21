@@ -426,11 +426,7 @@ class Interpreter:
             ]
         # FIXME
         if splits[0] == "export":
-            splits = [
-                splits[0],
-                *splits[1].split(maxsplit=1),
-                *splits[2:]
-            ]
+            splits = [splits[0], *splits[1].split(maxsplit=1), *splits[2:]]
         if splits[0] == "show_stats":
             splits = [split for split in splits if split]
         try:
@@ -662,11 +658,7 @@ class Interpreter:
         )
 
     def export(
-            self,
-            ext="",
-            full_name=FullName("", frozenset()),
-            from_="today",
-            to="today"
+        self, ext="", full_name=FullName("", frozenset()), from_="today", to="today"
     ):
         """Export tasks.
 

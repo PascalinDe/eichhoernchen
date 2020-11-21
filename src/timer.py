@@ -300,10 +300,7 @@ class Timer:
         :param FullName full_name: full_name
         """
         tasks = self.list(
-            from_=from_,
-            to=to,
-            full_name=full_name,
-            full_match=any(full_name)
+            from_=from_, to=to, full_name=full_name, full_match=any(full_name)
         )
         filename = (
             pathlib.Path(tempfile.gettempdir())
