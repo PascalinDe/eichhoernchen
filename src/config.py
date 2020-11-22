@@ -21,18 +21,13 @@
 
 
 # standard library imports
-import configparser
 import os
-import os.path
+import configparser
+
+from pathlib import Path
 
 # third party imports
 # library specific imports
-
-
-class ConfigFound(Exception):
-    """Raised when configuration file exists."""
-
-    pass
 
 
 class BadConfig(Exception):
@@ -47,15 +42,15 @@ class ConfigNotFound(Exception):
     pass
 
 
-def _create_config():
-    """Create configuration file."""
-    path = os.path.join(os.environ["HOME"], ".config/eichhoernchen.ini")
-    if os.path.exists(path):
-        raise ConfigFound(f"configuration file {path} already exists")
+def _create_config(path):
+    """Create configuration file.
+
+    :param str path: path to configuration file
+    """
     config = configparser.ConfigParser()
     config["database"] = {
         "dbname": "eichhoernchen.db",
-        "path": os.path.join(os.environ["HOME"], ".local/share"),
+        "path": Path(os.environ["HOME"]) / ".local" / "share",
     }
     with open(path, "w") as fp:
         config.write(fp)
@@ -67,6 +62,7 @@ def _validate_config(config):
     :param ConfigParser config: configuration
 
     :raises: BadConfig when required section or key(s) are missing
+    :raises: BadConfig when there are unknown commands in 'aliases' section
     """
     check = {"database": {"dbname", "path"}}
     for section, required in check.items():
@@ -110,11 +106,8 @@ def _read_config(path):
     :returns: configuration
     :rtype: ConfigParser
     """
-    if not os.path.exists(path):
-        raise ConfigNotFound(f"configuration file {path} does not exist")
-    else:
-        config = configparser.ConfigParser()
-        config.read(path)
+    config = configparser.ConfigParser()
+    config.read(path)
     _validate_config(config)
     return config
 
@@ -124,17 +117,18 @@ def load_config(path=""):
 
     :param str path: path to configuration file
 
+    :raises: ConfigNotFound when configuration file does not exist
     :raises: SystemExit when configuration file contains errors
 
     :returns: configuration
     :rtype: dict
     """
     if not path:
-        try:
-            _create_config()
-        except ConfigFound:
-            pass
         path = os.path.join(os.environ["HOME"], ".config/eichhoernchen.ini")
+        if not os.path.exists(path):
+            _create_config(path)
+    if not os.path.exists(path):
+        raise ConfigNotFound(f"configuration file {path} does not exist")
     try:
         return _read_config(path)
     except BadConfig as exception:
