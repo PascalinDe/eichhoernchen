@@ -324,7 +324,7 @@ def _get_time_period(from_, to):
     """
     return f"""WHERE date(time_span.start,'localtime')
 BETWEEN date('{from_}','localtime','start of day')
-AND date('{to}','localtime','start of day','+1 day')"""
+AND date('{to}','localtime','start of day')"""
 
 
 def _row(task):
