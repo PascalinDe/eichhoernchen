@@ -252,6 +252,7 @@ class TestInterpreter(unittest.TestCase):
             "stop": dict(),
             "add": {"full_name": full_name, "start": now, "end": now},
             "remove": {"full_name": full_name, "from_": now},
+            "clean_up": {},
             "edit": {"full_name": full_name, "from_": now, "to": now},
             "list": {"full_name": full_name, "from_": now, "to": now},
             "sum": {"summand": full_name, "from_": now, "to": now},

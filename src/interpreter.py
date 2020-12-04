@@ -271,6 +271,12 @@ class Interpreter:
                     },
                 },
             },
+            "clean_up": {
+                "description": "clean up tasks",
+                "aliases": aliases.get("clean_up", tuple()),
+                "func": self.clean_up,
+                "args": {},
+            },
             "edit": {
                 "description": "edit task",
                 "aliases": aliases.get("edit", tuple()),
@@ -566,6 +572,13 @@ class Interpreter:
             return (src.output_formatter.pprint_error(str(exception)),)
         self.timer.remove(task)
         return (src.output_formatter.pprint_info(f"removed {item}"),)
+
+    def clean_up(self):
+        """Clean up tasks."""
+        return (
+            src.output_formatter.pprint_task(task, date=True)
+            for task in self.timer.clean_up()
+        )
 
     def edit(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """Choose task to edit.

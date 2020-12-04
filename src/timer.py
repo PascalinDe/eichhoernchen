@@ -128,6 +128,24 @@ class Timer:
                 f"DELETE FROM {table} WHERE start=?", (task.time_span[0],)
             )
 
+    def clean_up(self):
+        """Clean tasks up.
+
+        :returns: tasks to clean up
+        :rtype: list
+        """
+        rows = self.sqlite.execute(
+            """SELECT running.start,name,tag
+            FROM running LEFT JOIN tagged ON running.start=tagged.start
+            JOIN time_span ON time_span.start=running.start
+            WHERE time_span.end IS NULL"""
+        )
+        tasks = []
+        for (start, name, tag), rows in itertools.groupby(rows, key=lambda x: x[:3]):
+            tags = {row[-1] for row in rows if row[-1]}
+            tasks.append(Task(name, tags, (start, datetime.datetime.now())))
+        return tasks
+
     def edit(self, task, action, *args):
         """Edit task.
 
