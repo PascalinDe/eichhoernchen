@@ -126,109 +126,6 @@ class TestTimer(unittest.TestCase):
             )
         connection.commit()
 
-    def test_list(self):
-        """Test listing tasks.
-
-        Trying: listing tasks
-        Expecting: list of tasks
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        now = datetime.datetime.now()
-        from_ = now - datetime.timedelta(days=now.weekday())
-        values = (
-            ("foo", {"bar"}, (now, now + datetime.timedelta(hours=1))),
-            ("baz", frozenset(), (from_, now)),
-            ("foobar", {"toto", "tata"}, (from_ - datetime.timedelta(days=1), now)),
-        )
-        self._insert(values)
-        expected = (
-            Task(name, tags, (start, end)) for name, tags, (start, end) in values[:2]
-        )
-        self.assertCountEqual(
-            timer.list(
-                from_.strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), full_match=False
-            ),
-            expected,
-        )
-
-    def test_sum_name(self):
-        """Test summing total time up.
-
-        Trying: summing up total time with a given name
-        Expecting: list of sums
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        now = datetime.datetime.now()
-        timedelta = datetime.timedelta(minutes=1)
-        values = (
-            ("foo", {"bar"}, (now, now + timedelta)),
-            ("foo", {}, (now + timedelta, now + 2 * timedelta)),
-            ("bar", {}, (now + 2 * timedelta, now + 3 * timedelta)),
-        )
-        self._insert(values)
-        expected = ((("foo", ("",)), int(2 * timedelta.total_seconds())),)
-        self.assertCountEqual(
-            timer.sum(
-                now.strftime("%Y-%m-%d"),
-                now.strftime("%Y-%m-%d"),
-                full_name=FullName("foo", frozenset()),
-                full_match=False,
-            ),
-            expected,
-        )
-
-    def test_sum_tags(self):
-        """Test summing total time up.
-
-        Trying: summing up total time with given tags
-        Expecting: list of sums
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        now = datetime.datetime.now()
-        timedelta = datetime.timedelta(minutes=1)
-        values = (
-            ("foo", {"bar"}, (now, now + timedelta)),
-            ("baz", {"bar"}, (now + timedelta, now + 2 * timedelta)),
-            ("foobar", {"toto"}, (now + 2 * timedelta, now + 3 * timedelta)),
-        )
-        self._insert(values)
-        expected = ((("", ("bar",)), int(2 * timedelta.total_seconds())),)
-        self.assertCountEqual(
-            timer.sum(
-                now.strftime("%Y-%m-%d"),
-                now.strftime("%Y-%m-%d"),
-                full_name=FullName("", {"bar"}),
-                full_match=False,
-            ),
-            expected,
-        )
-
-    def test_sum_full_name(self):
-        """Test summing total time up.
-
-        Trying: summing up total time with given full name
-        Expecting: list of sums
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        now = datetime.datetime.now()
-        timedelta = datetime.timedelta(minutes=1)
-        values = (
-            ("foo", frozenset(), (now, now + timedelta)),
-            ("foo", frozenset(), (now + timedelta, now + 2 * timedelta)),
-            ("foo", {"foobar"}, (now + 2 * timedelta, now + 3 * timedelta)),
-        )
-        self._insert(values)
-        expected = ((("foo", ("foobar",)), int(timedelta.total_seconds())),)
-        self.assertCountEqual(
-            timer.sum(
-                now.strftime("%Y-%m-%d"),
-                now.strftime("%Y-%m-%d"),
-                full_name=FullName("foo", {"foobar"}),
-                full_match=True,
-            ),
-            expected,
-        )
-
     def test_edit_name(self):
         """Test editing task.
 
@@ -479,6 +376,109 @@ class TestTimer(unittest.TestCase):
         end = start - datetime.timedelta(days=1)
         with self.assertRaises(ValueError):
             timer.add(FullName("foo", {"bar"}), start, end)
+
+    def test_list(self):
+        """Test listing tasks.
+
+        Trying: listing tasks
+        Expecting: list of tasks
+        """
+        timer = src.timer.Timer(self.DATABASE)
+        now = datetime.datetime.now()
+        from_ = now - datetime.timedelta(days=now.weekday())
+        values = (
+            ("foo", {"bar"}, (now, now + datetime.timedelta(hours=1))),
+            ("baz", frozenset(), (from_, now)),
+            ("foobar", {"toto", "tata"}, (from_ - datetime.timedelta(days=1), now)),
+        )
+        self._insert(values)
+        expected = (
+            Task(name, tags, (start, end)) for name, tags, (start, end) in values[:2]
+        )
+        self.assertCountEqual(
+            timer.list(
+                from_.strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), full_match=False
+            ),
+            expected,
+        )
+
+    def test_sum_name(self):
+        """Test summing total time up.
+
+        Trying: summing up total time with a given name
+        Expecting: list of sums
+        """
+        timer = src.timer.Timer(self.DATABASE)
+        now = datetime.datetime.now()
+        timedelta = datetime.timedelta(minutes=1)
+        values = (
+            ("foo", {"bar"}, (now, now + timedelta)),
+            ("foo", {}, (now + timedelta, now + 2 * timedelta)),
+            ("bar", {}, (now + 2 * timedelta, now + 3 * timedelta)),
+        )
+        self._insert(values)
+        expected = ((("foo", ("",)), int(2 * timedelta.total_seconds())),)
+        self.assertCountEqual(
+            timer.sum(
+                now.strftime("%Y-%m-%d"),
+                now.strftime("%Y-%m-%d"),
+                full_name=FullName("foo", frozenset()),
+                full_match=False,
+            ),
+            expected,
+        )
+
+    def test_sum_tags(self):
+        """Test summing total time up.
+
+        Trying: summing up total time with given tags
+        Expecting: list of sums
+        """
+        timer = src.timer.Timer(self.DATABASE)
+        now = datetime.datetime.now()
+        timedelta = datetime.timedelta(minutes=1)
+        values = (
+            ("foo", {"bar"}, (now, now + timedelta)),
+            ("baz", {"bar"}, (now + timedelta, now + 2 * timedelta)),
+            ("foobar", {"toto"}, (now + 2 * timedelta, now + 3 * timedelta)),
+        )
+        self._insert(values)
+        expected = ((("", ("bar",)), int(2 * timedelta.total_seconds())),)
+        self.assertCountEqual(
+            timer.sum(
+                now.strftime("%Y-%m-%d"),
+                now.strftime("%Y-%m-%d"),
+                full_name=FullName("", {"bar"}),
+                full_match=False,
+            ),
+            expected,
+        )
+
+    def test_sum_full_name(self):
+        """Test summing total time up.
+
+        Trying: summing up total time with given full name
+        Expecting: list of sums
+        """
+        timer = src.timer.Timer(self.DATABASE)
+        now = datetime.datetime.now()
+        timedelta = datetime.timedelta(minutes=1)
+        values = (
+            ("foo", frozenset(), (now, now + timedelta)),
+            ("foo", frozenset(), (now + timedelta, now + 2 * timedelta)),
+            ("foo", {"foobar"}, (now + 2 * timedelta, now + 3 * timedelta)),
+        )
+        self._insert(values)
+        expected = ((("foo", ("foobar",)), int(timedelta.total_seconds())),)
+        self.assertCountEqual(
+            timer.sum(
+                now.strftime("%Y-%m-%d"),
+                now.strftime("%Y-%m-%d"),
+                full_name=FullName("foo", {"foobar"}),
+                full_match=True,
+            ),
+            expected,
+        )
 
     def test_export_to_csv(self):
         """Test exporting tasks.
