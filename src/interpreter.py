@@ -272,7 +272,7 @@ class Interpreter:
                 },
             },
             "clean_up": {
-                "description": "clean up tasks",
+                "description": "list buggy tasks to clean up",
                 "aliases": aliases.get("clean_up", tuple()),
                 "func": self.clean_up,
                 "args": {},
@@ -574,7 +574,7 @@ class Interpreter:
         return (src.output_formatter.pprint_info(f"removed {item}"),)
 
     def clean_up(self):
-        """Clean up tasks."""
+        """List buggy tasks to clean up."""
         return (
             src.output_formatter.pprint_task(task, date=True)
             for task in self.timer.clean_up()

@@ -129,22 +129,24 @@ class Timer:
             )
 
     def clean_up(self):
-        """Clean tasks up.
+        """List buggy tasks to clean up.
 
-        :returns: tasks to clean up
-        :rtype: list
+        :returns: buggy task to clean up
+        :rtype: Task
         """
         rows = self.sqlite.execute(
             """SELECT running.start,name,tag
-            FROM running LEFT JOIN tagged ON running.start=tagged.start
+            FROM running
+            LEFT JOIN tagged ON running.start=tagged.start
             JOIN time_span ON time_span.start=running.start
             WHERE time_span.end IS NULL"""
         )
-        tasks = []
         for (start, name, tag), rows in itertools.groupby(rows, key=lambda x: x[:3]):
-            tags = {row[-1] for row in rows if row[-1]}
-            tasks.append(Task(name, tags, (start, datetime.datetime.now())))
-        return tasks
+            yield Task(
+                name,
+                {row[-1] for row in rows if row[-1]},
+                (start, datetime.datetime.now()),
+            )
 
     def edit(self, task, action, *args):
         """Edit task.

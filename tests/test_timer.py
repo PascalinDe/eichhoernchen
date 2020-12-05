@@ -109,10 +109,13 @@ class TestTimer(unittest.TestCase):
         """
         timer = src.timer.Timer(self.DATABASE)
         connection = timer.sqlite.connect()
-        connection.executemany(
-            "INSERT INTO time_span (start,end) VALUES (?,?)",
-            ((start, end) for _, _, (start, end) in values if end),
-        )
+        for _, _, (start, end) in values:
+            if end:
+                connection.execute(
+                    "INSERT INTO time_span (start,end) VALUES (?,?)", (start, end)
+                )
+            else:
+                connection.execute("INSERT INTO time_span (start) VALUES (?)", (start,))
         connection.commit()
         connection.executemany(
             "INSERT INTO running (name,start) VALUES (?,?)",
@@ -303,21 +306,26 @@ class TestTimer(unittest.TestCase):
             timer.remove(task=timer.task)
 
     def test_clean_up(self):
-        """Test cleaning up tasks.
+        """Test listing buggy tasks.
 
-        Trying: cleaning up tasks
-        Expecting: tasks to clean up
+        Trying: listing buggy tasks
+        Expecting: buggy tasks
         """
         timer = src.timer.Timer(self.DATABASE)
         now = datetime.datetime.now()
+        timedelta = datetime.timedelta(hours=1)
         values = (
             ("foo", {"bar"}, (now, None)),
-            ("baz", frozenset(), (now + datetime.timedelta(hours=1), None)),
-            ("foobar", {"toto", "tata"}, (now - datetime.timedelta(hours=1), now)),
+            ("baz", frozenset(), (now + timedelta, None)),
+            ("foobar", {"toto", "tata"}, (now - timedelta, now)),
         )
         self._insert(values)
+        actual = (
+            Task(task.name, task.tags, (task.time_span[0], None))
+            for task in timer.clean_up()
+        )
         self.assertCountEqual(
-            timer.clean_up(),
+            actual,
             (Task(name, tags, time_span) for name, tags, time_span in values[:-1]),
         )
 
