@@ -188,7 +188,7 @@ def parse_datetime(date_string, keywords=tuple()):
             continue
         if format_string == "%H:%M":
             now = datetime.datetime.now()
-            date_string = f"{now.year}-{now.month}-{now.day} {date_string}"
+            date_string = f"{now.year:04}-{now.month:02}-{now.day:02} {date_string}"
         return date_string
     else:
         raise ValueError(f"'{date_string}' does not match any format")
@@ -549,9 +549,9 @@ class Interpreter:
                 "%Y-%m-%d"
             )
         if endpoint == "month":
-            return f"{today.year}-{today.month:02}-01"
+            return f"{today.year:04}-{today.month:02}-01"
         if endpoint == "year":
-            return f"{today.year}-01-01"
+            return f"{today.year:04}-01-01"
         if endpoint == "all":
             return "0000-01-01"
         return endpoint
