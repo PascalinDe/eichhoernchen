@@ -316,8 +316,8 @@ class TestTimer(unittest.TestCase):
         timedelta = datetime.timedelta(hours=1)
         values = (
             ("foo", {"bar"}, (now, None)),
-            ("baz", frozenset(), (now + timedelta, None)),
-            ("foobar", {"toto", "tata"}, (now - timedelta, now)),
+            ("baz", {"foobar", "toto"}, (now + timedelta, None)),
+            ("tata", frozenset(), (now - timedelta, now)),
         )
         self._insert(values)
         actual = (

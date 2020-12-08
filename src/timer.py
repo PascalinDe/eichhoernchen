@@ -141,7 +141,7 @@ class Timer:
             JOIN time_span ON time_span.start=running.start
             WHERE time_span.end IS NULL"""
         )
-        for (start, name, tag), rows in itertools.groupby(rows, key=lambda x: x[:3]):
+        for (start, name), rows in itertools.groupby(rows, key=lambda x: x[:2]):
             yield Task(
                 name,
                 {row[-1] for row in rows if row[-1]},
