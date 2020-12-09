@@ -32,7 +32,7 @@ import curses.panel
 # library specific imports
 from src.cutils import initialize_colour, mk_panel, ResizeError, WindowManager
 from src.interpreter import Interpreter, InterpreterError
-from src.output_formatter import pprint_info, pprint_prompt
+from src.output_formatter import pprint_prompt
 
 
 def _loop(stdscr, config):
@@ -79,7 +79,9 @@ def _loop(stdscr, config):
                 window_mgr.writelines(*window_mgr.window.getyx(), output)
         except (EOFError, KeyboardInterrupt):
             window_mgr.mv_down_or_scroll_down()
-            window_mgr.writeline(*window_mgr.window.getyx(), pprint_info("Goodbye!"))
+            window_mgr.writeline(
+                *window_mgr.window.getyx(), (("Goodbye!", curses.color_pair(0)),)
+            )
             window.refresh()
             time.sleep(0.5)
             raise SystemExit
