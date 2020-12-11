@@ -43,14 +43,18 @@ def _loop(stdscr, config):
 
     :raises: SystemExit when Control+C is pressed
     """
-    panel = mk_panel(*stdscr.getmaxyx(), 0, 0)
-    window = panel.window()
-    window_mgr = WindowManager(window, banner=True)
-    interpreter = Interpreter(
-        os.path.join(config["database"]["path"], config["database"]["dbname"]),
+    aliases = (
         {k: json.loads(v) for k, v in config["aliases"].items()}
         if "aliases" in config
-        else {},
+        else {}
+    )
+    interpreter = Interpreter(
+        os.path.join(config["database"]["path"], config["database"]["dbname"]), aliases
+    )
+    panel = mk_panel(*stdscr.getmaxyx(), 0, 0)
+    window = panel.window()
+    window_mgr = WindowManager(
+        window, banner=True, commands=(*aliases.keys(), *interpreter.subcommands.keys())
     )
     while True:
         try:

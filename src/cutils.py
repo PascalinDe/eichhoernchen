@@ -26,6 +26,9 @@ import unicodedata
 import curses
 import curses.panel
 
+from difflib import SequenceMatcher
+from collections import defaultdict
+
 # third party imports
 # library specific imports
 
@@ -46,18 +49,21 @@ class WindowManager:
     :ivar list upper_stack: stack (upper window)
     :ivar list lower_stack: stack (lower window)
     :ivar bool box: whether a border is drawn around the edges
+    :ivar tuple commands: valid commands
     """
 
-    def __init__(self, window, box=False, banner=False):
+    def __init__(self, window, box=False, banner=False, commands=tuple()):
         """Initialize window manager.
 
         :param window window: window
         :param bool box: toggle drawing a border around the edges on/off
         :param bool banner: toggle adding a banner on/off
+        :param tuple commands: valid commands
         """
         self.window = window
         self.box = box
         self.banner = banner
+        self.commands = commands
         self.reinitialize()
         self.window.idlok(True)
         self.window.keypad(True)
@@ -112,6 +118,36 @@ class WindowManager:
                 raise KeyboardInterrupt
             if ch == "\x04":
                 raise EOFError
+            if ch == "\x09":
+                if " " in buffer:
+                    continue
+                y, _ = self.window.getyx()
+                multi_part_line = self.scrapeline(y)
+                self.window.move(y, 0)
+                z = len(buffer)
+                self.completeline(buffer)
+                if z == len(buffer):
+                    y, _ = self.window.getyx()
+                    self.writeline(
+                        y,
+                        0,
+                        ((multi_part_line[0][0].strip(), multi_part_line[0][1]),),
+                        move=False,
+                    )
+                else:
+                    self.writeline(
+                        y,
+                        0,
+                        (
+                            (
+                                multi_part_line[0][0].strip() + "".join(buffer[z:]),
+                                multi_part_line[0][1],
+                            ),
+                        ),
+                        move=False,
+                    )
+                    i = len(buffer)
+                continue
             if ch in (curses.KEY_DOWN, curses.KEY_UP):
                 if not scroll:
                     continue
@@ -241,6 +277,35 @@ class WindowManager:
         if buffer:
             multi_part_line.append(("".join(buffer), attr))
         return multi_part_line
+
+    def completeline(self, buffer):
+        """Complete line.
+
+        :param list buffer: buffer
+        """
+        if not buffer:
+            commands = self.commands
+        else:
+            matchers = defaultdict(list)
+            for command in self.commands:
+                matcher = SequenceMatcher(
+                    None, "".join(buffer), command
+                ).find_longest_match(0, len(buffer))
+                if matcher.b > 0:
+                    continue
+                if matcher.size < len(buffer):
+                    continue
+                matchers[matcher.size].append(command)
+            commands = sorted(matchers.items(), key=lambda x: x[0], reverse=True)[0][1]
+            if len(commands) == 1:
+                buffer.clear()
+                buffer += [*commands[0]]
+                return
+        y, x = self.window.getyx()
+        y += 1
+        self.writelines(
+            y, x, tuple(((command, curses.color_pair(0)),) for command in commands)
+        )
 
     def scroll_up(self):
         """Scroll up."""
