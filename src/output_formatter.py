@@ -77,7 +77,7 @@ def pprint_time_span(time_span, date=False):
     :rtype: tuple
     """
     if date:
-        if (time_span[1] - time_span[0]).days >= 1:
+        if time_span[0].date() != time_span[1].date():
             start = time_span[0].strftime("%Y-%m-%d %H:%M")
         else:
             start = time_span[0].strftime("%H:%M")
