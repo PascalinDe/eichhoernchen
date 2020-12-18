@@ -148,16 +148,16 @@ class WindowManager:
                     )
                     i = len(buffer)
                 continue
-            if ch in (curses.KEY_DOWN, curses.KEY_UP):
+            if isinstance(ch, int) and curses.keyname(ch) in (b"kDN5", b"kUP5"):
                 if not scroll:
                     continue
-            if ch == curses.KEY_DOWN:
+            if isinstance(ch, int) and curses.keyname(ch) == b"kDN5":
                 if y < max_y and self.lower_stack:
                     self.scroll_down()
                     if not self.lower_stack:
                         self.window.move(y, len(self.scrapeline(y)[0][0].strip()))
                 continue
-            if ch == curses.KEY_UP:
+            if isinstance(ch, int) and curses.keyname(ch) == b"kUP5":
                 if y > 2 or len(self.upper_stack) > 1:
                     self.scroll_up()
                 continue
