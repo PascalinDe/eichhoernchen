@@ -608,7 +608,9 @@ class Interpreter:
                 ),
             )
         try:
-            arg = (_name, _tags, _from, _to)[i](readline(prompt=f"new {actions[i]} >"))
+            arg = (_name, _tags, _from, _to)[i](
+                readline(prompt=((f"new {actions[i]} >", curses.color_pair(0)),))
+            )
         except EOFError:
             return (
                 src.output_formatter.pprint_error(

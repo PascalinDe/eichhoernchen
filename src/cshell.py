@@ -58,12 +58,10 @@ def _loop(stdscr, config):
     )
     while True:
         try:
-            y, _ = window.getyx()
-            window_mgr.writeline(
-                y, 0, pprint_prompt(task=interpreter.timer.task), move=False
-            )
             try:
-                line = window_mgr.readline(scroll=True)
+                line = window_mgr.readline(
+                    prompt=pprint_prompt(task=interpreter.timer.task), scroll=True
+                )
             except ResizeError:
                 window_mgr.reinitialize()
                 continue

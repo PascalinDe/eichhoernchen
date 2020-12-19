@@ -83,11 +83,11 @@ class WindowManager:
             y, _ = self.window.getyx()
             self.window.move(y + 2, 0)
 
-    def readline(self, y=-1, prompt="", scroll=False, clear=False):
+    def readline(self, y=-1, prompt=tuple(), scroll=False, clear=False):
         """Read line.
 
         :param int y: y position
-        :param str prompt: prompt
+        :param tuple prompt: prompt
         :param bool scroll: toggle scrolling on/off
         :param bool clear: toggle clearing line on/off
 
@@ -102,8 +102,8 @@ class WindowManager:
             x += 1
         min_x = x
         if prompt:
-            self.window.addstr(y, x, prompt)
-            min_x += len(prompt)
+            self.writeline(y, x, prompt, move=False)
+            min_x += len(prompt[0][0])
         buffer = []
         i = 0
         while True:
@@ -386,7 +386,9 @@ def mk_menu(items):
         line = ""
         try:
             while line not in (str(i) for i in range(1, len(items) + 1)):
-                line = window_mgr.readline(y=y, prompt=">", scroll=True, clear=True)
+                line = window_mgr.readline(
+                    y=y, prompt=((">", curses.color_pair(0)),), scroll=True, clear=True
+                )
         except EOFError:
             return -1
         except ResizeError:
@@ -401,10 +403,10 @@ def mk_menu(items):
     return int(line) - 1
 
 
-def readline(prompt=""):
+def readline(prompt=tuple()):
     """Read line.
 
-    :param str prompt: prompt
+    :param tuple prompt: prompt
 
     :returns: line
     :rtype: str
@@ -451,7 +453,9 @@ def mk_stats(stats):
         try:
             line = ""
             while line != "q":
-                line = window_mgr.readline(y=y, prompt=">", scroll=True, clear=True)
+                line = window_mgr.readline(
+                    y=y, prompt=((">", curses.color_pair(0)),), scroll=True, clear=True
+                )
         except EOFError:
             return
         except ResizeError:
