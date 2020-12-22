@@ -56,11 +56,14 @@ def _loop(stdscr, config):
     window_mgr = WindowManager(
         window, banner=True, commands=(*aliases.keys(), *interpreter.subcommands.keys())
     )
+    history = []
     while True:
         try:
             try:
                 line = window_mgr.readline(
-                    prompt=pprint_prompt(task=interpreter.timer.task), scroll=True
+                    history,
+                    prompt=pprint_prompt(task=interpreter.timer.task),
+                    scroll=True,
                 )
             except ResizeError:
                 window_mgr.reinitialize()
@@ -79,6 +82,7 @@ def _loop(stdscr, config):
             else:
                 window_mgr.mv_down_or_scroll_down()
                 window_mgr.writelines(*window_mgr.window.getyx(), output)
+                history.append(line)
         except (EOFError, KeyboardInterrupt):
             window_mgr.mv_down_or_scroll_down()
             window_mgr.writeline(

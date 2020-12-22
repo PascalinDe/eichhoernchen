@@ -83,9 +83,10 @@ class WindowManager:
             y, _ = self.window.getyx()
             self.window.move(y + 2, 0)
 
-    def readline(self, y=-1, prompt=tuple(), scroll=False, clear=False):
+    def readline(self, history, y=-1, prompt=tuple(), scroll=False, clear=False):
         """Read line.
 
+        :param list history: command history
         :param int y: y position
         :param tuple prompt: prompt
         :param bool scroll: toggle scrolling on/off
@@ -106,6 +107,9 @@ class WindowManager:
             min_x += len(prompt[0][0])
         buffer = []
         i = 0
+        history_up = history.copy()
+        history_down = []
+        command = ""
         while True:
             if self.box:
                 self.window.box()
@@ -147,6 +151,39 @@ class WindowManager:
                         move=False,
                     )
                     i = len(buffer)
+                continue
+            if ch in (curses.KEY_DOWN, curses.KEY_UP):
+                old_length = len(command)
+                if ch == curses.KEY_DOWN:
+                    if not history_down:
+                        continue
+                    history_up.append(command)
+                    command = history_down.pop()
+                if ch == curses.KEY_UP:
+                    if not history_up:
+                        continue
+                    history_down.append(command)
+                    command = history_up.pop()
+                length = sum(len(part[0]) for part in prompt)
+                if length + old_length > max_x:
+                    self.window.move(y, 0)
+                    self.window.clrtoeol()
+                    y = y - 1
+                buffer = list(command)
+                self.window.move(y, 0)
+                self.window.clrtoeol()
+                self.writeline(
+                    y,
+                    0,
+                    prompt,
+                    move=False
+                )
+                self.writeline(
+                    y,
+                    length,
+                    (("".join(buffer), curses.color_pair(0)),),
+                    move=False
+                )
                 continue
             if isinstance(ch, int) and curses.keyname(ch) in (b"kDN5", b"kUP5"):
                 if not scroll:
