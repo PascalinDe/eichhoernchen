@@ -1,5 +1,5 @@
 # eichhoernchen
-[![Build Status](https://www.travis-ci.org/PascalinDe/eichhoernchen.svg?branch=master)](https://www.travis-ci.org/PascalinDe/eichhoernchen)
+[![Build Status](https://github.com/PascalinDe/eichhoernchen/workflows/Python%20package/badge.svg)](https://github.com/PascalinDe/eichhoernchen/actions/runs/)
 [![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 Lightweight curses-based time tracking tool.
