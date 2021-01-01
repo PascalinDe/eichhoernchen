@@ -172,17 +172,9 @@ class WindowManager:
                 buffer = list(command)
                 self.window.move(y, 0)
                 self.window.clrtoeol()
+                self.writeline(y, 0, prompt, move=False)
                 self.writeline(
-                    y,
-                    0,
-                    prompt,
-                    move=False
-                )
-                self.writeline(
-                    y,
-                    length,
-                    (("".join(buffer), curses.color_pair(0)),),
-                    move=False
+                    y, length, (("".join(buffer), curses.color_pair(0)),), move=False
                 )
                 continue
             if isinstance(ch, int) and curses.keyname(ch) in (b"kDN5", b"kUP5"):
