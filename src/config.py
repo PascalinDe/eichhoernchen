@@ -86,6 +86,7 @@ def _validate_config(config):
         "export",
         "help",
         "aliases",
+        "clean_up",
     }
     try:
         unknown = ",".join(
