@@ -33,7 +33,7 @@ FullName = collections.namedtuple(
 )
 
 
-_Task = collections.namedtuple("Task", ["name", "tags", "time_span"])
+_Task = collections.namedtuple("Task", ("name", "tags", "time_span"))
 
 
 class Task(_Task):
