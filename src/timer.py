@@ -316,8 +316,11 @@ class Timer:
 
         :param str ext: file format
         :param str from_: start of time period
-        :param str end: end of time period
+        :param str to: end of time period
         :param FullName full_name: full_name
+
+        :returns: filename
+        :rtype: str
         """
         tasks = self.list(
             from_=from_, to=to, full_name=full_name, full_match=any(full_name)
