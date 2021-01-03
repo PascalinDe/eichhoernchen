@@ -126,6 +126,8 @@ def _to(to):
 
     :param str to: string containing to
 
+    :raises ArgumentTypeError: when string does not contain to
+
     :returns: to
     :rtype: str
     """
@@ -472,8 +474,8 @@ class Interpreter:
         """Add task.
 
         :param FullName full_name: full name
-        :param str from_: from
-        :param str to: to
+        :param str start: start of time period
+        :param str end: end of time period
 
         :returns: confirmation or error message
         :rtype: tuple
@@ -506,6 +508,8 @@ class Interpreter:
         :param FullName full_name: full name
         :param str from_: from
         :param str to: to
+
+        :raises RuntimeError: if task does not exist or operation has been aborted
 
         :returns: task and pretty-printed task
         :rtype: tuple
@@ -654,10 +658,9 @@ class Interpreter:
     def sum(self, summand=FullName("", frozenset()), from_="today", to="today"):
         """Sum total time up.
 
-        :param FullName full_name: full name
+        :param FullName summand: full name
         :param str from_: start of time period
         :param str to: end of time period
-        :param bool full_match: toggle matching full name on/off
 
         :returns: summed up total time per task
         :rtype: tuple
