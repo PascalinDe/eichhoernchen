@@ -130,27 +130,13 @@ class WindowManager:
                 self.window.move(y, 0)
                 z = len(buffer)
                 self.completeline(buffer)
+                part = multi_part_line[0][0].strip()
                 if z == len(buffer):
                     y, _ = self.window.getyx()
-                    self.writeline(
-                        y,
-                        0,
-                        ((multi_part_line[0][0].strip(), multi_part_line[0][1]),),
-                        move=False,
-                    )
                 else:
-                    self.writeline(
-                        y,
-                        0,
-                        (
-                            (
-                                multi_part_line[0][0].strip() + "".join(buffer[z:]),
-                                multi_part_line[0][1],
-                            ),
-                        ),
-                        move=False,
-                    )
+                    part = part + "".join(buffer[z:])
                     i = len(buffer)
+                self.writeline(y, 0, ((part, multi_part_line[0][1]),), move=False)
                 continue
             if ch in (curses.KEY_DOWN, curses.KEY_UP):
                 old_length = len(command)
