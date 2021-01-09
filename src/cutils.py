@@ -126,17 +126,16 @@ class WindowManager:
                 if " " in buffer:
                     continue
                 y, _ = self.window.getyx()
-                multi_part_line = self.scrapeline(y)
-                self.window.move(y, 0)
                 z = len(buffer)
                 self.completeline(buffer)
-                part = multi_part_line[0][0].strip()
+                multi_part_line = (*prompt, ("".join(buffer), curses.color_pair(0)))
                 if z == len(buffer):
                     y, _ = self.window.getyx()
                 else:
-                    part = part + "".join(buffer[z:])
                     i = len(buffer)
-                self.writeline(y, 0, ((part, multi_part_line[0][1]),), move=False)
+                    self.window.move(y, 0)
+                    self.window.clrtoeol()
+                self.writeline(y, 0, multi_part_line, move=False)
                 continue
             if ch in (curses.KEY_DOWN, curses.KEY_UP):
                 old_length = len(command)
