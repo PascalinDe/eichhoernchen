@@ -402,7 +402,11 @@ def mk_menu(items):
         try:
             while line not in (str(i) for i in range(1, len(items) + 1)):
                 line = window_mgr.readline(
-                    y=y, prompt=((">", curses.color_pair(0)),), scroll=True, clear=True
+                    [],
+                    y=y,
+                    prompt=((">", curses.color_pair(0)),),
+                    scroll=True,
+                    clear=True,
                 )
         except EOFError:
             return -1
@@ -433,7 +437,7 @@ def readline(prompt=tuple()):
             )
             window = panel.window()
             window_mgr = WindowManager(window, box=True)
-            line = window_mgr.readline(prompt=prompt, y=1)
+            line = window_mgr.readline([], prompt=prompt, y=1)
         except ResizeError:
             panel.bottom()
             window.reinitialize()
@@ -469,7 +473,11 @@ def mk_stats(stats):
             line = ""
             while line != "q":
                 line = window_mgr.readline(
-                    y=y, prompt=((">", curses.color_pair(0)),), scroll=True, clear=True
+                    [],
+                    y=y,
+                    prompt=((">", curses.color_pair(0)),),
+                    scroll=True,
+                    clear=True,
                 )
         except EOFError:
             return
