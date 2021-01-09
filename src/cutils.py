@@ -209,6 +209,8 @@ class WindowManager:
                     self.window.delch(y, x)
                     continue
             if ch in (curses.KEY_BACKSPACE, 8, 127):
+                if not buffer:
+                    continue
                 if x > min_x:
                     i -= 1
                     x -= 1
