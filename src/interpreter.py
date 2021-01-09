@@ -729,6 +729,9 @@ class Interpreter:
 
         :param str from_: from
         :param str to: to
+
+        :returns: empty message
+        :rtype: tuple
         """
         tasks = tuple(
             self.timer.list(
@@ -737,7 +740,7 @@ class Interpreter:
                 full_match=False,
             )
         )
-        from_ = tasks[0].time_span[0].strftime("%Y-%m-%d")
+        from_ = tasks[0].time_span[0].strftime("%Y-%m-%d") if tasks else from_
         heading = self.pprint_heading(from_, to)
         stats = (
             heading,
