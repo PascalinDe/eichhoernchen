@@ -104,7 +104,7 @@ class WindowManager:
         min_x = x
         if prompt:
             self.writeline(y, x, prompt, move=False)
-            min_x += len(prompt[0][0])
+            min_x += sum(len(part[0]) for part in prompt)
         buffer = []
         i = 0
         history_up = history.copy()
@@ -209,8 +209,6 @@ class WindowManager:
                     self.window.delch(y, x)
                     continue
             if ch in (curses.KEY_BACKSPACE, 8, 127):
-                if not buffer:
-                    continue
                 if x > min_x:
                     i -= 1
                     x -= 1
