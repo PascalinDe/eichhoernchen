@@ -27,7 +27,7 @@ import curses
 import curses.panel
 
 from difflib import SequenceMatcher
-from collections import defaultdict
+from collections import defaultdict, UserList
 
 # third party imports
 # library specific imports
@@ -40,6 +40,80 @@ class ResizeError(Exception):
     """Raised when window has been resized."""
 
     pass
+
+
+class Buffer(UserList):
+    """Buffer."""
+
+    def __init__(self, iterable=()):
+        self._pos = len(iterable)
+        super().__init__(iterable)
+
+    @property
+    def pos(self):
+        return self._pos
+
+    @property
+    def cursor(self):
+        if not self.data:
+            raise IndexError("empty buffer")
+        return self.data[self._pos]
+
+    def append(self, x):
+        if self._pos == len(self.data) - 1:
+            self._pos += 1
+        super().append(x)
+
+    def extend(self, iterable):
+        if self._pos == len(self.data) - 1:
+            self._pos += len(iterable)
+        super().extend(iterable)
+
+    def insert(self, i, x):
+        if self._pos >= i:
+            self._pos += 1
+        super().insert(i, x)
+
+    def remove(self, x):
+        try:
+            i = self.data.index(x)
+        except ValueError:
+            pass
+        else:
+            if (self._pos == i and self._pos > 0) or self._pos > i:
+                self._pos -= 1
+        super().remove(x)
+
+    def pop(self, index=-1):
+        if self._pos > 0 and self._pos >= index:
+            self._pos -= 1
+        return super().pop(index)
+
+    def clear(self):
+        self._pos = 0
+        super().clear()
+
+    def reverse(self):
+        self._pos = (len(self.data) - 1) - self._pos
+        super().reverse()
+
+    def move(self, n):
+        """Move cursor position n steps to the right.
+
+        :param int n: number of steps
+        """
+        if self._pos + n <= len(self.data) and self._pos + n >= 0:
+            self._pos += n
+        else:
+            raise IndexError("new position out of range")
+
+    def move_to_start(self):
+        """Move cursor position to start."""
+        self._pos = 0
+
+    def move_to_end(self):
+        """Move cursor position to end."""
+        self._pos = len(self.data) - 1
 
 
 class WindowManager:
@@ -105,8 +179,7 @@ class WindowManager:
         if prompt:
             self.writeline(y, x, prompt, move=False)
             min_x += sum(len(part[0]) for part in prompt)
-        buffer = []
-        i = 0
+        buffer = Buffer()
         history_up = history.copy()
         history_down = []
         command = ""
@@ -132,7 +205,7 @@ class WindowManager:
                 if z == len(buffer):
                     y, _ = self.window.getyx()
                 else:
-                    i = len(buffer)
+                    buffer.move_to_end()
                     self.window.move(y, 0)
                     self.window.clrtoeol()
                 self.writeline(y, 0, multi_part_line, move=False)
@@ -154,7 +227,7 @@ class WindowManager:
                     self.window.move(y, 0)
                     self.window.clrtoeol()
                     y = y - 1
-                buffer = list(command)
+                buffer = Buffer(command)
                 self.window.move(y, 0)
                 self.window.clrtoeol()
                 self.writeline(y, 0, prompt, move=False)
@@ -185,47 +258,46 @@ class WindowManager:
                 break
             if ch == curses.KEY_LEFT:
                 if x > min_x:
-                    i -= 1
+                    buffer.move(-1)
                     self.window.move(y, x - 1)
                     continue
-                if len(buffer) > 0 and i > 0:
-                    i -= 1
-                    self.window.insstr(y, x, buffer[i])
+                if len(buffer) > 0 and buffer.pos > 0:
+                    buffer.move(-1)
+                    self.window.insstr(y, x, buffer.cursor)
                     continue
             if ch == curses.KEY_RIGHT:
                 if x < max_x - 1:
-                    if i < len(buffer):
-                        i += 1
+                    if buffer.pos < len(buffer):
+                        buffer.move(1)
                         self.window.move(y, x + 1)
                     continue
-                if i < len(buffer) - 1:
+                if buffer.pos < len(buffer) - 1:
                     self.window.delch(y, min_x)
-                    i += 1
-                    self.window.insstr(y, x, buffer[i])
+                    buffer.move(1)
+                    self.window.insstr(y, x, buffer.cursor)
                     continue
                 if self.window.instr(y, x, 1).decode(encoding="utf-8") == buffer[-1]:
                     self.window.delch(y, min_x)
-                    i += 1
+                    buffer.move(1)
                     self.window.delch(y, x)
                     continue
             if ch in (curses.KEY_BACKSPACE, 8, 127):
                 if x > min_x:
-                    i -= 1
+                    buffer.move(-1)
                     x -= 1
-                    buffer.pop(i)
+                    buffer.pop(buffer.pos)
                     if self.box:
                         self.window.delch(y, max_x - 1)
                     self.window.delch(y, x)
-                    if len(buffer) > max_x - (min_x + 2) and i >= x - 1:
-                        self.window.insstr(y, min_x, buffer[(i - x) + 1])
+                    if len(buffer) > max_x - (min_x + 2) and buffer.pos >= x - 1:
+                        self.window.insstr(y, min_x, buffer[(buffer.pos - x) + 1])
                         self.window.move(y, x + 1)
                 continue
             if isinstance(ch, int):
                 continue
             if unicodedata.category(ch).startswith("C"):
                 continue
-            buffer.insert(i, ch)
-            i += 1
+            buffer.insert(buffer.pos, ch)
             if x < max_x - 1:
                 x += 1
             else:
