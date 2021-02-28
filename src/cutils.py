@@ -321,7 +321,10 @@ class WindowManager:
         :param bool move: toggle moving cursor down on/off
         """
         for line, attr in multi_part_line:
-            self.window.addstr(y, x, line, attr)
+            try:
+                self.window.addstr(y, x, line, attr)
+            except Exception as exception:
+                raise Exception(f"'{line}' at ({y},{x}): {exception}") from exception
             x += len(line)
         if move:
             self.mv_down_or_scroll_down()
