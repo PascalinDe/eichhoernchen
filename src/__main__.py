@@ -22,6 +22,7 @@
 
 # standard library imports
 import curses
+import logging
 import argparse
 
 # third party imports
@@ -30,13 +31,16 @@ import argparse
 import src.config
 import src.cshell
 
+prog = "eichhoernchen"
 __version__ = "2.1"
 
 
 def main():
     """Main function."""
+    logging.basicConfig(filename=f"/tmp/{prog}.log", level=logging.DEBUG)
+    logger = logging.getLogger(__name__)
     parser = argparse.ArgumentParser(
-        prog="eichhoernchen", description="Lightweight curses-based time tracking tool."
+        prog=prog, description="Lightweight curses-based time tracking tool."
     )
     parser.add_argument("-c", "--config", help="use this configuration file")
     parser.add_argument(
@@ -46,7 +50,7 @@ def main():
     try:
         curses.wrapper(src.cshell.launch, config)
     except Exception as exception:
-        print(exception)
+        logger.exception(exception)
 
 
 main()
