@@ -51,6 +51,7 @@ def main():
         curses.wrapper(src.cshell.launch, config)
     except Exception as exception:
         logger.exception(exception)
+        raise SystemExit("an unexpected error occurred")
 
 
 main()
