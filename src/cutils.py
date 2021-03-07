@@ -22,6 +22,7 @@
 
 # standard library imports
 import os
+import logging
 import unicodedata
 import curses
 import curses.panel
@@ -124,6 +125,7 @@ class WindowManager:
     :ivar list lower_stack: stack (lower window)
     :ivar bool box: whether a border is drawn around the edges
     :ivar tuple commands: valid commands
+    :ivar Logger logger: logger
     """
 
     def __init__(self, window, box=False, banner=False, commands=tuple()):
@@ -138,6 +140,7 @@ class WindowManager:
         self.box = box
         self.banner = banner
         self.commands = commands
+        self.logger = logging.getLogger().getChild(__name__)
         self.reinitialize()
         self.window.idlok(True)
         self.window.keypad(True)
