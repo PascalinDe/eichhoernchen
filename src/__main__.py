@@ -37,8 +37,12 @@ __version__ = "2.1"
 
 def main():
     """Main function."""
-    logging.basicConfig(filename=f"/tmp/{prog}.log", level=logging.DEBUG)
-    logger = logging.getLogger(__name__)
+    logging.basicConfig(
+        filename=f"/tmp/{prog}.log",
+        format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
+        level=logging.DEBUG,
+    )
+    logger = logging.getLogger(main.__name__)
     parser = argparse.ArgumentParser(
         prog=prog, description="Lightweight curses-based time tracking tool."
     )
