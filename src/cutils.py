@@ -225,6 +225,7 @@ class WindowManager:
                         self.window.move(y, 0)
                         self.window.clrtoeol()
                     self.writeline(y, 0, multi_part_line, move=False)
+                    y, x = self.window.getyx()
                     continue
                 if ch in (curses.KEY_DOWN, curses.KEY_UP):
                     old_length = len(command)
@@ -247,6 +248,7 @@ class WindowManager:
                     self.window.move(y, 0)
                     self.window.clrtoeol()
                     self.writeline(y, 0, prompt, move=False)
+                    y, x = self.window.getyx()
                     self.writeline(
                         y,
                         length,
@@ -353,15 +355,20 @@ class WindowManager:
         :param tuple multi_part_line: multi-part line
         :param bool move: toggle moving cursor down on/off
         """
-        for line, attr in multi_part_line:
+        _, max_x = self.window.getmaxyx()
+        for i, (line, attr) in enumerate(multi_part_line):
             try:
                 self.window.addstr(y, x, line, attr)
+                y, x = self.window.getyx()
             except Exception as exception:
                 self.logger.getChild(WindowManager.writeline.__name__).exception(
                     f"'{line}' at ({y},{x}): {exception}"
                 )
                 raise
-            x += len(line)
+            if x > max_x - 1:
+                if i < len(line) - 1:
+                    self.mv_down_or_scroll_down()
+                    y, x = self.window.getyx()
         if move:
             self.mv_down_or_scroll_down()
 
@@ -375,7 +382,7 @@ class WindowManager:
         """
         for multi_part_line in multi_part_lines:
             self.writeline(y, x, multi_part_line, move=move)
-            y, _ = self.window.getyx()
+            y, x = self.window.getyx()
 
     def scrapeline(self, y):
         """Scrape multi-part line.
