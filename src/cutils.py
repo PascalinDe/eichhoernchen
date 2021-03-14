@@ -527,13 +527,13 @@ class WindowManager:
         try:
             if y < max_y - 1:
                 self.window.move(y + 1, 0)
+            else:
+                self.scroll_down()
         except Exception as exception:
             self.logger.getChild(
                 WindowManager.mv_down_or_scroll_down.__name__
             ).exception(f"at ({y},0): {exception}")
             raise
-        else:
-            self.scroll_down()
 
 
 def mk_menu(items):
