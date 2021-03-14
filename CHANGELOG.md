@@ -1,4 +1,4 @@
-# [2.2] ()
+# [2.2] (2021-03-14)
 ## Bug Fixes
 * properly update prompt when editing running task (closes [#27](https://github.com/PascalinDe/eichhoernchen/issues/27))
 * do not accept aliases for unknown commands (closes [#21](https://github.com/PascalinDe/eichhoernchen/issues/21))
