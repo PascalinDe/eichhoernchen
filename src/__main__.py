@@ -16,7 +16,7 @@
 
 
 """
-:synopsis: Eichhörnchen 2.0.
+:synopsis: Eichhörnchen 2.2.
 """
 
 
@@ -32,7 +32,7 @@ import src.config
 import src.cshell
 
 prog = "eichhoernchen"
-__version__ = "2.1"
+__version__ = "2.2"
 
 
 def main():
