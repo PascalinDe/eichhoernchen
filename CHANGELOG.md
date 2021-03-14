@@ -1,9 +1,21 @@
 # [2.2] ()
 ## Bug Fixes
+* properly update prompt when editing running task (closes [#27](https://github.com/PascalinDe/eichhoernchen/issues/27))
+* do not accept aliases for unknown commands (closes [#21](https://github.com/PascalinDe/eichhoernchen/issues/21))
+* take "'" into account (closes [#20](https://github.com/PascalinDe/eichhoernchen/issues/20))
+* fixed backspace (closes [#44](https://github.com/PascalinDe/eichhoernchen/issues/44) and [#45](https://github.com/PascalinDe/eichhoernchen/issues/45))
 ## Features
+* use Ctrl+D to abort input, editing, ... (closes [#26](https://github.com/PascalinDe/eichhoernchen/issues/26))
+* automatically jump to bottom on starting to type a command (closes [#6](https://github.com/PascalinDe/eichhoernchen/issues/6))
+* choose tasks to export by full name (closes [#22](https://github.com/PascalinDe/eichhoernchen/issues/22))
+* add `clean_up` command to show broken tasks (closes [#32](https://github.com/PascalinDe/eichhoernchen/issues/32))
+* add tab completion (closes [#33](https://github.com/PascalinDe/eichhoernchen/issues/33))
+* use arrow keys to navigate command history and Ctrl+Down/Ctrl+Up to scroll window (closes [#34](https://github.com/PascalinDe/eichhoernchen/issues/34))
 ## Miscellaneous
 * include date when listing tasks from day other than today
-
+* show error message instead of empty aliases table (closes [#19](https://github.com/PascalinDe/eichhoernchen/issues/19))
+* migrated to GitHub actions
+* upgraded to Python3.9
 # [2.1] (2020-10-24)
 ## Bug Fixes
 * take resizing into account (closes [#5](https://github.com/PascalinDe/eichhoernchen/issues/5))
