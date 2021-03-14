@@ -307,9 +307,8 @@ class WindowManager:
                         continue
                 if ch in (curses.KEY_BACKSPACE, 8, 127):
                     if x > min_x:
-                        buffer.move(-1)
                         x -= 1
-                        buffer.pop(buffer.pos)
+                        buffer.pop(buffer.pos - 1)
                         if self.box:
                             self.window.delch(y, max_x - 1)
                         self.window.delch(y, x)
