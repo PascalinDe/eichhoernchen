@@ -163,4 +163,4 @@ class TestBuffer(unittest.TestCase):
         """
         self.buffer._pos = 8
         self.buffer.move_to_end()
-        self.assertEqual(self.buffer.cursor, self.buffer.data[-1])
+        self.assertEqual(self.buffer.pos, len(self.buffer.data))
