@@ -1,3 +1,8 @@
+# [2.3]()
+## Bug Fixes
+## Features
+## Miscellaneous
+
 # [2.2] (2021-03-14)
 ## Bug Fixes
 * properly update prompt when editing running task (closes [#27](https://github.com/PascalinDe/eichhoernchen/issues/27))
