@@ -1,4 +1,4 @@
-#    Eichhörnchen 2.1
+#    Eichhörnchen 2.2
 #    Copyright (C) 2018-2019  Carine Dengler
 #
 #    This program is free software: you can redistribute it and/or modify

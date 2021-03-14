@@ -1,4 +1,4 @@
-#    This file is part of Eichhoernchen 2.1.
+#    This file is part of Eichhoernchen 2.2.
 #    Copyright (C) 2020  Carine Dengler
 #
 #    Eichhoernchen is free software: you can redistribute it and/or modify
