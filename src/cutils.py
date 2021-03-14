@@ -114,7 +114,7 @@ class Buffer(UserList):
 
     def move_to_end(self):
         """Move cursor position to end."""
-        self._pos = len(self.data) - 1
+        self._pos = len(self.data)
 
 
 class WindowManager:
