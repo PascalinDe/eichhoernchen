@@ -1,5 +1,5 @@
 #    This file is part of Eichhoernchen 2.2.
-#    Copyright (C) 2021  Carine Dengler
+#    Copyright (C) 2018-2021  Carine Dengler
 #
 #    Eichhoernchen is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by

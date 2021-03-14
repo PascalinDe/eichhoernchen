@@ -1,5 +1,5 @@
 #    Eichhörnchen 2.2
-#    Copyright (C) 2018-2019  Carine Dengler
+#    Copyright (C) 2018-2021  Carine Dengler
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
