@@ -84,6 +84,8 @@ def _loop(stdscr, config):
                 window_mgr.writelines(*window_mgr.window.getyx(), output)
                 history.append(line)
         except (EOFError, KeyboardInterrupt):
+            if interpreter.timer.task.name:
+                interpreter.timer.stop()
             window_mgr.mv_down_or_scroll_down()
             window_mgr.writeline(
                 *window_mgr.window.getyx(), (("Goodbye!", curses.color_pair(0)),)
