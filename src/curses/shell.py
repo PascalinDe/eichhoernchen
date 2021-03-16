@@ -30,7 +30,7 @@ import curses.panel
 
 # third party imports
 # library specific imports
-from src.cutils import initialize_colour, mk_panel, ResizeError, WindowManager
+from src.curses.utils import initialize_colour, mk_panel, ResizeError, WindowManager
 from src.interpreter import Interpreter, InterpreterError
 from src.output_formatter import pprint_prompt
 

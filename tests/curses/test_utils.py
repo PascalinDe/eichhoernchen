@@ -25,7 +25,7 @@ import unittest
 
 # third party imports
 # library specific imports
-from src.cutils import Buffer
+from src.curses.utils import Buffer
 
 
 class TestBuffer(unittest.TestCase):

@@ -29,7 +29,7 @@ import argparse
 
 # library specific imports
 import src.config
-import src.cshell
+import src.curses.shell
 
 prog = "eichhoernchen"
 __version__ = "2.2"
@@ -52,7 +52,7 @@ def main():
     )
     config = src.config.load_config(path=parser.parse_args().config)
     try:
-        curses.wrapper(src.cshell.launch, config)
+        curses.wrapper(src.curses.shell.launch, config)
     except Exception as exception:
         logger.exception(exception)
         raise SystemExit("an unexpected error occurred")
