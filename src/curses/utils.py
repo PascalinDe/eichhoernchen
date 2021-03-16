@@ -596,16 +596,3 @@ def mk_panel(nlines, ncols, begin_y, begin_x):
     curses.panel.update_panels()
     curses.doupdate()
     return panel
-
-
-def initialize_colour():
-    """Initialize colour pairs."""
-    colour_pairs = (
-        (1, 2, -1),  # name
-        (2, 8, -1),  # tags
-        (3, 5, -1),  # time span
-        (4, 11, -1),  # total
-        (5, 9, -1),  # error
-    )
-    for colour_pair in colour_pairs:
-        curses.init_pair(*colour_pair)

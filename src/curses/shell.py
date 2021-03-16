@@ -30,9 +30,9 @@ import curses.panel
 
 # third party imports
 # library specific imports
-from src.curses.utils import initialize_colour, mk_panel, ResizeError, WindowManager
 from src.interpreter import Interpreter, InterpreterError
 from src.output_formatter import pprint_prompt
+from src.curses.utils import mk_panel, ResizeError, WindowManager
 
 
 def _loop(stdscr, config):
@@ -106,5 +106,12 @@ def launch(stdscr, config):
     curses.start_color()
     curses.raw()
     curses.use_default_colors()
-    initialize_colour()
+    for colour_pair in (
+        (1, 2, -1),  # name
+        (2, 8, -1),  # tag(s)
+        (3, 5, -1),  # time span
+        (4, 11, -1),  # total
+        (5, 9, -1),  # error
+    ):
+        curses.init_pair(*colour_pair)
     _loop(stdscr, config)
