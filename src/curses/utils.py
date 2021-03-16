@@ -542,54 +542,6 @@ class WindowManager:
             raise
 
 
-def mk_menu(items):
-    """Make menu.
-
-    :param list items: items
-
-    :returns: item
-    :rtype: int
-    """
-    if len(items) == 1:
-        return 0
-    while True:
-        panel = mk_panel(*get_menu_dims(*curses.panel.top_panel().window().getmaxyx()))
-        window = panel.window()
-        window_mgr = WindowManager(window, box=True)
-        y, x = window.getyx()
-        multi_part_lines = (
-            ((f"Pick choice 1...{len(items)}.", curses.color_pair(0)),),
-            *tuple(
-                ((f"{i}: {item}", curses.color_pair(0)),)
-                for i, item in enumerate(items, start=1)
-            ),
-        )
-        window_mgr.writelines(y + 1, x + 1, multi_part_lines)
-        y, _ = window_mgr.window.getyx()
-        line = ""
-        try:
-            while line not in (str(i) for i in range(1, len(items) + 1)):
-                line = window_mgr.readline(
-                    [],
-                    y=y,
-                    prompt=((">", curses.color_pair(0)),),
-                    scroll=True,
-                    clear=True,
-                )
-        except EOFError:
-            return -1
-        except ResizeError:
-            panel.bottom()
-            window_mgr.reinitialize()
-            continue
-        else:
-            break
-        finally:
-            del panel
-            curses.panel.update_panels()
-    return int(line) - 1
-
-
 def readline(prompt=tuple()):
     """Read line.
 
