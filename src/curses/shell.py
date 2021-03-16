@@ -54,7 +54,9 @@ def _loop(stdscr, config):
     panel = mk_panel(*stdscr.getmaxyx(), 0, 0)
     window = panel.window()
     window_mgr = WindowManager(
-        window, banner=True, commands=(*aliases.keys(), *interpreter.subcommands.keys())
+        window,
+        banner="Welcome to Eichhörnchen.\tType help or ? to list commands.",
+        commands=(*aliases.keys(), *interpreter.subcommands.keys()),
     )
     history = []
     while True:

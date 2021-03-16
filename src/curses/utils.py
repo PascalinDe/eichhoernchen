@@ -34,9 +34,6 @@ from collections import defaultdict, UserList
 # library specific imports
 
 
-BANNER = "Welcome to Eichhörnchen.\tType help or ? to list commands."
-
-
 class ResizeError(Exception):
     """Raised when window has been resized."""
 
@@ -124,16 +121,17 @@ class WindowManager:
     :ivar list upper_stack: stack (upper window)
     :ivar list lower_stack: stack (lower window)
     :ivar bool box: whether a border is drawn around the edges
+    :ivar str banner: banner
     :ivar tuple commands: valid commands
     :ivar Logger logger: logger
     """
 
-    def __init__(self, window, box=False, banner=False, commands=tuple()):
+    def __init__(self, window, box=False, banner="", commands=tuple()):
         """Initialize window manager.
 
         :param window window: window
         :param bool box: toggle drawing a border around the edges on/off
-        :param bool banner: toggle adding a banner on/off
+        :param str banner: banner
         :param tuple commands: valid commands
         """
         self.window = window
@@ -157,7 +155,7 @@ class WindowManager:
                 self.window.box()
                 y += 1
             if self.banner:
-                self.window.addstr(y, x, BANNER)
+                self.window.addstr(y, x, self.banner)
                 y, _ = self.window.getyx()
                 self.window.move(y + 2, 0)
         except Exception as exception:
