@@ -34,7 +34,8 @@ from contextlib import redirect_stderr
 import src.timer
 
 from src import FullName
-from src.curses.utils import mk_menu, mk_stats, readline
+from src.curses.windows import mk_stats
+from src.curses.utils import mk_menu, readline
 
 
 def _name(name):
