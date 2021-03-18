@@ -550,8 +550,11 @@ def readline(prompt=tuple()):
     """
     while True:
         try:
+            max_y, max_x = curses.panel.top_panel().window().getmaxyx()
+            nlines = max_y // 2
+            ncols = max_x // 2
             panel = get_panel(
-                *get_menu_dims(*curses.panel.top_panel().window().getmaxyx())
+                nlines, ncols, (max_y - nlines) // 2, (max_x - ncols) // 2
             )
             window = panel.window()
             window_mgr = WindowManager(window, box=True)
@@ -565,20 +568,6 @@ def readline(prompt=tuple()):
         finally:
             del panel
             curses.panel.update_panels()
-
-
-def get_menu_dims(max_y, max_x):
-    """Get menu window dimensions.
-
-    :param int max_y: maximum y position
-    :param int max_x: maximum x position
-
-    :returns: height, width and initial x, y cursor positions
-    :rtype: tuple
-    """
-    nlines = max_y // 2
-    ncols = max_x // 2
-    return nlines, ncols, (max_y - nlines) // 2, (max_x - ncols) // 2
 
 
 def get_panel(nlines, ncols, begin_y, begin_x):
