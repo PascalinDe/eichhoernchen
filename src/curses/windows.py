@@ -25,7 +25,7 @@ import curses
 
 # third party imports
 # library specific imports
-from src.curses.utils import mk_panel, WindowManager, ResizeError, get_menu_dims
+from src.curses.utils import get_panel, WindowManager, ResizeError, get_menu_dims
 
 
 def mk_stats(stats):
@@ -43,7 +43,7 @@ def mk_stats(stats):
                 ),
             ),
         ]
-        panel = mk_panel(*curses.panel.top_panel().window().getmaxyx(), 0, 0)
+        panel = get_panel(*curses.panel.top_panel().window().getmaxyx(), 0, 0)
         window = panel.window()
         window_mgr = WindowManager(window)
         window_mgr.writelines(*window.getyx(), stats)
@@ -83,7 +83,7 @@ def mk_menu(items):
     if len(items) == 1:
         return 0
     while True:
-        panel = mk_panel(*get_menu_dims(*curses.panel.top_panel().window().getmaxyx()))
+        panel = get_panel(*get_menu_dims(*curses.panel.top_panel().window().getmaxyx()))
         window = panel.window()
         window_mgr = WindowManager(window, box=True)
         y, x = window.getyx()

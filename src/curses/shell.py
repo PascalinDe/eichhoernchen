@@ -32,7 +32,7 @@ import curses.panel
 # library specific imports
 from src.interpreter import Interpreter, InterpreterError
 from src.output_formatter import pprint_prompt
-from src.curses.utils import mk_panel, ResizeError, WindowManager
+from src.curses.utils import get_panel, ResizeError, WindowManager
 
 
 def _loop(stdscr, config):
@@ -51,7 +51,7 @@ def _loop(stdscr, config):
     interpreter = Interpreter(
         os.path.join(config["database"]["path"], config["database"]["dbname"]), aliases
     )
-    panel = mk_panel(*stdscr.getmaxyx(), 0, 0)
+    panel = get_panel(*stdscr.getmaxyx(), 0, 0)
     window = panel.window()
     window_mgr = WindowManager(
         window,

@@ -550,7 +550,7 @@ def readline(prompt=tuple()):
     """
     while True:
         try:
-            panel = mk_panel(
+            panel = get_panel(
                 *get_menu_dims(*curses.panel.top_panel().window().getmaxyx())
             )
             window = panel.window()
@@ -581,8 +581,8 @@ def get_menu_dims(max_y, max_x):
     return nlines, ncols, (max_y - nlines) // 2, (max_x - ncols) // 2
 
 
-def mk_panel(nlines, ncols, begin_y, begin_x):
-    """Make panel.
+def get_panel(nlines, ncols, begin_y, begin_x):
+    """Get panel.
 
     :param int nlines: number of lines
     :param int ncols: number of columns
