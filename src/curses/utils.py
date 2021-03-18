@@ -540,36 +540,6 @@ class WindowManager:
             raise
 
 
-def readline(prompt=tuple()):
-    """Read line.
-
-    :param tuple prompt: prompt
-
-    :returns: line
-    :rtype: str
-    """
-    while True:
-        try:
-            max_y, max_x = curses.panel.top_panel().window().getmaxyx()
-            nlines = max_y // 2
-            ncols = max_x // 2
-            panel = get_panel(
-                nlines, ncols, (max_y - nlines) // 2, (max_x - ncols) // 2
-            )
-            window = panel.window()
-            window_mgr = WindowManager(window, box=True)
-            line = window_mgr.readline([], prompt=prompt, y=1)
-        except ResizeError:
-            panel.bottom()
-            window.reinitialize()
-            continue
-        else:
-            return line
-        finally:
-            del panel
-            curses.panel.update_panels()
-
-
 def get_panel(nlines, ncols, begin_y, begin_x):
     """Get panel.
 

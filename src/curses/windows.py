@@ -72,12 +72,13 @@ def mk_stats(stats):
     return
 
 
-def mk_menu(items):
-    """Make menu.
+def draw_menu(items, banner=""):
+    """Draw menu.
 
     :param list items: items
+    :param str banner: banner
 
-    :returns: item
+    :returns:
     :rtype: int
     """
     if len(items) == 1:
@@ -88,14 +89,11 @@ def mk_menu(items):
         ncols = max_x // 2
         panel = get_panel(nlines, ncols, (max_y - nlines) // 2, (max_x - ncols) // 2)
         window = panel.window()
-        window_mgr = WindowManager(window, box=True)
+        window_mgr = WindowManager(window, box=True, banner=banner)
         y, x = window.getyx()
         multi_part_lines = (
-            ((f"Pick choice 1...{len(items)}.", curses.color_pair(0)),),
-            *tuple(
-                ((f"{i}: {item}", curses.color_pair(0)),)
-                for i, item in enumerate(items, start=1)
-            ),
+            ((f"{i}: {item}", curses.color_pair(0)),)
+            for i, item in enumerate(items, start=1)
         )
         window_mgr.writelines(y + 1, x + 1, multi_part_lines)
         y, _ = window_mgr.window.getyx()
@@ -121,3 +119,35 @@ def mk_menu(items):
             del panel
             curses.panel.update_panels()
     return int(line) - 1
+
+
+def draw_input_box(banner="", prompt=tuple()):
+    """Draw input box.
+
+    :param str banner: banner
+    :param tuple prompt: prompt
+
+    :returns: line
+    :rtype: str
+    """
+    while True:
+        try:
+            max_y, max_x = curses.panel.top_panel().window().getmaxyx()
+            nlines = max_y // 2
+            ncols = max_x // 2
+            panel = get_panel(
+                nlines, ncols, (max_y - nlines) // 2, (max_x - ncols) // 2
+            )
+            window = panel.window()
+            window_mgr = WindowManager(window, box=True, banner=banner)
+            y, _ = window_mgr.window.getyx()
+            line = window_mgr.readline([], prompt=prompt, y=y if banner else 1)
+        except ResizeError:
+            panel.bottom()
+            window.reinitialize()
+            continue
+        else:
+            return line
+        finally:
+            del panel
+            curses.panel.update_panels()

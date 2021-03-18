@@ -34,8 +34,7 @@ from contextlib import redirect_stderr
 import src.timer
 
 from src import FullName
-from src.curses.utils import readline
-from src.curses.windows import mk_menu, mk_stats
+from src.curses.windows import draw_input_box, draw_menu, mk_stats
 
 
 def _name(name):
@@ -531,7 +530,7 @@ class Interpreter:
             self._flatten_items(src.output_formatter.pprint_task(task))
             for task in tasks
         )
-        i = mk_menu(items)
+        i = draw_menu(items, banner=f"Pick choice 1...{len(items)}.")
         if i < 0:
             raise RuntimeError(f"abort removing task '{pprint_full_name}'")
         return tasks[i], items[i]
@@ -605,7 +604,7 @@ class Interpreter:
         if not task:
             return (src.output_formatter.pprint_error(f"no task '{pprint_full_name}'"),)
         actions = ("name", "tags", "start", "end")
-        i = mk_menu(actions)
+        i = draw_menu(actions, banner=f"Pick choice 1...{len(actions)}.")
         if i < 0:
             return (
                 src.output_formatter.pprint_error(
@@ -614,7 +613,9 @@ class Interpreter:
             )
         try:
             arg = (_name, _tags, _from, _to)[i](
-                readline(prompt=((f"new {actions[i]} >", curses.color_pair(0)),))
+                draw_input_box(
+                    banner=f"New {actions[i]}", prompt=((">", curses.color_pair(0)),)
+                )
             )
         except EOFError:
             return (
