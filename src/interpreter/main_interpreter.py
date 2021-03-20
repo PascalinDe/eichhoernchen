@@ -32,6 +32,7 @@ from contextlib import redirect_stderr
 # third party imports
 # library specific imports
 import src.timer
+import src.interpreter.base_interpreter
 
 from src import FullName
 from src.curses.windows import draw_input_box, draw_menu, mk_stats
@@ -202,7 +203,7 @@ class InterpreterError(Exception):
     pass
 
 
-class Interpreter:
+class Interpreter(src.interpreter.base_interpreter.BaseInterpreter):
     """Command-line interpreter.
 
     :cvar dict ARGS: ArgumentParser arguments
@@ -372,48 +373,6 @@ class Interpreter:
             },
         }
         self._init_parser(aliases)
-
-    def _init_parser(self, aliases):
-        """Initialize parser.
-
-        :param dict aliases: aliases
-        """
-        self._parser = argparse.ArgumentParser(prog="", add_help=False)
-        self._init_subparsers(self._parser, aliases)
-
-    def _init_subparsers(self, parser, aliases):
-        """Initialize subparsers.
-
-        :param ArgumentParser parser: command-line interpreter
-        :param dict aliases: aliases
-        """
-        subparsers = parser.add_subparsers()
-        subcommands = {}
-        for prog, subcommand in self.subcommands.items():
-            subcommands[prog] = subparsers.add_parser(
-                prog,
-                description=subcommand["description"],
-                add_help=False,
-                aliases=subcommand["aliases"],
-            )
-            if prog == "help":
-                continue
-            subcommands[prog].set_defaults(func=subcommand["func"])
-            for arg, kwargs in subcommand["args"].items():
-                subcommands[prog].add_argument(arg, **kwargs)
-        subcommands["help"].add_argument(
-            "command",
-            nargs="?",
-            choices=(
-                tuple(subcommands.keys())
-                + tuple(x for y in aliases.values() for x in y)
-            ),
-        )
-        subcommands["help"].set_defaults(
-            func=lambda *args, **kwargs: self.help(
-                kwargs["command"], subcommands, aliases
-            )
-        )
 
     def interpret_line(self, line):
         """Interpret line.
