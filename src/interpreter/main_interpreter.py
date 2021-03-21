@@ -23,7 +23,6 @@
 # standard library imports
 import re
 import curses
-import argparse
 import datetime
 
 from io import StringIO
@@ -32,169 +31,11 @@ from contextlib import redirect_stderr
 # third party imports
 # library specific imports
 import src.timer
+import src.interpreter.utils
 import src.interpreter.base_interpreter
 
 from src import FullName
 from src.curses.windows import draw_input_box, draw_menu, mk_stats
-
-
-def _name(name):
-    """Name.
-
-    :param str name: string containing name
-
-    :raises ArgumentTypeError: when string does not contain name
-
-    :returns: name
-    :rtype: str
-    """
-    match = re.match(r"(?:\w|\s|[!#'+-?])+", name)
-    if match:
-        return match.group(0).strip()
-    raise argparse.ArgumentTypeError(f"'{name}' does not contain name")
-
-
-def _tags(tags):
-    """Tags.
-
-    :param str tags: string containing tags
-
-    :raises ArgumentTypeError: when string does not contain tags
-
-    :returns: tags
-    :rtype: set
-    """
-    matches = re.findall(r"\[((?:\w|\s|[!#'+-?])+)\]", tags)
-    if matches:
-        return set(tag.strip() for tag in matches)
-    raise argparse.ArgumentTypeError(f"'{tags}' does not contain any tags")
-
-
-def _full_name(full_name):
-    """Full name.
-
-    :param str full_name: string containing full name
-
-    :raises ArgumentTypeError: when string does not contain full name
-
-    :returns: full name
-    :rtype: FullName
-    """
-    if not full_name:
-        return FullName("", frozenset())
-    try:
-        return FullName(_name(full_name), _tags(full_name))
-    except argparse.ArgumentTypeError:
-        return FullName(_name(full_name), frozenset())
-
-
-def _summand(summand):
-    """Summand.
-
-    :param str summand: string containing summand
-
-    :raises ArgumentTypeError: when string does not contain summand
-
-    :returns: summand
-    :rtype: FullName
-    """
-    try:
-        return _full_name(summand)
-    except argparse.ArgumentTypeError:
-        return FullName("", _tags(summand))
-
-
-def _from(from_):
-    """From.
-
-    :param str from_: string containing from
-
-    :raises ArgumentTypeError: when string does not contain from
-
-    :returns: from
-    :rtype: str
-    """
-    try:
-        return parse_datetime(
-            from_, keywords=("all", "year", "month", "week", "yesterday", "today")
-        )
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"'{from_}' does not contain from")
-
-
-def _to(to):
-    """To.
-
-    :param str to: string containing to
-
-    :raises ArgumentTypeError: when string does not contain to
-
-    :returns: to
-    :rtype: str
-    """
-    try:
-        return parse_datetime(
-            to, keywords=("year", "month", "week", "yesterday", "today")
-        )
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"'{to}' does not contain to")
-
-
-def _start(start):
-    """Start.
-
-    :param str start: string containing start
-
-    :raises ArgumentTypeError: when string does not contain start
-
-    :returns: start
-    :rtype: str
-    """
-    try:
-        return parse_datetime(start)
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"'{start}' does not contain start")
-
-
-def _end(end):
-    """End.
-
-    :param str end: string containing end
-
-    :raises ArgumentTypeError: when string does not contain end
-
-    :returns: end
-    :rtype: str
-    """
-    return _start(end)
-
-
-def parse_datetime(date_string, keywords=tuple()):
-    """Parse date string.
-
-    :param str date_string: date string
-    :param tuple keywords: keywords
-
-    :raises ValueError: when date string does not match any format
-
-    :returns: date string
-    :rtype: str
-    """
-    if keywords:
-        match = re.match(r"|".join(keywords), date_string)
-        if match:
-            return match.group(0)
-    for format_string in ("%Y-%m-%d %H:%M", "%Y-%m-%d", "%H:%M"):
-        try:
-            datetime.datetime.strptime(date_string, format_string)
-        except ValueError:
-            continue
-        if format_string == "%H:%M":
-            now = datetime.datetime.now()
-            date_string = f"{now.year:04}-{now.month:02}-{now.day:02} {date_string}"
-        return date_string
-    else:
-        raise ValueError(f"'{date_string}' does not match any format")
 
 
 class InterpreterError(Exception):
@@ -214,21 +55,27 @@ class Interpreter(src.interpreter.base_interpreter.BaseInterpreter):
 
     ARGS = {
         "full_name": {
-            "type": _full_name,
+            "type": src.interpreter.utils.match_full_name,
             "help": "name followed by 0 or more tags, e.g. 'foo[bar]'",
             "metavar": "full name",
         },
         "from_": {
-            "type": _from,
+            "type": src.interpreter.utils.match_from,
             "help": "@([YYYY-MM-DD] [hh:mm]|{all,year,month,week,yesterday,today})",
             "metavar": "from",
         },
         "to": {
-            "type": _to,
+            "type": src.interpreter.utils.match_to,
             "help": "@([YYYY-MM-DD] [hh:mm]|{year,month,week,yesterday,today})",
         },
-        "start": {"type": _start, "help": "@YYYY-MM-DD [hh:mm]"},
-        "end": {"type": _end, "help": "@YYYY-MM-DD [hh:mm]"},
+        "start": {
+            "type": src.interpreter.utils.match_start,
+            "help": "@YYYY-MM-DD [hh:mm]"
+        },
+        "end": {
+            "type": src.interpreter.utils.match_end,
+            "help": "@YYYY-MM-DD [hh:mm]"
+        },
     }
     RESERVED = ("@",)
 
@@ -318,7 +165,7 @@ class Interpreter(src.interpreter.base_interpreter.BaseInterpreter):
                 "func": self.sum,
                 "args": {
                     "summand": {
-                        "type": _summand,
+                        "type": src.interpreter.utils.match_summand,
                         "help": "full name, name or tag(s) to sum up",
                     },
                     "from_": {
@@ -571,7 +418,12 @@ class Interpreter(src.interpreter.base_interpreter.BaseInterpreter):
                 ),
             )
         try:
-            arg = (_name, _tags, _from, _to)[i](
+            arg = (
+                src.interpreter.utils.match_name,
+                src.interpreter.utils.match_tags,
+                src.interpreter.utils.match_from,
+                src.interpreter.utils.match_to
+            )[i](
                 draw_input_box(
                     banner=f"New {actions[i]}", prompt=((">", curses.color_pair(0)),)
                 )
