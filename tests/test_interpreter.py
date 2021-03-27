@@ -29,7 +29,8 @@ from unittest.mock import patch
 
 # third party imports
 # library specific imports
-import src.interpreter
+import src.interpreter.main_interpreter
+import src.interpreter.utils
 import src.output_formatter
 
 from src import FullName
@@ -48,7 +49,7 @@ class TestInterpreter(unittest.TestCase):
         Expecting: name
         """
         name = "foo"
-        self.assertEqual(src.interpreter._name(name), name)
+        self.assertEqual(src.interpreter.utils.match_name(name), name)
 
     def test_name_partial_name(self):
         """Test name.
@@ -57,7 +58,7 @@ class TestInterpreter(unittest.TestCase):
         Expecting: partial name
         """
         name = "foob@r"
-        self.assertEqual(src.interpreter._name(name), name[:-2])
+        self.assertEqual(src.interpreter.utils.match_name(name), name[:-2])
 
     def test_name_no_name(self):
         """Test name.
@@ -67,7 +68,7 @@ class TestInterpreter(unittest.TestCase):
         """
         name = "[foo]"
         with self.assertRaises(argparse.ArgumentTypeError):
-            src.interpreter._name(name)
+            src.interpreter.utils.match_name(name)
 
     def test_tags(self):
         """Test tags.
@@ -77,7 +78,7 @@ class TestInterpreter(unittest.TestCase):
         """
         tags = ("foo", "bar")
         self.assertCountEqual(
-            src.interpreter._tags("".join(f"[{tag}]" for tag in tags)), tags
+            src.interpreter.utils.match_tags("".join(f"[{tag}]" for tag in tags)), tags
         )
 
     def test_tags_partial_tags(self):
@@ -88,7 +89,10 @@ class TestInterpreter(unittest.TestCase):
         """
         tags = ("foo", "bar")
         self.assertCountEqual(
-            src.interpreter._tags("foo" + "".join(f"[{tag}]" for tag in tags)), tags
+            src.interpreter.utils.match_tags(
+                "foo" + "".join(f"[{tag}]" for tag in tags)
+            ),
+            tags,
         )
 
     def test_tags_no_tags(self):
@@ -98,7 +102,7 @@ class TestInterpreter(unittest.TestCase):
         Expecting: ArgumentTypeError has been raised
         """
         with self.assertRaises(argparse.ArgumentTypeError):
-            src.interpreter._tags("")
+            src.interpreter.utils.match_tags("")
 
     def test_full_name(self):
         """Test full name.
@@ -111,7 +115,7 @@ class TestInterpreter(unittest.TestCase):
             FullName("foo", frozenset()),
         ):
             self.assertEqual(
-                src.interpreter._full_name(
+                src.interpreter.utils.match_full_name(
                     full_name.name + "".join(f"[{tag}]" for tag in full_name.tags)
                 ),
                 full_name,
@@ -124,7 +128,7 @@ class TestInterpreter(unittest.TestCase):
         Expecting: ArgumentTypeError has been raised
         """
         with self.assertRaises(argparse.ArgumentTypeError):
-            src.interpreter._full_name("[foo]")
+            src.interpreter.utils.match_full_name("[foo]")
 
     def test_full_name_empty_string(self):
         """Test full name.
@@ -132,7 +136,9 @@ class TestInterpreter(unittest.TestCase):
         Trying: empty string
         Expecting: empty FullName
         """
-        self.assertEqual(src.interpreter._full_name(""), FullName("", frozenset()))
+        self.assertEqual(
+            src.interpreter.utils.match_full_name(""), FullName("", frozenset())
+        )
 
     def test_summand(self):
         """Test summand.
@@ -147,7 +153,7 @@ class TestInterpreter(unittest.TestCase):
             FullName("", frozenset()),
         ):
             self.assertEqual(
-                src.interpreter._summand(
+                src.interpreter.utils.match_summand(
                     full_name.name + "".join(f"[{tag}]" for tag in full_name.tags)
                 ),
                 full_name,
@@ -169,7 +175,7 @@ class TestInterpreter(unittest.TestCase):
         )
         now = datetime.datetime.now().strftime("%Y-%m-%d")
         for date_string in (*keywords, now):
-            self.assertEqual(src.interpreter._from(date_string), date_string)
+            self.assertEqual(src.interpreter.utils.match_from(date_string), date_string)
 
     def test_to(self):
         """Test to.
@@ -186,7 +192,7 @@ class TestInterpreter(unittest.TestCase):
         )
         now = datetime.datetime.now().strftime("%Y-%m-%d")
         for date_string in (*keywords, now):
-            self.assertEqual(src.interpreter._to(date_string), date_string)
+            self.assertEqual(src.interpreter.utils.match_to(date_string), date_string)
 
     def test_start(self):
         """Test start.
@@ -200,7 +206,9 @@ class TestInterpreter(unittest.TestCase):
                 expected = now.strftime("%Y-%m-%d %H:%M")
             else:
                 expected = now.strftime(fmt_string)
-            self.assertEqual(src.interpreter._start(now.strftime(fmt_string)), expected)
+            self.assertEqual(
+                src.interpreter.utils.match_start(now.strftime(fmt_string)), expected
+            )
 
     def test_parse_datetime(self):
         """Test parsing date string.
@@ -218,7 +226,8 @@ class TestInterpreter(unittest.TestCase):
         )
         for keyword in keywords:
             self.assertEqual(
-                src.interpreter.parse_datetime(keyword, keywords=keywords), keyword
+                src.interpreter.utils.parse_datetime(keyword, keywords=keywords),
+                keyword,
             )
         now = datetime.datetime.now()
         for fmt_string in ("%Y-%m-%d %H:%M", "%Y-%m-%d", "%H:%M"):
@@ -227,7 +236,7 @@ class TestInterpreter(unittest.TestCase):
             else:
                 expected = now.strftime(fmt_string)
             self.assertEqual(
-                src.interpreter.parse_datetime(now.strftime(fmt_string)), expected
+                src.interpreter.utils.parse_datetime(now.strftime(fmt_string)), expected
             )
 
     def test_parse_datetime_no_keyword_or_format(self):
@@ -237,7 +246,7 @@ class TestInterpreter(unittest.TestCase):
         Expecting: ValueError has been raised
         """
         with self.assertRaises(ValueError):
-            src.interpreter.parse_datetime("foo")
+            src.interpreter.utils.parse_datetime("foo")
 
     def test_interpret_line(self):
         """Test interpreting line.
@@ -262,8 +271,12 @@ class TestInterpreter(unittest.TestCase):
             "aliases": dict(),
         }
         for subcommand, kwargs in subcommands.items():
-            with patch.object(src.interpreter.Interpreter, subcommand) as mock:
-                interpreter = src.interpreter.Interpreter(":memory:", dict())
+            with patch.object(
+                src.interpreter.main_interpreter.Interpreter, subcommand
+            ) as mock:
+                interpreter = src.interpreter.main_interpreter.Interpreter(
+                    ":memory:", dict()
+                )
                 line = subcommand
                 for k, v in kwargs.items():
                     if k in ("full_name", "summand"):
