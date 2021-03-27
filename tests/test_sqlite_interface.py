@@ -16,48 +16,61 @@
 
 
 """
-:synopsis: Eichhörnchen SQLite3 database interface tests.
+:synopsis: SQLite database interface.
 """
 
 
 # standard library imports
+import os
 import sqlite3
 import unittest
 
 # third party imports
 # library specific imports
-import src.sqlite
+import src.sqlite_interface
 
 
-class TestSQLite(unittest.TestCase):
-    """Test Eichhörnchen SQLite database interface.
+class TestSQLiteInterface(unittest.TestCase):
+    """Test SQLite database interface.
 
-    :ivar SQLite sqlite: Eichhörnchen SQLite database interface
+    :ivar SQLiteInterface interface: SQLite database interface
     """
 
     def setUp(self):
-        """Initialize SQLite database interface."""
-        self.sqlite = src.sqlite.SQLite(":memory:")
+        """Set up SQLite database interface test cases."""
+        self.interface = src.sqlite_interface.SQLiteInterface(
+            os.path.join(os.getcwd(), "temp.db")
+        )
+
+    def tearDown(self):
+        """Tear down SQLite database interface test cases."""
+        try:
+            os.unlink(os.path.join(os.getcwd(), "temp.db"))
+        except FileNotFoundError:
+            pass
 
     def test_connect(self):
-        """Test connecting to Eichhörnchen SQLite database.
+        """Test SQLite database connection.
 
         Trying: connecting to database
         Expecting: Connection object
         """
-        connection = self.sqlite.connect()
-        self.assertIs(sqlite3.Connection, type(connection))
+        self.assertIsInstance(self.interface.connect(), sqlite3.Connection)
 
-    def test_create_table(self):
+    def test_create_tables(self):
         """Test table creation.
 
-        Trying: creating table(s)
-        Expecting: table(s) exists
+        Trying: creating tables
+        Expecting: tables exist
         """
-        connection = self.sqlite.connect()
-        for table in src.sqlite.COLUMN_DEF:
-            src.sqlite.create_table(connection, table, close=False)
-        cursor = connection.execute(
-            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        self.interface.create_tables()
+        connection = self.interface.connect()
+        self.assertEqual(
+            [
+                row[0]
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                )
+            ],
+            list(src.sqlite_interface.COLUMN_DEFINITIONS.keys()),
         )
-        self.assertEqual([row[0] for row in cursor], list(src.sqlite.COLUMN_DEF.keys()))

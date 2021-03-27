@@ -31,7 +31,7 @@ import os.path
 # third party imports
 # library specific imports
 import src.timer
-import src.sqlite
+import src.sqlite_interface
 
 from src import FullName, Task
 

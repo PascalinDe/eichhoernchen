@@ -31,7 +31,7 @@ import collections
 
 # third party imports
 # library specific imports
-import src.sqlite
+import src.sqlite_interface
 
 from src import FullName, Task
 
@@ -48,8 +48,8 @@ class Timer:
 
         :param str database: path to SQLite3 database
         """
-        self.sqlite = src.sqlite.SQLite(database)
-        self.sqlite.create_database()
+        self.sqlite = src.sqlite_interface.SQLiteInterface(database)
+        self.sqlite.create_tables()
         self._reset_task()
 
     def _reset_task(self, task=Task("", frozenset(), tuple())):
