@@ -109,8 +109,7 @@ def match_from(from_):
     """
     try:
         return parse_datetime(
-            from_,
-            keywords=("all", "year", "month", "week", "yesterday", "today")
+            from_, keywords=("all", "year", "month", "week", "yesterday", "today")
         )
     except ValueError:
         raise ArgumentTypeError(f"'{from_}' does not contain from")
@@ -128,8 +127,7 @@ def match_to(to):
     """
     try:
         return parse_datetime(
-            to,
-            keywords=("year", "month", "week", "yesterday", "today")
+            to, keywords=("year", "month", "week", "yesterday", "today")
         )
     except ValueError:
         raise ArgumentTypeError(f"'{to}' does not contain to")

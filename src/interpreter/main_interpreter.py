@@ -70,12 +70,9 @@ class Interpreter(src.interpreter.base_interpreter.BaseInterpreter):
         },
         "start": {
             "type": src.interpreter.utils.match_start,
-            "help": "@YYYY-MM-DD [hh:mm]"
+            "help": "@YYYY-MM-DD [hh:mm]",
         },
-        "end": {
-            "type": src.interpreter.utils.match_end,
-            "help": "@YYYY-MM-DD [hh:mm]"
-        },
+        "end": {"type": src.interpreter.utils.match_end, "help": "@YYYY-MM-DD [hh:mm]"},
     }
     RESERVED = ("@",)
 
@@ -422,7 +419,7 @@ class Interpreter(src.interpreter.base_interpreter.BaseInterpreter):
                 src.interpreter.utils.match_name,
                 src.interpreter.utils.match_tags,
                 src.interpreter.utils.match_from,
-                src.interpreter.utils.match_to
+                src.interpreter.utils.match_to,
             )[i](
                 draw_input_box(
                     banner=f"New {actions[i]}", prompt=((">", curses.color_pair(0)),)
