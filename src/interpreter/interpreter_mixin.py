@@ -16,34 +16,38 @@
 
 
 """
-:synopsis: Base command-line interpreter.
+:synopsis: Command-line interpreter mixin.
 """
 
 
 # standard library imports
 import argparse
 
+from io import StringIO
+from contextlib import redirect_stderr
+
 # third party imports
+
 # library specific imports
 import src.output_formatter
 
 
-class BaseInterpreter:
-    """Base command-line interpreter."""
+class InterpreterError(Exception):
+    """Raised when command-line input cannot be parsed."""
 
-    def _init_parser(self, aliases):
-        """Initialize parser.
+    pass
 
-        :param dict aliases: aliases
-        """
+
+class InterpreterMixin:
+    """Command-line interpreter mixin."""
+
+    def _init_parser(self):
+        """Initialize parser."""
         self._parser = argparse.ArgumentParser(prog="", add_help=False)
-        self._init_subparsers(aliases)
+        self._init_subparsers()
 
-    def _init_subparsers(self, aliases):
-        """Initialize subparsers.
-
-        :param dict aliases: aliases
-        """
+    def _init_subparsers(self):
+        """Initialize subparsers."""
         subparsers = self._parser.add_subparsers()
         subcommands = {}
         for prog, subcommand in self.subcommands.items():
@@ -63,30 +67,28 @@ class BaseInterpreter:
             nargs="?",
             choices=(
                 tuple(subcommands.keys())
-                + tuple(x for y in aliases.values() for x in y)
+                + tuple(x for y in self.aliases.values() for x in y)
             ),
         )
         subcommands["help"].set_defaults(
             func=lambda *args, **kwargs: self.help(
                 kwargs["command"],
                 subcommands,
-                aliases,
             )
         )
 
-    def help(self, subcommand, subcommands, aliases):
+    def help(self, subcommand, subcommands):
         """Show help message.
 
         :param str subcommand: subcommand
         :param dict subcommands: subcommands
-        :param dict aliases: aliases
 
         :returns: help message
         :rtype: tuple
         """
         if subcommand:
             if subcommand not in subcommands:
-                for k, v in aliases.items():
+                for k, v in self.aliases.items():
                     if subcommand in v:
                         subparser = subcommands[k]
                         break
@@ -97,7 +99,39 @@ class BaseInterpreter:
                 for help in subparser.format_help().split("\n")
             )
         return tuple(
-            src.ouput_formatter.pprint_info(usage.strip())
+            src.output_formatter.pprint_info(usage.strip())
             for usage in self._parser.format_usage().split("\n")
             if usage
         )
+
+    def interpret_line(self, line):
+        """Interpret line.
+
+        :param str line: line
+
+        :returns: output
+        :rtype: tuple
+        """
+        cmd, *args = line.split(maxsplit=1)
+        if args:
+            (args,) = args
+            if cmd in self.subcommands:
+                maxsplit = (
+                    len(
+                        [
+                            arg
+                            for arg in self.subcommands[cmd]["args"]
+                            if "nargs" not in arg
+                        ]
+                    )
+                    - 1
+                )
+            args = args.split(maxsplit=maxsplit)
+        try:
+            fp = StringIO()
+            with redirect_stderr(fp):
+                args = self._parser.parse_args((cmd, *args))
+        except SystemExit:
+            fp.seek(0)
+            raise InterpreterError("\t".join(line.strip() for line in fp.readlines()))
+        return args.func(**{k: v for k, v in vars(args).items() if k != "func"})

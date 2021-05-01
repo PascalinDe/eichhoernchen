@@ -21,30 +21,21 @@
 
 
 # standard library imports
-import re
 import curses
 import datetime
-
-from io import StringIO
-from contextlib import redirect_stderr
 
 # third party imports
 # library specific imports
 import src.timer
 import src.interpreter.utils
-import src.interpreter.base_interpreter
+import src.interpreter.interpreter_mixin
 
 from src import FullName
 from src.curses.windows import draw_input_box, draw_menu, mk_stats
+from src.interpreter.interpreter_mixin import InterpreterMixin
 
 
-class InterpreterError(Exception):
-    """Raised when command-line input cannot be parsed."""
-
-    pass
-
-
-class Interpreter(src.interpreter.base_interpreter.BaseInterpreter):
+class Interpreter(InterpreterMixin):
     """Command-line interpreter.
 
     :cvar dict ARGS: ArgumentParser arguments
@@ -82,6 +73,7 @@ class Interpreter(src.interpreter.base_interpreter.BaseInterpreter):
         :param str database: pathname of the database
         :param dict aliases: aliases
         """
+        self.aliases = aliases
         self.timer = src.timer.Timer(database)
         self.subcommands = {
             "start": {
@@ -216,38 +208,7 @@ class Interpreter(src.interpreter.base_interpreter.BaseInterpreter):
                 "args": {},
             },
         }
-        self._init_parser(aliases)
-
-    def interpret_line(self, line):
-        """Interpret line.
-
-        :param str line: line
-
-        :returns:
-        :rtype:
-        """
-        splits = line.split(maxsplit=1)
-        if len(splits) > 1:
-            splits = [
-                splits[0],
-                *[
-                    split.strip()
-                    for split in re.split(r"|".join(self.RESERVED), splits[1])
-                ],
-            ]
-        # FIXME
-        if splits[0] == "export":
-            splits = [splits[0], *splits[1].split(maxsplit=1), *splits[2:]]
-        if splits[0] == "show_stats":
-            splits = [split for split in splits if split]
-        try:
-            fp = StringIO()
-            with redirect_stderr(fp):
-                args = self._parser.parse_args(splits)
-        except SystemExit:
-            fp.seek(0)
-            raise InterpreterError("\t".join(line.strip() for line in fp.readlines()))
-        return args.func(**{k: v for k, v in vars(args).items() if k != "func"})
+        self._init_parser()
 
     def start(self, full_name=FullName("", frozenset())):
         """Start task.
