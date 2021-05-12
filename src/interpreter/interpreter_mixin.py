@@ -21,6 +21,7 @@
 
 
 # standard library imports
+import logging
 import argparse
 
 from io import StringIO
@@ -30,6 +31,8 @@ from contextlib import redirect_stderr
 
 # library specific imports
 import src.output_formatter
+
+from src.interpreter.utils import search_datetime
 
 
 class InterpreterError(Exception):
@@ -104,6 +107,44 @@ class InterpreterMixin:
             if usage
         )
 
+    def split_args(self, cmd, line):
+        """Split arguments.
+
+        :param str cmd: command
+        :param str line: rest of the line
+
+        :returns: arguments
+        :rtype: list
+        """
+        args = []
+        positionals = {
+            k: v for k, v in self.subcommands[cmd]["args"].items() if "nargs" not in v
+        }
+        optionals = {
+            k: v for k, v in self.subcommands[cmd]["args"].items() if "nargs" in v
+        }
+        spans = tuple(search_datetime(line))
+        for span in spans:
+            args.append(line[span[0] : span[1]])
+        # datetime arguments are at the end
+        line = line[: spans[0][0]] if spans else line
+        for k in ("from_", "to", "start", "end"):
+            positionals.pop(k, None)
+            optionals.pop(k, None)
+        if "full_name" in positionals:
+            # full_name is first required argument
+            args = line.rsplit(maxsplit=len(positionals) + len(optionals) - 1) + args
+        elif "full_name" in optionals:
+            # full_name is first optional argument
+            maxsplit = len(positionals)
+            splits = line.split(maxsplit=maxsplit)[:maxsplit]
+            (line,) = splits[maxsplit:]
+            rsplits = line.rsplit(maxsplit=len(optionals) - 1)
+            args = splits + rsplits + args
+        else:
+            args = line.split(maxsplit=len(positionals) + len(optionals)) + args
+        return args
+
     def interpret_line(self, line):
         """Interpret line.
 
@@ -112,24 +153,16 @@ class InterpreterMixin:
         :returns: output
         :rtype: tuple
         """
+        logger = logging.getLogger(self.interpret_line.__name__)
         cmd, *args = line.split(maxsplit=1)
         if args:
             (args,) = args
             if cmd in self.subcommands:
-                maxsplit = (
-                    len(
-                        [
-                            arg
-                            for arg in self.subcommands[cmd]["args"]
-                            if "nargs" not in arg
-                        ]
-                    )
-                    - 1
-                )
-            args = args.split(maxsplit=maxsplit)
+                args = self.split_args(cmd, args)
         try:
             fp = StringIO()
             with redirect_stderr(fp):
+                logger.debug(f"{cmd}: {','.join(args)}")
                 args = self._parser.parse_args((cmd, *args))
         except SystemExit:
             fp.seek(0)

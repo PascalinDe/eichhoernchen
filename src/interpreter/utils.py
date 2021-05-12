@@ -162,6 +162,27 @@ def match_end(end):
     return match_start(end)
 
 
+def search_datetime(line, keywords=tuple()):
+    """Search datetime strings.
+
+    :param str line: line
+    :param tuple keywords: keywords
+
+    :returns: datetime strings
+    :rtype: list
+    """
+    pattern = re.compile(
+        (r"([0-9]{4}(?:-[0-9]{2}){2}(?:\s[0-9]{2}:[0-9]{2})?" fr"{'|'.join(keywords)})")
+    )
+    scanner = pattern.scanner(line)
+    while True:
+        match = scanner.search()
+        if match:
+            yield match.span()
+        else:
+            break
+
+
 def parse_datetime(date_string, keywords=tuple()):
     """Parse date string.
 
