@@ -16,10 +16,326 @@
 
 
 """
-:synopsis:
+:synopsis: Command-line interpreter utils.
 """
 
 
 # standard library imports
+import re
+import argparse
+import datetime
+
+from io import StringIO
+from contextlib import redirect_stderr
+
 # third party imports
 # library specific imports
+import src.output_formatter
+
+from src import FullName
+
+
+def match_name(name):
+    """Match name.
+
+    :param str name: string containing name
+
+    :raises ArgumentTypeError: when string does not contain name
+
+    :returns: name
+    :rtype: str
+    """
+    if (match := re.match(r"(?:\w|\s|[!#'+-?])+", name)) :
+        return match.group(0).strip()
+    raise argparse.ArgumentTypeError(f"'{name}' does not contain name")
+
+
+def match_tags(tags):
+    """Match tags.
+
+    :param str tags: string containing tags
+
+    :raises ArgumentTypeError: when string does not contain tags
+
+    :returns: tags
+    :rtype: set
+    """
+    if (matches := re.findall(r"\[((?:\w|\s|[!#'+-?])+)\]", tags)) :
+        return set(tag.strip() for tag in matches)
+    raise argparse.ArgumentTypeError(f"'{tags}' does not contain any tags")
+
+
+def match_full_name(full_name):
+    """Match full name.
+
+    :param str full_name: string containing full name
+
+    :raises ArgumentTypeError: when string does not contain full name
+
+    :returns: full name
+    :rtype: FullName
+    """
+    if not full_name:
+        return FullName("", frozenset())
+    try:
+        return FullName(match_name(full_name), match_tags(full_name))
+    except argparse.ArgumentTypeError:
+        return FullName(match_name(full_name), frozenset())
+
+
+def match_summand(summand):
+    """Match summand.
+
+    :param str summand: string containing summand
+
+    :raises ArgumentTypeError: when string does not contain summand
+
+    :returns: summand
+    :rtype: FullName
+    """
+    try:
+        return match_full_name(summand)
+    except argparse.ArgumentTypeError:
+        return FullName("", match_tags(summand))
+
+
+def match_from(from_):
+    """Match from.
+
+    :param str from_: string containing from
+
+    :raises ArgumentTypeError: when string does not contain from
+
+    :returns: from
+    :rtype: str
+    """
+    try:
+        return parse_datetime(
+            from_, keywords=("all", "year", "month", "week", "yesterday", "today")
+        )
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"'{from_}' does not contain from")
+
+
+def match_to(to):
+    """Match to.
+
+    :param str to: string containing to
+
+    :raises ArgumentTypeError: when string does not contain to
+
+    :returns: to
+    :rtype: str
+    """
+    try:
+        return parse_datetime(
+            to, keywords=("year", "month", "week", "yesterday", "today")
+        )
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"'{to}' does not contain to")
+
+
+def match_start(start):
+    """Match start.
+
+    :param str start: string containing start
+
+    :raises ArgumentTypeError: when string does not contain start
+
+    :returns: start
+    :rtype: str
+    """
+    try:
+        return parse_datetime(start)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"'{start}' does not contain start")
+
+
+def match_end(end):
+    """Match end.
+
+    :param str end: string containing end
+
+    :raises ArgumentTypeError: when string does not contain end
+
+    :returns: end
+    :rtype: str
+    """
+    return match_start(end)
+
+
+def parse_datetime(date_string, keywords=tuple()):
+    """Parse date string.
+
+    :param str date_string: date string
+    :param tuple keywords: keywords
+
+    :raises ArgumentTypeError: when date string does not match
+    any keyword or format string
+
+    :returns: date string
+    :rtype: str
+    """
+    if keywords:
+        if (match := re.match(r"|".join(keywords), date_string)) :
+            return match.group(0)
+    for format_string in ("%Y-%m-%d %H:%M", "%Y-%m-%d", "%H:%M"):
+        try:
+            datetime.datetime.strptime(date_string, format_string)
+        except ValueError:
+            continue
+        if format_string == "%H:%M":
+            now = datetime.datetime.now()
+            date_string = f"{now.year:04}-{now.month:02}-{now.day:02} {date_string}"
+        return date_string
+    raise argparse.ArgumentTypeError(
+        f"{date_string} does not match any keyword or format string"
+    )
+
+
+def search_datetime(line, keywords=tuple()):
+    """Search datetime strings.
+
+    :param str line: line containing datetime strings
+    :param tuple keywords: keywords
+
+    :returns: datetime strings
+    :rtype: list
+    """
+    pattern = re.compile(
+        r"([0-9]{4}(?:-[0-9]{2}){2}(?:\s[0-9]{2}:[0-9]{2})?"
+        fr"{'|' + '|'.join(keywords) if keywords else ''})"
+    )
+    scanner = pattern.scanner(line)
+    while True:
+        if (match := scanner.search()) :
+            yield match.span()
+        else:
+            break
+
+
+class InterpreterError(Exception):
+    """Raised when command-line cannot be interpreted."""
+
+    pass
+
+
+class InterpreterMixin:
+    """Command-line interpreter mixin."""
+
+    def _init_parser(self):
+        """Initialize parser."""
+        self._parser = argparse.ArgumentParser(prog="", add_help=False)
+        self._init_subparsers()
+
+    def _init_subparsers(self):
+        """Initialize subparsers."""
+        subparsers = self._parser.add_subparsers()
+        subcommands = {}
+        for prog, subcommand in self.subcommands.items():
+            subcommands[prog] = subparsers.add_parser(
+                prog,
+                description=subcommand["description"],
+                add_help=False,
+                aliases=subcommand["aliases"],
+            )
+            if prog == "help":
+                continue
+            subcommands[prog].set_defaults(func=subcommand["func"])
+            for arg, kwargs in subcommand["args"].items():
+                subcommands[prog].add_argument(arg, **kwargs)
+        subcommands["help"].add_argument(
+            "command",
+            nargs="?",
+            choices=(
+                tuple(subcommands.keys())
+                + tuple(x for y in self.aliases.values() for x in y)
+            ),
+        )
+        subcommands["help"].set_defaults(
+            func=lambda *args, **kwargs: self.help(
+                kwargs["command"],
+                subcommands,
+            )
+        )
+
+    def help(self, subcommand, subcommands):
+        """Show help message.
+
+        :param str subcommand: subcommand
+        :param dict subcommands: subcommands
+
+        :returns: help message
+        :rtype: tuple
+        """
+        if subcommand:
+            if subcommand not in subcommands:
+                for k, v in self.aliases.items():
+                    if subcommand in v:
+                        subparser = subcommands[k]
+                        break
+            else:
+                subparser = subcommands[subcommand]
+            return tuple(
+                src.output_formatter.pprint_info(help)
+                for help in subparser.format_help().split("\n")
+            )
+        return tuple(
+            src.output_formatter.pprint_info(usage.strip())
+            for usage in self._parser.format_usage().split("\n")
+            if usage
+        )
+
+    def split_args(self, cmd, line):
+        """Split arguments.
+
+        :param str cmd: command
+        :param str line: rest of the line
+
+        :returns: arguments
+        :rtype: list
+        """
+        positional_args = {
+            k: v for k, v in self.subcommands[cmd]["args"].items() if "nargs" not in v
+        }
+        optional_args = {
+            k: v for k, v in self.subcommands[cmd]["args"].items() if "nargs" in v
+        }
+        spans = tuple(search_datetime(line))
+        args = [line[span[0] : span[1]] for span in spans] if spans else []
+        line = line[: spans[0][0]] if spans else line
+        for k in ("from_", "to", "start", "end"):
+            positional_args.pop(k, None)
+            optional_args.pop(k, None)
+        if "full_name" in positional_args:
+            return (
+                line.rsplit(maxsplit=len(positional_args) + len(optional_args) - 1)
+                + args
+            )
+        if "full_name" in optional_args:
+            maxsplit = len(positional_args)
+            splits = line.split(maxsplit=maxsplit)[:maxsplit]
+            (line,) = splits[maxsplit:]
+            rsplits = line.rsplit(maxsplit=len(optional_args) - 1)
+            return splits + rsplits + args
+        return line.split(maxsplit=len(positional_args) + len(optional_args)) + args
+
+    def interpret_line(self, line):
+        """Interpret line.
+
+        :param str line: line
+
+        :returns: output
+        :rtype: tuple
+        """
+        cmd, *args = line.split(maxsplit=1)
+        if cmd in self.subcommands and args:
+            args = self.split_args(cmd, *args)
+        try:
+            fp = StringIO()
+            with redirect_stderr(fp):
+                args = self._parser.parse_args((cmd, *args))
+        except SystemExit:
+            fp.seek(0)
+            raise InterpreterError("\t".join(line.strip() for line in fp.readlines()))
+        return args.func(**{k: v for k, v in vars(args).items() if k != "func"})
