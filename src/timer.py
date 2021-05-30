@@ -31,7 +31,7 @@ import collections
 
 # third party imports
 # library specific imports
-import src.sqlite
+import src.sqlite_interface
 
 from src import FullName, Task
 
@@ -48,8 +48,8 @@ class Timer:
 
         :param str database: path to SQLite3 database
         """
-        self.sqlite = src.sqlite.SQLite(database)
-        self.sqlite.create_database()
+        self.interface = src.sqlite_interface.SQLiteInterface(database)
+        self.interface.create_tables()
         self._reset_task()
 
     def _reset_task(self, task=Task("", frozenset(), tuple())):
@@ -65,12 +65,12 @@ class Timer:
         :param FullName full_name: full name
         """
         start = datetime.datetime.now()
-        self.sqlite.execute("INSERT INTO time_span (start) VALUES (?)", (start,))
-        self.sqlite.execute(
+        self.interface.execute("INSERT INTO time_span (start) VALUES (?)", (start,))
+        self.interface.execute(
             "INSERT INTO running (name,start) VALUES (?,?)", (full_name.name, start)
         )
         if full_name.tags:
-            self.sqlite.execute(
+            self.interface.execute(
                 "INSERT INTO tagged (tag,start) VALUES (?,?)",
                 *((tag, start) for tag in full_name.tags),
             )
@@ -79,7 +79,7 @@ class Timer:
     def stop(self):
         """Stop task."""
         if self.task.name:
-            self.sqlite.execute(
+            self.interface.execute(
                 "UPDATE time_span SET end = ? WHERE start = ?",
                 (datetime.datetime.now(), self.task.time_span[0]),
             )
@@ -99,16 +99,16 @@ class Timer:
         """
         if end <= start:
             raise ValueError(f"new task's end ({end}) is before its start ({start})")
-        if self.sqlite.execute("SELECT start FROM running WHERE start=?", (start,)):
+        if self.interface.execute("SELECT start FROM running WHERE start=?", (start,)):
             raise ValueError(f"there is already a task started at {start}")
-        self.sqlite.execute(
+        self.interface.execute(
             "INSERT INTO running (start,name) VALUES (?,?)", (start, full_name.name)
         )
-        self.sqlite.execute(
+        self.interface.execute(
             "INSERT INTO time_span (start,end) VALUES (?,?)", (start, end)
         )
         if full_name.tags:
-            self.sqlite.execute(
+            self.interface.execute(
                 "INSERT INTO tagged (tag,start) VALUES (?,?)",
                 *((tag, start) for tag in full_name.tags),
             )
@@ -124,7 +124,7 @@ class Timer:
         if self.task == task:
             raise ValueError("cannot remove a running task")
         for table in ("running", "tagged", "time_span"):
-            self.sqlite.execute(
+            self.interface.execute(
                 f"DELETE FROM {table} WHERE start=?", (task.time_span[0],)
             )
 
@@ -134,7 +134,7 @@ class Timer:
         :returns: buggy task to clean up
         :rtype: Task
         """
-        rows = self.sqlite.execute(
+        rows = self.interface.execute(
             """SELECT running.start,name,tag
             FROM running
             LEFT JOIN tagged ON running.start=tagged.start
@@ -169,13 +169,13 @@ class Timer:
             reset = True
         if action == "name":
             name = args[0]
-            self.sqlite.execute(
+            self.interface.execute(
                 "UPDATE running SET name=? WHERE start=?", (name, start)
             )
         if action == "tags":
             tags = set(args[0])
-            self.sqlite.execute("DELETE FROM tagged WHERE start=?", (start,))
-            self.sqlite.execute(
+            self.interface.execute("DELETE FROM tagged WHERE start=?", (start,))
+            self.interface.execute(
                 "INSERT INTO tagged (tag,start) VALUES (?,?)",
                 *((tag, start) for tag in tags),
             )
@@ -183,19 +183,22 @@ class Timer:
             end = args[0]
             if args[0] <= start:
                 raise ValueError(f"new end '{end}' is before task's start")
-            self.sqlite.execute(
+            self.interface.execute(
                 "UPDATE time_span SET end=? WHERE start=?", (end, start)
             )
         if action == "start":
             start = args[0]
             if end <= start:
                 raise ValueError(f"new start {start} is after the task's end")
-            if self.sqlite.execute("SELECT start FROM running WHERE start=?", (start,)):
+            if self.interface.execute(
+                    "SELECT start FROM running WHERE start=?",
+                    (start,)
+            ):
                 raise ValueError(
                     f"there is already a task started at new start {start}"
                 )
             for table in ("time_span", "running", "tagged"):
-                self.sqlite.execute(
+                self.interface.execute(
                     f"UPDATE {table} SET start=? WHERE start=?",
                     (start, task.time_span[0]),
                 )
@@ -217,7 +220,7 @@ class Timer:
         :returns: tasks
         :rtype: list
         """
-        rows = self.sqlite.execute(
+        rows = self.interface.execute(
             f"""SELECT time_span.start,end,name,tag
             FROM time_span
             JOIN running ON time_span.start=running.start

@@ -31,7 +31,7 @@ import os.path
 # third party imports
 # library specific imports
 import src.timer
-import src.sqlite
+import src.sqlite_interface
 
 from src import FullName, Task
 
@@ -58,7 +58,7 @@ class TestTimer(unittest.TestCase):
         Expecting: task is started
         """
         timer = src.timer.Timer(self.DATABASE)
-        connection = timer.sqlite.connect()
+        connection = timer.interface.connect()
         full_name = FullName("foo", {"bar", "baz"})
         timer.start(full_name)
         self.assertEqual(timer.task.name, full_name.name)
@@ -87,7 +87,7 @@ class TestTimer(unittest.TestCase):
         Expecting: task has been stopped
         """
         timer = src.timer.Timer(self.DATABASE)
-        connection = timer.sqlite.connect()
+        connection = timer.interface.connect()
         name = "foo"
         timer.start(full_name=FullName(name))
         timer.stop()
@@ -108,7 +108,7 @@ class TestTimer(unittest.TestCase):
         :param tuple values: tasks to insert
         """
         timer = src.timer.Timer(self.DATABASE)
-        connection = timer.sqlite.connect()
+        connection = timer.interface.connect()
         for _, _, (start, end) in values:
             if end:
                 connection.execute(
@@ -136,7 +136,7 @@ class TestTimer(unittest.TestCase):
         Expecting: name has been updated
         """
         timer = src.timer.Timer(self.DATABASE)
-        connection = timer.sqlite.connect()
+        connection = timer.interface.connect()
         timer.start(full_name=FullName("foo"))
         task = timer.task
         timer.stop()
@@ -156,7 +156,7 @@ class TestTimer(unittest.TestCase):
         Expecting: tags have been updated
         """
         timer = src.timer.Timer(self.DATABASE)
-        connection = timer.sqlite.connect()
+        connection = timer.interface.connect()
         timer.start(full_name=FullName("foo", {"bar"}))
         task = timer.task
         timer.stop()
@@ -180,7 +180,7 @@ class TestTimer(unittest.TestCase):
         Expecting: start has been updated
         """
         timer = src.timer.Timer(self.DATABASE)
-        connection = timer.sqlite.connect()
+        connection = timer.interface.connect()
         timer.start(full_name=FullName("foo"))
         task = timer.task
         timer.stop()
@@ -202,7 +202,7 @@ class TestTimer(unittest.TestCase):
         Expecting: end has been updated
         """
         timer = src.timer.Timer(self.DATABASE)
-        connection = timer.sqlite.connect()
+        connection = timer.interface.connect()
         timer.start(full_name=FullName("foo"))
         task = timer.task
         timer.stop()
@@ -282,7 +282,7 @@ class TestTimer(unittest.TestCase):
         Expecting: task has been removed
         """
         timer = src.timer.Timer(self.DATABASE)
-        connection = timer.sqlite.connect()
+        connection = timer.interface.connect()
         timer.start(full_name=FullName("foo", {"bar"}))
         task = timer.task
         timer.stop()
@@ -336,7 +336,7 @@ class TestTimer(unittest.TestCase):
         Expecting: task has been added
         """
         timer = src.timer.Timer(self.DATABASE)
-        connection = timer.sqlite.connect()
+        connection = timer.interface.connect()
         start = datetime.datetime.now()
         end = start + datetime.timedelta(days=1)
         timer.add(FullName("foo", {"bar"}), start, end)
