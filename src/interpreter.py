@@ -33,7 +33,7 @@ from contextlib import redirect_stderr
 # library specific imports
 import src.timer
 
-from src import FullName
+from src import FullName, Task
 from src.cutils import mk_menu, mk_stats, readline
 
 
@@ -456,7 +456,7 @@ class Interpreter:
         """
         if self.timer.task.name:
             return (src.output_formatter.pprint_error("a task is already running"),)
-        self.timer.start(full_name)
+        self.timer.start(Task(*full_name, tuple()))
         return tuple()
 
     def stop(self):
@@ -482,9 +482,11 @@ class Interpreter:
         """
         try:
             task = self.timer.add(
-                full_name,
-                datetime.datetime.strptime(start, "%Y-%m-%d %H:%M"),
-                datetime.datetime.strptime(end, "%Y-%m-%d %H:%M"),
+                Task(
+                    *full_name,
+                    datetime.datetime.strptime("%Y-%m-%d %H:%M"),
+                    datetime.datetime.strptime("%Y-%m-%d %H:%M"),
+                )
             )
             return (src.output_formatter.pprint_task(task),)
         except ValueError as exception:
@@ -581,7 +583,7 @@ class Interpreter:
         """List buggy tasks to clean up."""
         return (
             src.output_formatter.pprint_task(task, date=True)
-            for task in self.timer.clean_up()
+            for task in self.timer.list_buggy_tasks()
         )
 
     def edit(self, full_name=FullName("", frozenset()), from_="today", to="today"):
@@ -651,7 +653,7 @@ class Interpreter:
                 self._convert_to_date_string(from_),
                 self._convert_to_date_string(to),
                 full_name=full_name,
-                full_match=any(full_name),
+                match_full_name=any(full_name),
             )
         )
 
@@ -671,7 +673,7 @@ class Interpreter:
                 self._convert_to_date_string(from_),
                 self._convert_to_date_string(to),
                 full_name=summand,
-                full_match=any(summand),
+                match_full_name=any(summand),
             )
         )
 

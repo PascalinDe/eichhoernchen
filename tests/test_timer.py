@@ -60,7 +60,7 @@ class TestTimer(unittest.TestCase):
         timer = src.timer.Timer(self.DATABASE)
         connection = timer.interface.connect()
         full_name = FullName("foo", {"bar", "baz"})
-        timer.start(full_name)
+        timer.start(Task(*full_name, tuple()))
         self.assertEqual(timer.task.name, full_name.name)
         self.assertEqual(timer.task.tags, full_name.tags)
         rows = connection.execute(
@@ -89,7 +89,7 @@ class TestTimer(unittest.TestCase):
         timer = src.timer.Timer(self.DATABASE)
         connection = timer.interface.connect()
         name = "foo"
-        timer.start(full_name=FullName(name))
+        timer.start(Task(name, frozenset(), tuple()))
         timer.stop()
         self.assertEqual(timer.task.name, "")
         rows = connection.execute(
@@ -137,7 +137,7 @@ class TestTimer(unittest.TestCase):
         """
         timer = src.timer.Timer(self.DATABASE)
         connection = timer.interface.connect()
-        timer.start(full_name=FullName("foo"))
+        timer.start(Task("foo", frozenset(), tuple()))
         task = timer.task
         timer.stop()
         name = "bar"
@@ -157,7 +157,7 @@ class TestTimer(unittest.TestCase):
         """
         timer = src.timer.Timer(self.DATABASE)
         connection = timer.interface.connect()
-        timer.start(full_name=FullName("foo", {"bar"}))
+        timer.start(Task("foo", {"bar"}, tuple()))
         task = timer.task
         timer.stop()
         tags = {"bar", "baz"}
@@ -181,7 +181,7 @@ class TestTimer(unittest.TestCase):
         """
         timer = src.timer.Timer(self.DATABASE)
         connection = timer.interface.connect()
-        timer.start(full_name=FullName("foo"))
+        timer.start(Task("foo", frozenset(), tuple()))
         task = timer.task
         timer.stop()
         timedelta = datetime.timedelta(minutes=1)
@@ -203,7 +203,7 @@ class TestTimer(unittest.TestCase):
         """
         timer = src.timer.Timer(self.DATABASE)
         connection = timer.interface.connect()
-        timer.start(full_name=FullName("foo"))
+        timer.start(Task("foo", frozenset(), tuple()))
         task = timer.task
         timer.stop()
         timedelta = datetime.timedelta(minutes=1)
@@ -226,7 +226,7 @@ class TestTimer(unittest.TestCase):
         Expecting: ValueError
         """
         timer = src.timer.Timer(self.DATABASE)
-        timer.start(full_name=FullName("foo"))
+        timer.start(Task("foo", frozenset(), tuple()))
         with self.assertRaises(ValueError):
             timer.edit(timer.task, "start", datetime.datetime.now())
 
@@ -237,7 +237,7 @@ class TestTimer(unittest.TestCase):
         Expecting: ValueError
         """
         timer = src.timer.Timer(self.DATABASE)
-        timer.start(full_name=FullName("foo"))
+        timer.start(Task("foo", frozenset(), tuple()))
         task = timer.task
         timer.stop()
         now = datetime.datetime.now()
@@ -254,7 +254,7 @@ class TestTimer(unittest.TestCase):
         Expecting: ValueError
         """
         timer = src.timer.Timer(self.DATABASE)
-        timer.start(full_name=FullName("foo"))
+        timer.start(Task("foo", frozenset(), tuple()))
         with self.assertRaises(ValueError):
             timer.edit(timer.task, "end", datetime.datetime.now())
 
@@ -265,7 +265,7 @@ class TestTimer(unittest.TestCase):
         Expecting: ValueError
         """
         timer = src.timer.Timer(self.DATABASE)
-        timer.start(full_name=FullName("foo"))
+        timer.start(Task("foo", frozenset(), tuple()))
         task = timer.task
         timer.stop()
         now = datetime.datetime.now()
@@ -283,7 +283,7 @@ class TestTimer(unittest.TestCase):
         """
         timer = src.timer.Timer(self.DATABASE)
         connection = timer.interface.connect()
-        timer.start(full_name=FullName("foo", {"bar"}))
+        timer.start(Task("foo", {"bar"}, tuple()))
         task = timer.task
         timer.stop()
         timer.remove(task=task)
@@ -301,7 +301,7 @@ class TestTimer(unittest.TestCase):
         Expecting: ValueError
         """
         timer = src.timer.Timer(self.DATABASE)
-        timer.start(full_name=FullName("foo"))
+        timer.start(Task("foo", frozenset(), tuple()))
         with self.assertRaises(ValueError):
             timer.remove(task=timer.task)
 
@@ -322,7 +322,7 @@ class TestTimer(unittest.TestCase):
         self._insert(values)
         actual = (
             Task(task.name, task.tags, (task.time_span[0], None))
-            for task in timer.clean_up()
+            for task in timer.list_buggy_tasks()
         )
         self.assertCountEqual(
             actual,
@@ -339,7 +339,7 @@ class TestTimer(unittest.TestCase):
         connection = timer.interface.connect()
         start = datetime.datetime.now()
         end = start + datetime.timedelta(days=1)
-        timer.add(FullName("foo", {"bar"}), start, end)
+        timer.add(Task("foo", {"bar"}, (start, end)))
         for table in ("time_span", "running", "tagged"):
             self.assertTrue(
                 connection.execute(
@@ -354,12 +354,16 @@ class TestTimer(unittest.TestCase):
         Expecting: ValueError
         """
         timer = src.timer.Timer(self.DATABASE)
-        timer.start(full_name=FullName("foo"))
+        timer.start(
+            Task("foo", frozenset(), tuple()),
+        )
         start, _ = timer.task.time_span
         timer.stop()
         end = start + datetime.timedelta(minutes=1)
         with self.assertRaises(ValueError):
-            timer.add(FullName("foo", frozenset()), start, end)
+            timer.add(
+                Task("foo", frozenset(), (start, end)),
+            )
 
     def test_add_start_after_end(self):
         """Test adding task.
@@ -371,7 +375,7 @@ class TestTimer(unittest.TestCase):
         end = datetime.datetime.now()
         start = end + datetime.timedelta(days=1)
         with self.assertRaises(ValueError):
-            timer.add(FullName("foo", {"bar"}), start, end)
+            timer.add(Task("foo", {"bar"}, (start, end)))
 
     def test_add_end_before_start(self):
         """Test adding task.
@@ -383,7 +387,7 @@ class TestTimer(unittest.TestCase):
         start = datetime.datetime.now()
         end = start - datetime.timedelta(days=1)
         with self.assertRaises(ValueError):
-            timer.add(FullName("foo", {"bar"}), start, end)
+            timer.add(Task("foo", {"bar"}, (start, end)))
 
     def test_list(self):
         """Test listing tasks.
@@ -405,7 +409,9 @@ class TestTimer(unittest.TestCase):
         )
         self.assertCountEqual(
             timer.list(
-                from_.strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), full_match=False
+                from_.strftime("%Y-%m-%d"),
+                now.strftime("%Y-%m-%d"),
+                match_full_name=False,
             ),
             expected,
         )
@@ -431,7 +437,7 @@ class TestTimer(unittest.TestCase):
                 now.strftime("%Y-%m-%d"),
                 now.strftime("%Y-%m-%d"),
                 full_name=FullName("foo", frozenset()),
-                full_match=False,
+                match_full_name=False,
             ),
             expected,
         )
@@ -457,7 +463,7 @@ class TestTimer(unittest.TestCase):
                 now.strftime("%Y-%m-%d"),
                 now.strftime("%Y-%m-%d"),
                 full_name=FullName("", {"bar"}),
-                full_match=False,
+                match_full_name=False,
             ),
             expected,
         )
@@ -483,7 +489,7 @@ class TestTimer(unittest.TestCase):
                 now.strftime("%Y-%m-%d"),
                 now.strftime("%Y-%m-%d"),
                 full_name=FullName("foo", {"foobar"}),
-                full_match=True,
+                match_full_name=True,
             ),
             expected,
         )
