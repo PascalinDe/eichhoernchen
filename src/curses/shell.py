@@ -30,9 +30,10 @@ import curses.panel
 
 # third party imports
 # library specific imports
-from src.cutils import initialize_colour, mk_panel, ResizeError, WindowManager
-from src.interpreter import Interpreter, InterpreterError
+from src.interpreter.main_interpreter import Interpreter
+from src.interpreter.interpreter_mixin import InterpreterError
 from src.output_formatter import pprint_prompt
+from src.curses.utils import get_panel, ResizeError, WindowManager
 
 
 def _loop(stdscr, config):
@@ -51,10 +52,12 @@ def _loop(stdscr, config):
     interpreter = Interpreter(
         os.path.join(config["database"]["path"], config["database"]["dbname"]), aliases
     )
-    panel = mk_panel(*stdscr.getmaxyx(), 0, 0)
+    panel = get_panel(*stdscr.getmaxyx(), 0, 0)
     window = panel.window()
     window_mgr = WindowManager(
-        window, banner=True, commands=(*aliases.keys(), *interpreter.subcommands.keys())
+        window,
+        banner="Welcome to Eichhörnchen.\tType help or ? to list commands.",
+        commands=(*aliases.keys(), *interpreter.subcommands.keys()),
     )
     history = []
     while True:
@@ -104,5 +107,12 @@ def launch(stdscr, config):
     curses.start_color()
     curses.raw()
     curses.use_default_colors()
-    initialize_colour()
+    for colour_pair in (
+        (1, 2, -1),  # name
+        (2, 8, -1),  # tag(s)
+        (3, 5, -1),  # time span
+        (4, 11, -1),  # total
+        (5, 9, -1),  # error
+    ):
+        curses.init_pair(*colour_pair)
     _loop(stdscr, config)

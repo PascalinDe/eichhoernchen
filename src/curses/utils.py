@@ -34,9 +34,6 @@ from collections import defaultdict, UserList
 # library specific imports
 
 
-BANNER = "Welcome to Eichhörnchen.\tType help or ? to list commands."
-
-
 class ResizeError(Exception):
     """Raised when window has been resized."""
 
@@ -124,16 +121,17 @@ class WindowManager:
     :ivar list upper_stack: stack (upper window)
     :ivar list lower_stack: stack (lower window)
     :ivar bool box: whether a border is drawn around the edges
+    :ivar str banner: banner
     :ivar tuple commands: valid commands
     :ivar Logger logger: logger
     """
 
-    def __init__(self, window, box=False, banner=False, commands=tuple()):
+    def __init__(self, window, box=False, banner="", commands=tuple()):
         """Initialize window manager.
 
         :param window window: window
         :param bool box: toggle drawing a border around the edges on/off
-        :param bool banner: toggle adding a banner on/off
+        :param str banner: banner
         :param tuple commands: valid commands
         """
         self.window = window
@@ -157,7 +155,7 @@ class WindowManager:
                 self.window.box()
                 y += 1
             if self.banner:
-                self.window.addstr(y, x, BANNER)
+                self.window.addstr(y, x, self.banner)
                 y, _ = self.window.getyx()
                 self.window.move(y + 2, 0)
         except Exception as exception:
@@ -542,141 +540,8 @@ class WindowManager:
             raise
 
 
-def mk_menu(items):
-    """Make menu.
-
-    :param list items: items
-
-    :returns: item
-    :rtype: int
-    """
-    if len(items) == 1:
-        return 0
-    while True:
-        panel = mk_panel(*get_menu_dims(*curses.panel.top_panel().window().getmaxyx()))
-        window = panel.window()
-        window_mgr = WindowManager(window, box=True)
-        y, x = window.getyx()
-        multi_part_lines = (
-            ((f"Pick choice 1...{len(items)}.", curses.color_pair(0)),),
-            *tuple(
-                ((f"{i}: {item}", curses.color_pair(0)),)
-                for i, item in enumerate(items, start=1)
-            ),
-        )
-        window_mgr.writelines(y + 1, x + 1, multi_part_lines)
-        y, _ = window_mgr.window.getyx()
-        line = ""
-        try:
-            while line not in (str(i) for i in range(1, len(items) + 1)):
-                line = window_mgr.readline(
-                    [],
-                    y=y,
-                    prompt=((">", curses.color_pair(0)),),
-                    scroll=True,
-                    clear=True,
-                )
-        except EOFError:
-            return -1
-        except ResizeError:
-            panel.bottom()
-            window_mgr.reinitialize()
-            continue
-        else:
-            break
-        finally:
-            del panel
-            curses.panel.update_panels()
-    return int(line) - 1
-
-
-def readline(prompt=tuple()):
-    """Read line.
-
-    :param tuple prompt: prompt
-
-    :returns: line
-    :rtype: str
-    """
-    while True:
-        try:
-            panel = mk_panel(
-                *get_menu_dims(*curses.panel.top_panel().window().getmaxyx())
-            )
-            window = panel.window()
-            window_mgr = WindowManager(window, box=True)
-            line = window_mgr.readline([], prompt=prompt, y=1)
-        except ResizeError:
-            panel.bottom()
-            window.reinitialize()
-            continue
-        else:
-            return line
-        finally:
-            del panel
-            curses.panel.update_panels()
-
-
-def mk_stats(stats):
-    """Make statistics.
-
-    :param tuple stats: statistics
-    """
-    while True:
-        stats += [
-            (("", curses.color_pair(0)),),
-            (
-                (
-                    "Enter 'q' or press Ctrl+D to return to main window",
-                    curses.color_pair(0),
-                ),
-            ),
-        ]
-        panel = mk_panel(*curses.panel.top_panel().window().getmaxyx(), 0, 0)
-        window = panel.window()
-        window_mgr = WindowManager(window)
-        window_mgr.writelines(*window.getyx(), stats)
-        y, _ = window_mgr.window.getyx()
-        try:
-            line = ""
-            while line != "q":
-                line = window_mgr.readline(
-                    [],
-                    y=y,
-                    prompt=((">", curses.color_pair(0)),),
-                    scroll=True,
-                    clear=True,
-                )
-        except EOFError:
-            return
-        except ResizeError:
-            panel.bottom()
-            window_mgr.reinitialize()
-            continue
-        else:
-            break
-        finally:
-            del panel
-            curses.panel.update_panels()
-    return
-
-
-def get_menu_dims(max_y, max_x):
-    """Get menu window dimensions.
-
-    :param int max_y: maximum y position
-    :param int max_x: maximum x position
-
-    :returns: height, width and initial x, y cursor positions
-    :rtype: tuple
-    """
-    nlines = max_y // 2
-    ncols = max_x // 2
-    return nlines, ncols, (max_y - nlines) // 2, (max_x - ncols) // 2
-
-
-def mk_panel(nlines, ncols, begin_y, begin_x):
-    """Make panel.
+def get_panel(nlines, ncols, begin_y, begin_x):
+    """Get panel.
 
     :param int nlines: number of lines
     :param int ncols: number of columns
@@ -690,16 +555,3 @@ def mk_panel(nlines, ncols, begin_y, begin_x):
     curses.panel.update_panels()
     curses.doupdate()
     return panel
-
-
-def initialize_colour():
-    """Initialize colour pairs."""
-    colour_pairs = (
-        (1, 2, -1),  # name
-        (2, 8, -1),  # tags
-        (3, 5, -1),  # time span
-        (4, 11, -1),  # total
-        (5, 9, -1),  # error
-    )
-    for colour_pair in colour_pairs:
-        curses.init_pair(*colour_pair)
