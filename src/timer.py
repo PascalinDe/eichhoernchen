@@ -103,9 +103,6 @@ class Timer:
         :param Task task: task to add
 
         :raises ValueError: when the task cannot be added
-
-        :returns: new task
-        :rtype: Task
         """
         start, end = task.time_span
         if end <= start:
@@ -134,7 +131,6 @@ class Timer:
                 statement,
                 *parameters,
             )
-        return task
 
     def remove(self, task):
         """Remove task.
