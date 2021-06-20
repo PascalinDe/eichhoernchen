@@ -39,7 +39,7 @@ from src import FullName, Task
 class TestTimer(unittest.TestCase):
     """Timer test cases.
 
-    :cvar str DATABASE: SQLite3 database
+    :cvar str DATABASE: SQLite database file
     """
 
     DATABASE = "test.db"
@@ -55,108 +55,87 @@ class TestTimer(unittest.TestCase):
         """Test starting task.
 
         Trying: start task
-        Expecting: task is started
+        Expecting: task has been started
         """
         timer = src.timer.Timer(self.DATABASE)
-        connection = timer.interface.connect()
-        full_name = FullName("foo", {"bar", "baz"})
-        timer.start(Task(*full_name, tuple()))
-        self.assertEqual(timer.task.name, full_name.name)
-        self.assertEqual(timer.task.tags, full_name.tags)
-        rows = connection.execute(
-            "SELECT start,end FROM time_span WHERE start = ?",
-            (timer.task.time_span[0],),
-        ).fetchall()
-        self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0], timer.task.time_span)
-        rows = connection.execute(
-            "SELECT name FROM running WHERE start = ?", (timer.task.time_span[0],)
-        ).fetchall()
-        self.assertEqual(len(rows), 1)
-        self.assertEqual(*rows[0], full_name.name)
-        rows = connection.execute(
-            "SELECT tag FROM tagged WHERE start = ?", (timer.task.time_span[0],)
-        ).fetchall()
-        self.assertEqual(len(rows), 2)
-        self.assertEqual({x for row in rows for x in row}, timer.task.tags)
+        name = "foo"
+        tags = {"bar", "baz"}
+        timer.start(Task(name, tags, tuple()))
+        for actual, expected in (
+            (timer.task.name, name),
+            (timer.task.tags, tags),
+        ):
+            self.assertEqual(actual, expected)
+        for columns, table in (
+            ("start,end", "time_span"),
+            ("name", "running"),
+            ("tag", "tagged"),
+        ):
+            rows = timer.interface.execute(
+                f"SELECT {columns} FROM {table} WHERE start=?",
+                (timer.task.time_span[0],),
+            )
+            if table == "time_span":
+                expected_len = 1
+                actual_columns = rows[0]
+                expected_columns = timer.task.time_span
+            if table == "running":
+                expected_len = 1
+                actual_columns = rows[0]
+                expected_columns = (name,)
+            if table == "tagged":
+                expected_len = 2
+                actual_columns = ({x for row in rows for x in row},)
+                expected_columns = (tags,)
+            self.assertEqual(len(rows), expected_len)
+            self.assertEqual(actual_columns, expected_columns)
 
     def test_stop(self):
         """Test stopping task.
 
-        Trying: stopping task
+        Trying: stop task
         Expecting: task has been stopped
         """
         timer = src.timer.Timer(self.DATABASE)
-        connection = timer.interface.connect()
         name = "foo"
         timer.start(Task(name, frozenset(), tuple()))
         timer.stop()
-        self.assertEqual(timer.task.name, "")
-        rows = connection.execute(
+        self.assertFalse(any(timer.task))
+        start, end = timer.interface.execute(
             """SELECT time_span.start,end
             FROM time_span
             JOIN running ON time_span.start=running.start
-            WHERE name = ?""",
+            WHERE name=?""",
             (name,),
-        ).fetchall()
-        start, end = rows.pop(0)
+        ).pop(0)
         self.assertTrue(end > start)
-
-    def _insert(self, values):
-        """Insert tasks.
-
-        :param tuple values: tasks to insert
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        connection = timer.interface.connect()
-        for _, _, (start, end) in values:
-            if end:
-                connection.execute(
-                    "INSERT INTO time_span (start,end) VALUES (?,?)", (start, end)
-                )
-            else:
-                connection.execute("INSERT INTO time_span (start) VALUES (?)", (start,))
-        connection.commit()
-        connection.executemany(
-            "INSERT INTO running (name,start) VALUES (?,?)",
-            ((name, start) for name, _, (start, _) in values),
-        )
-        connection.commit()
-        for _, tags, (start, _) in values:
-            connection.executemany(
-                "INSERT INTO tagged (tag,start) VALUES (?,?)",
-                ((tag, start) for tag in tags),
-            )
-        connection.commit()
 
     def test_edit_name(self):
         """Test editing task.
 
-        Trying: editing name
+        Trying: edit name
         Expecting: name has been updated
         """
         timer = src.timer.Timer(self.DATABASE)
-        connection = timer.interface.connect()
         timer.start(Task("foo", frozenset(), tuple()))
         task = timer.task
         timer.stop()
         name = "bar"
         timer.edit(task, "name", name)
         self.assertEqual(
-            *connection.execute(
+            *timer.interface.execute(
                 "SELECT name FROM running WHERE start=?", (task.time_span[0],)
-            ).fetchone(),
-            name,
+            ),
+            (name,),
         )
 
     def test_edit_tags(self):
         """Test editing task.
 
-        Trying: editing tags
+        Trying: edit task
         Expecting: tags have been updated
         """
         timer = src.timer.Timer(self.DATABASE)
-        connection = timer.interface.connect()
         timer.start(Task("foo", {"bar"}, tuple()))
         task = timer.task
         timer.stop()
@@ -165,7 +144,7 @@ class TestTimer(unittest.TestCase):
         self.assertCountEqual(
             (
                 x
-                for row in connection.execute(
+                for row in timer.interface.execute(
                     "SELECT tag FROM tagged WHERE start=?", (task.time_span[0],)
                 )
                 for x in row
@@ -176,430 +155,308 @@ class TestTimer(unittest.TestCase):
     def test_edit_start(self):
         """Test editing task.
 
-        Trying: editing start
+        Trying: edit start
         Expecting: start has been updated
         """
         timer = src.timer.Timer(self.DATABASE)
-        connection = timer.interface.connect()
         timer.start(Task("foo", frozenset(), tuple()))
         task = timer.task
         timer.stop()
-        timedelta = datetime.timedelta(minutes=1)
+        minutes = datetime.timedelta(minutes=1)
         task = Task(
-            task.name, task.tags, (task.time_span[0], task.time_span[0] + timedelta)
+            task.name,
+            task.tags,
+            task.time_span,
         )
-        start = task.time_span[0] - timedelta
+        start = task.time_span[0] - minutes
         timer.edit(task, "start", start)
         for table in ("time_span", "running"):
-            sql = f"SELECT 1 FROM {table} WHERE start=?"
-            self.assertFalse(connection.execute(sql, (task.time_span[0],)).fetchall())
-            self.assertTrue(connection.execute(sql, (start,)).fetchall())
+            statement = f"SELECT 1 FROM {table} WHERE start=?"
+            self.assertFalse(timer.interface.execute(statement, (task.time_span[0],)))
+            self.assertTrue(timer.interface.execute(statement, (start,)))
 
     def test_edit_end(self):
         """Test editing task.
 
-        Trying: editing end
+        Trying: edit end
         Expecting: end has been updated
         """
         timer = src.timer.Timer(self.DATABASE)
-        connection = timer.interface.connect()
         timer.start(Task("foo", frozenset(), tuple()))
         task = timer.task
         timer.stop()
-        timedelta = datetime.timedelta(minutes=1)
+        minutes = datetime.timedelta(minutes=1)
         task = Task(
-            task.name, task.tags, (task.time_span[0], task.time_span[0] + timedelta)
+            task.name,
+            task.tags,
+            (task.time_span[0], task.time_span[0] + minutes),
         )
-        end = task.time_span[1] + timedelta
+        end = task.time_span[1] + minutes
         timer.edit(task, "end", end)
-        self.assertEqual(
-            *connection.execute(
-                "SELECT end FROM time_span WHERE start=?", (task.time_span[0],)
-            ).fetchall(),
-            (end,),
+        self.assertTrue(
+            timer.interface.execute(
+                "SELECT 1 FROM time_span WHERE end=?",
+                (end,),
+            )
         )
 
-    def test_edit_start_running(self):
+    def test_edit_currently_running(self):
         """Test editing task.
 
-        Trying: editing start of a running task
+        Trying: edit currently running task
         Expecting: ValueError
         """
         timer = src.timer.Timer(self.DATABASE)
         timer.start(Task("foo", frozenset(), tuple()))
-        with self.assertRaises(ValueError):
-            timer.edit(timer.task, "start", datetime.datetime.now())
-
-    def test_edit_start_after_end(self):
-        """Test editing task.
-
-        Trying: editing start so that new start is after end
-        Expecting: ValueError
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        timer.start(Task("foo", frozenset(), tuple()))
-        task = timer.task
-        timer.stop()
-        now = datetime.datetime.now()
-        timedelta = datetime.timedelta(minutes=1)
-        task = Task(task.name, task.tags, (task.time_span[0], now + timedelta))
-        start = now + 2 * timedelta
-        with self.assertRaises(ValueError):
-            timer.edit(task, "start", start)
-
-    def test_edit_end_running(self):
-        """Test editing task.
-
-        Trying: editing end of a running task
-        Expecting: ValueError
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        timer.start(Task("foo", frozenset(), tuple()))
-        with self.assertRaises(ValueError):
-            timer.edit(timer.task, "end", datetime.datetime.now())
-
-    def test_edit_end_before_start(self):
-        """Test editing task.
-
-        Trying: editing end so that new end is before start
-        Expecting: ValueError
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        timer.start(Task("foo", frozenset(), tuple()))
-        task = timer.task
-        timer.stop()
-        now = datetime.datetime.now()
-        timedelta = datetime.timedelta(minutes=1)
-        task = Task(task.name, task.tags, (task.time_span[0], now))
-        end = task.time_span[0] - timedelta
-        with self.assertRaises(ValueError):
-            timer.edit(task, "end", end)
+        for action in ("start", "end"):
+            with self.assertRaises(ValueError):
+                timer.edit(timer.task, action)
 
     def test_remove(self):
         """Test removing task.
 
-        Trying: removing task
+        Trying: remove task
         Expecting: task has been removed
         """
         timer = src.timer.Timer(self.DATABASE)
-        connection = timer.interface.connect()
         timer.start(Task("foo", {"bar"}, tuple()))
         task = timer.task
         timer.stop()
-        timer.remove(task=task)
+        timer.remove(task)
         for table in ("time_span", "running", "tagged"):
             self.assertFalse(
-                connection.execute(
-                    f"SELECT 1 FROM {table} WHERE start=?", (task.time_span[0],)
-                ).fetchall()
+                timer.interface.execute(
+                    f"SELECT 1 FROM {table} WHERE start=?",
+                    (task.time_span[0],),
+                )
             )
 
-    def test_remove_running(self):
+    def test_remove_currently_running(self):
         """Test removing task.
 
-        Trying: removing running task
+        Trying: remove currently running task
         Expecting: ValueError
         """
         timer = src.timer.Timer(self.DATABASE)
         timer.start(Task("foo", frozenset(), tuple()))
         with self.assertRaises(ValueError):
-            timer.remove(task=timer.task)
+            timer.remove(timer.task)
 
-    def test_clean_up(self):
+    def _insert_tasks(self, tasks):
+        """Insert tasks.
+
+        :param tuple tasks: tasks to insert
+        """
+        timer = src.timer.Timer(self.DATABASE)
+        for task in tasks:
+            start, end = task.time_span
+            if end:
+                timer.interface.execute(
+                    "INSERT INTO time_span (start,end) VALUES (?,?)",
+                    (start, end),
+                )
+            else:
+                timer.interface.execute(
+                    "INSERT INTO time_span (start) VALUES (?)",
+                    (start,),
+                )
+            if task.tags:
+                timer.interface.execute(
+                    "INSERT INTO tagged (tag,start) VALUES (?,?)",
+                    *((tag, start) for tag in task.tags),
+                )
+        timer.interface.execute(
+            "INSERT INTO running (name,start) VALUES (?,?)",
+            *((task.name, task.time_span[0]) for task in tasks),
+        )
+
+    def test_list_buggy_tasks(self):
         """Test listing buggy tasks.
 
-        Trying: listing buggy tasks
-        Expecting: buggy tasks
+        Trying: list buggy tasks
+        Expecting: list of buggy tasks
         """
         timer = src.timer.Timer(self.DATABASE)
         now = datetime.datetime.now()
-        timedelta = datetime.timedelta(hours=1)
-        values = (
-            ("foo", {"bar"}, (now, None)),
-            ("baz", {"foobar", "toto"}, (now + timedelta, None)),
-            ("tata", frozenset(), (now - timedelta, now)),
+        hours = datetime.timedelta(hours=1)
+        tasks = (
+            Task("foo", {"bar"}, (now, None)),
+            Task("baz", {"foobar", "toto"}, (now + hours, None)),
+            Task("tata", frozenset(), (now - hours, now)),
         )
-        self._insert(values)
-        actual = (
-            Task(task.name, task.tags, (task.time_span[0], None))
-            for task in timer.list_buggy_tasks()
-        )
+        self._insert_tasks(tasks)
         self.assertCountEqual(
-            actual,
-            (Task(name, tags, time_span) for name, tags, time_span in values[:-1]),
+            (
+                Task(task.name, task.tags, (task.time_span[0], None))
+                for task in timer.list_buggy_tasks()
+            ),
+            tasks[:-1],
         )
 
     def test_add(self):
         """Test adding task.
 
-        Trying: adding task
+        Trying: add task
         Expecting: task has been added
         """
         timer = src.timer.Timer(self.DATABASE)
-        connection = timer.interface.connect()
         start = datetime.datetime.now()
-        end = start + datetime.timedelta(days=1)
-        timer.add(Task("foo", {"bar"}, (start, end)))
+        timer.add(Task("foo", {"bar"}, (start, start + datetime.timedelta(days=1))))
         for table in ("time_span", "running", "tagged"):
             self.assertTrue(
-                connection.execute(
+                timer.interface.execute(
                     f"SELECT 1 FROM {table} WHERE start=?", (start,)
-                ).fetchall()
+                )
             )
 
     def test_add_same_start(self):
         """Test adding task.
 
-        Trying: add task starting at the same time as existing task
-        Expecting: ValueError
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        timer.start(
-            Task("foo", frozenset(), tuple()),
-        )
-        start, _ = timer.task.time_span
-        timer.stop()
-        end = start + datetime.timedelta(minutes=1)
-        with self.assertRaises(ValueError):
-            timer.add(
-                Task("foo", frozenset(), (start, end)),
-            )
-
-    def test_add_start_after_end(self):
-        """Test adding task.
-
-        Trying: add task starting after its end
-        Expecting: ValueError
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        end = datetime.datetime.now()
-        start = end + datetime.timedelta(days=1)
-        with self.assertRaises(ValueError):
-            timer.add(Task("foo", {"bar"}, (start, end)))
-
-    def test_add_end_before_start(self):
-        """Test adding task.
-
-        Trying: add task ending before its start
+        Trying: add task started at the same time than existing task
         Expecting: ValueError
         """
         timer = src.timer.Timer(self.DATABASE)
         start = datetime.datetime.now()
-        end = start - datetime.timedelta(days=1)
+        time_span = (start, start + datetime.timedelta(hours=1))
+        task = Task("foo", {"bar"}, time_span)
+        self._insert_tasks((task,))
         with self.assertRaises(ValueError):
-            timer.add(Task("foo", {"bar"}, (start, end)))
+            timer.add(task)
 
     def test_list(self):
         """Test listing tasks.
 
-        Trying: listing tasks
+        Trying: list tasks
         Expecting: list of tasks
         """
         timer = src.timer.Timer(self.DATABASE)
-        now = datetime.datetime.now()
-        from_ = now - datetime.timedelta(days=now.weekday())
-        values = (
-            ("foo", {"bar"}, (now, now + datetime.timedelta(hours=1))),
-            ("baz", frozenset(), (from_, now)),
-            ("foobar", {"toto", "tata"}, (from_ - datetime.timedelta(days=1), now)),
+        start = datetime.datetime.now()
+        hours = datetime.timedelta(hours=1)
+        end = start + (4 * hours)
+        tasks = (
+            Task("foo", {"bar"}, (start, start + hours)),
+            Task("foo", frozenset(), (start + hours, start + (2 * hours))),
+            Task("foobar", {"bar", "toto"}, (start + (2 * hours), start + (3 * hours))),
+            Task("tata", {"bar", "toto"}, (start + (3 * hours), end)),
         )
-        self._insert(values)
-        expected = (
-            Task(name, tags, (start, end)) for name, tags, (start, end) in values[:2]
-        )
+        self._insert_tasks(tasks)
         self.assertCountEqual(
-            timer.list(
-                from_.strftime("%Y-%m-%d"),
-                now.strftime("%Y-%m-%d"),
-                match_full_name=False,
-            ),
-            expected,
+            timer.list(start, end, full_match=False),
+            tasks,
         )
+        for full_match, expected in ((True, (tasks[0],)), (False, tasks[:2])):
+            self.assertCountEqual(
+                timer.list(
+                    start,
+                    end,
+                    full_name=FullName("foo", {"bar"}),
+                    full_match=full_match,
+                ),
+                expected,
+            )
+        for full_match, expected in ((True, (tasks[2],)), (False, tasks[2:])):
+            self.assertCountEqual(
+                timer.list(
+                    start,
+                    end,
+                    full_name=FullName("foobar", {"bar", "toto"}),
+                    full_match=full_match,
+                ),
+                expected,
+            )
 
-    def test_sum_name(self):
-        """Test summing total time up.
+    def test_sum(self):
+        """Test summing runtime up.
 
-        Trying: summing up total time with a given name
-        Expecting: list of sums
+        Trying: sum runtime up
+        Expecting: summed up runtime per task
         """
         timer = src.timer.Timer(self.DATABASE)
-        now = datetime.datetime.now()
-        timedelta = datetime.timedelta(minutes=1)
-        values = (
-            ("foo", {"bar"}, (now, now + timedelta)),
-            ("foo", {}, (now + timedelta, now + 2 * timedelta)),
-            ("bar", {}, (now + 2 * timedelta, now + 3 * timedelta)),
+        start = datetime.datetime.now()
+        minutes = datetime.timedelta(minutes=1)
+        end = start + (4 * minutes)
+        tasks = (
+            Task("foo", {"bar"}, (start, start + minutes)),
+            Task("foo", {"bar"}, (start + minutes, (start + 2 * minutes))),
+            Task("foo", {"baz"}, (start + (2 * minutes), start + (3 * minutes))),
+            Task("foobar", {"bar"}, (start + (3 * minutes), end)),
         )
-        self._insert(values)
-        expected = ((("foo", ("",)), int(2 * timedelta.total_seconds())),)
+        self._insert_tasks(tasks)
         self.assertCountEqual(
             timer.sum(
-                now.strftime("%Y-%m-%d"),
-                now.strftime("%Y-%m-%d"),
+                start,
+                end,
                 full_name=FullName("foo", frozenset()),
-                match_full_name=False,
-            ),
-            expected,
+                full_match=False,
+            ).items(),
+            ((("foo", ("",)), int(3 * minutes.total_seconds())),),
         )
-
-    def test_sum_tags(self):
-        """Test summing total time up.
-
-        Trying: summing up total time with given tags
-        Expecting: list of sums
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        now = datetime.datetime.now()
-        timedelta = datetime.timedelta(minutes=1)
-        values = (
-            ("foo", {"bar"}, (now, now + timedelta)),
-            ("baz", {"bar"}, (now + timedelta, now + 2 * timedelta)),
-            ("foobar", {"toto"}, (now + 2 * timedelta, now + 3 * timedelta)),
-        )
-        self._insert(values)
-        expected = ((("", ("bar",)), int(2 * timedelta.total_seconds())),)
         self.assertCountEqual(
             timer.sum(
-                now.strftime("%Y-%m-%d"),
-                now.strftime("%Y-%m-%d"),
+                start,
+                end,
                 full_name=FullName("", {"bar"}),
-                match_full_name=False,
-            ),
-            expected,
+                full_match=False,
+            ).items(),
+            ((("", ("bar",)), int(3 * minutes.total_seconds())),),
         )
-
-    def test_sum_full_name(self):
-        """Test summing total time up.
-
-        Trying: summing up total time with given full name
-        Expecting: list of sums
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        now = datetime.datetime.now()
-        timedelta = datetime.timedelta(minutes=1)
-        values = (
-            ("foo", frozenset(), (now, now + timedelta)),
-            ("foo", frozenset(), (now + timedelta, now + 2 * timedelta)),
-            ("foo", {"foobar"}, (now + 2 * timedelta, now + 3 * timedelta)),
-        )
-        self._insert(values)
-        expected = ((("foo", ("foobar",)), int(timedelta.total_seconds())),)
         self.assertCountEqual(
             timer.sum(
-                now.strftime("%Y-%m-%d"),
-                now.strftime("%Y-%m-%d"),
-                full_name=FullName("foo", {"foobar"}),
-                match_full_name=True,
-            ),
-            expected,
+                start,
+                end,
+                full_name=FullName("foo", {"bar"}),
+                full_match=True,
+            ).items(),
+            ((("foo", ("bar",)), int(2 * minutes.total_seconds())),),
         )
 
-    def test_export_to_csv(self):
+    def test_export(self):
         """Test exporting tasks.
 
-        Trying: export to CSV file
-        Expecting: tasks have been exported to CSV file
+        Trying: export tasks
+        Expecting: tasks have been exported
         """
         timer = src.timer.Timer(self.DATABASE)
-        now = datetime.datetime.now()
-        timedelta = datetime.timedelta(minutes=1)
-        values = (
-            ("foo", {"bar", "baz"}, (now, now + timedelta)),
-            ("foobar", frozenset(), (now + timedelta, now + 2 * timedelta)),
-            ("toto", frozenset(), (now - timedelta, now)),
+        start = datetime.datetime.now()
+        minutes = datetime.timedelta(minutes=1)
+        end = start + (3 * minutes)
+        tasks = (
+            Task("foo", {"bar"}, (start, start + minutes)),
+            Task("foobar", frozenset(), (start + minutes, start + (2 * minutes))),
+            Task("toto", frozenset(), (start + (2 * minutes), end)),
         )
-        self._insert(values)
-        filename = timer.export(
-            "csv", now.strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d")
-        )
+        self._insert_tasks(tasks)
+        filename = timer.export("csv", start, end, full_match=False)
         with open(filename) as fp:
-            self.assertEqual(
+            self.assertListEqual(
                 list(row for row in csv.reader(fp)),
                 sorted(
                     (
                         [
-                            name,
+                            task.name,
                             tag,
-                            start.isoformat(timespec="seconds"),
-                            end.isoformat(timespec="seconds"),
+                            task.time_span[0].isoformat(timespec="seconds"),
+                            task.time_span[1].isoformat(timespec="seconds"),
                         ]
-                        for name, tags, (start, end) in values
-                        for tag in sorted(tags) or {""}
+                        for task in tasks
+                        for tag in sorted(task.tags) or {""}
                     ),
                     key=lambda x: x[2],
                 ),
             )
-
-    def test_export_to_json(self):
-        """Test exporting tasks.
-
-        Trying: export to JSON file
-        Expecting: tasks have been exported to JSON file
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        now = datetime.datetime.now()
-        timedelta = datetime.timedelta(minutes=1)
-        values = (
-            ("foo", {"bar", "baz"}, (now, now + timedelta)),
-            ("foobar", frozenset(), (now + timedelta, now + 2 * timedelta)),
-            ("toto", frozenset(), (now - timedelta, now)),
-        )
-        self._insert(values)
-        filename = timer.export(
-            "json", now.strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d")
-        )
+        filename = timer.export("json", start, end, full_match=False)
         with open(filename) as fp:
-            self.assertEqual(
+            self.assertListEqual(
                 json.load(fp),
                 sorted(
                     (
                         [
-                            name,
-                            list(tags),
-                            start.isoformat(timespec="seconds"),
-                            end.isoformat(timespec="seconds"),
+                            task.name,
+                            list(task.tags),
+                            task.time_span[0].isoformat(timespec="seconds"),
+                            task.time_span[1].isoformat(timespec="seconds"),
                         ]
-                        for name, tags, (start, end) in values
-                    ),
-                    key=lambda x: x[2],
-                ),
-            )
-
-    def test_export_to_csv_full_name(self):
-        """Test exporting tasks.
-
-        Trying: export tasks with given full name to CSV file
-        Expecting: tasks with given full name have been exported to CSV file
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        now = datetime.datetime.now()
-        timedelta = datetime.timedelta(minutes=1)
-        values = (
-            ("foo", {"bar", "baz"}, (now, now + timedelta)),
-            ("foobar", frozenset(), (now + timedelta, now + 2 * timedelta)),
-            ("toto", frozenset(), (now - timedelta, now)),
-            ("toto", frozenset(), (now + 2 * timedelta, now + 3 * timedelta)),
-        )
-        self._insert(values)
-        filename = timer.export(
-            "csv",
-            now.strftime("%Y-%m-%d"),
-            now.strftime("%Y-%m-%d"),
-            full_name=FullName("toto", frozenset()),
-        )
-        with open(filename) as fp:
-            self.assertEqual(
-                list(row for row in csv.reader(fp)),
-                sorted(
-                    (
-                        [
-                            name,
-                            tag,
-                            start.isoformat(timespec="seconds"),
-                            end.isoformat(timespec="seconds"),
-                        ]
-                        for name, tags, (start, end) in values[2:]
-                        for tag in sorted(tags) or {""}
+                        for task in tasks
                     ),
                     key=lambda x: x[2],
                 ),
