@@ -44,6 +44,34 @@ class TestTimer(unittest.TestCase):
 
     DATABASE = "test.db"
 
+    def _insert_tasks(self, tasks):
+        """Insert tasks.
+
+        :param tuple tasks: tasks to insert
+        """
+        timer = src.timer.Timer(self.DATABASE)
+        for task in tasks:
+            start, end = task.time_span
+            if end:
+                timer.interface.execute(
+                    "INSERT INTO time_span (start,end) VALUES (?,?)",
+                    (start, end),
+                )
+            else:
+                timer.interface.execute(
+                    "INSERT INTO time_span (start) VALUES (?)",
+                    (start,),
+                )
+            if task.tags:
+                timer.interface.execute(
+                    "INSERT INTO tagged (tag,start) VALUES (?,?)",
+                    *((tag, start) for tag in task.tags),
+                )
+        timer.interface.execute(
+            "INSERT INTO running (name,start) VALUES (?,?)",
+            *((task.name, task.time_span[0]) for task in tasks),
+        )
+
     def tearDown(self):
         """Tear down test cases."""
         try:
@@ -110,6 +138,66 @@ class TestTimer(unittest.TestCase):
         ).pop(0)
         self.assertTrue(end > start)
 
+    def test_add(self):
+        """Test adding task.
+
+        Trying: add task
+        Expecting: task has been added
+        """
+        timer = src.timer.Timer(self.DATABASE)
+        start = datetime.datetime.now()
+        timer.add(Task("foo", {"bar"}, (start, start + datetime.timedelta(days=1))))
+        for table in ("time_span", "running", "tagged"):
+            self.assertTrue(
+                timer.interface.execute(
+                    f"SELECT 1 FROM {table} WHERE start=?", (start,)
+                )
+            )
+
+    def test_add_same_start(self):
+        """Test adding task.
+
+        Trying: add task started at the same time than existing task
+        Expecting: ValueError
+        """
+        timer = src.timer.Timer(self.DATABASE)
+        start = datetime.datetime.now()
+        time_span = (start, start + datetime.timedelta(hours=1))
+        task = Task("foo", {"bar"}, time_span)
+        self._insert_tasks((task,))
+        with self.assertRaises(ValueError):
+            timer.add(task)
+
+    def test_remove(self):
+        """Test removing task.
+
+        Trying: remove task
+        Expecting: task has been removed
+        """
+        timer = src.timer.Timer(self.DATABASE)
+        timer.start(Task("foo", {"bar"}, tuple()))
+        task = timer.task
+        timer.stop()
+        timer.remove(task)
+        for table in ("time_span", "running", "tagged"):
+            self.assertFalse(
+                timer.interface.execute(
+                    f"SELECT 1 FROM {table} WHERE start=?",
+                    (task.time_span[0],),
+                )
+            )
+
+    def test_remove_currently_running(self):
+        """Test removing task.
+
+        Trying: remove currently running task
+        Expecting: ValueError
+        """
+        timer = src.timer.Timer(self.DATABASE)
+        timer.start(Task("foo", frozenset(), tuple()))
+        with self.assertRaises(ValueError):
+            timer.remove(timer.task)
+
     def test_edit_name(self):
         """Test editing task.
 
@@ -166,7 +254,7 @@ class TestTimer(unittest.TestCase):
         task = Task(
             task.name,
             task.tags,
-            task.time_span,
+            (task.time_span[0], task.time_span[0] + minutes),
         )
         start = task.time_span[0] - minutes
         timer.edit(task, "start", start)
@@ -212,63 +300,47 @@ class TestTimer(unittest.TestCase):
             with self.assertRaises(ValueError):
                 timer.edit(timer.task, action)
 
-    def test_remove(self):
-        """Test removing task.
+    def test_list(self):
+        """Test listing tasks.
 
-        Trying: remove task
-        Expecting: task has been removed
+        Trying: list tasks
+        Expecting: list of tasks
         """
         timer = src.timer.Timer(self.DATABASE)
-        timer.start(Task("foo", {"bar"}, tuple()))
-        task = timer.task
-        timer.stop()
-        timer.remove(task)
-        for table in ("time_span", "running", "tagged"):
-            self.assertFalse(
-                timer.interface.execute(
-                    f"SELECT 1 FROM {table} WHERE start=?",
-                    (task.time_span[0],),
-                )
-            )
-
-    def test_remove_currently_running(self):
-        """Test removing task.
-
-        Trying: remove currently running task
-        Expecting: ValueError
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        timer.start(Task("foo", frozenset(), tuple()))
-        with self.assertRaises(ValueError):
-            timer.remove(timer.task)
-
-    def _insert_tasks(self, tasks):
-        """Insert tasks.
-
-        :param tuple tasks: tasks to insert
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        for task in tasks:
-            start, end = task.time_span
-            if end:
-                timer.interface.execute(
-                    "INSERT INTO time_span (start,end) VALUES (?,?)",
-                    (start, end),
-                )
-            else:
-                timer.interface.execute(
-                    "INSERT INTO time_span (start) VALUES (?)",
-                    (start,),
-                )
-            if task.tags:
-                timer.interface.execute(
-                    "INSERT INTO tagged (tag,start) VALUES (?,?)",
-                    *((tag, start) for tag in task.tags),
-                )
-        timer.interface.execute(
-            "INSERT INTO running (name,start) VALUES (?,?)",
-            *((task.name, task.time_span[0]) for task in tasks),
+        start = datetime.datetime.now()
+        hours = datetime.timedelta(hours=1)
+        end = start + (4 * hours)
+        tasks = (
+            Task("foo", {"bar"}, (start, start + hours)),
+            Task("foo", frozenset(), (start + hours, start + (2 * hours))),
+            Task("foobar", {"bar", "toto"}, (start + (2 * hours), start + (3 * hours))),
+            Task("tata", {"bar", "toto"}, (start + (3 * hours), end)),
         )
+        self._insert_tasks(tasks)
+        self.assertCountEqual(
+            timer.list(start, end, match_full_name=False),
+            tasks,
+        )
+        for match_full_name, expected in ((True, (tasks[0],)), (False, tasks[:2])):
+            self.assertCountEqual(
+                timer.list(
+                    start,
+                    end,
+                    full_name=FullName("foo", {"bar"}),
+                    match_full_name=match_full_name,
+                ),
+                expected,
+            )
+        for match_full_name, expected in ((True, (tasks[2],)), (False, tasks[2:])):
+            self.assertCountEqual(
+                timer.list(
+                    start,
+                    end,
+                    full_name=FullName("foobar", {"bar", "toto"}),
+                    match_full_name=match_full_name,
+                ),
+                expected,
+            )
 
     def test_list_buggy_tasks(self):
         """Test listing buggy tasks.
@@ -293,78 +365,6 @@ class TestTimer(unittest.TestCase):
             tasks[:-1],
         )
 
-    def test_add(self):
-        """Test adding task.
-
-        Trying: add task
-        Expecting: task has been added
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        start = datetime.datetime.now()
-        timer.add(Task("foo", {"bar"}, (start, start + datetime.timedelta(days=1))))
-        for table in ("time_span", "running", "tagged"):
-            self.assertTrue(
-                timer.interface.execute(
-                    f"SELECT 1 FROM {table} WHERE start=?", (start,)
-                )
-            )
-
-    def test_add_same_start(self):
-        """Test adding task.
-
-        Trying: add task started at the same time than existing task
-        Expecting: ValueError
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        start = datetime.datetime.now()
-        time_span = (start, start + datetime.timedelta(hours=1))
-        task = Task("foo", {"bar"}, time_span)
-        self._insert_tasks((task,))
-        with self.assertRaises(ValueError):
-            timer.add(task)
-
-    def test_list(self):
-        """Test listing tasks.
-
-        Trying: list tasks
-        Expecting: list of tasks
-        """
-        timer = src.timer.Timer(self.DATABASE)
-        start = datetime.datetime.now()
-        hours = datetime.timedelta(hours=1)
-        end = start + (4 * hours)
-        tasks = (
-            Task("foo", {"bar"}, (start, start + hours)),
-            Task("foo", frozenset(), (start + hours, start + (2 * hours))),
-            Task("foobar", {"bar", "toto"}, (start + (2 * hours), start + (3 * hours))),
-            Task("tata", {"bar", "toto"}, (start + (3 * hours), end)),
-        )
-        self._insert_tasks(tasks)
-        self.assertCountEqual(
-            timer.list(start, end, full_match=False),
-            tasks,
-        )
-        for full_match, expected in ((True, (tasks[0],)), (False, tasks[:2])):
-            self.assertCountEqual(
-                timer.list(
-                    start,
-                    end,
-                    full_name=FullName("foo", {"bar"}),
-                    full_match=full_match,
-                ),
-                expected,
-            )
-        for full_match, expected in ((True, (tasks[2],)), (False, tasks[2:])):
-            self.assertCountEqual(
-                timer.list(
-                    start,
-                    end,
-                    full_name=FullName("foobar", {"bar", "toto"}),
-                    full_match=full_match,
-                ),
-                expected,
-            )
-
     def test_sum(self):
         """Test summing runtime up.
 
@@ -387,8 +387,8 @@ class TestTimer(unittest.TestCase):
                 start,
                 end,
                 full_name=FullName("foo", frozenset()),
-                full_match=False,
-            ).items(),
+                match_full_name=False,
+            ),
             ((("foo", ("",)), int(3 * minutes.total_seconds())),),
         )
         self.assertCountEqual(
@@ -396,8 +396,8 @@ class TestTimer(unittest.TestCase):
                 start,
                 end,
                 full_name=FullName("", {"bar"}),
-                full_match=False,
-            ).items(),
+                match_full_name=False,
+            ),
             ((("", ("bar",)), int(3 * minutes.total_seconds())),),
         )
         self.assertCountEqual(
@@ -405,8 +405,8 @@ class TestTimer(unittest.TestCase):
                 start,
                 end,
                 full_name=FullName("foo", {"bar"}),
-                full_match=True,
-            ).items(),
+                match_full_name=True,
+            ),
             ((("foo", ("bar",)), int(2 * minutes.total_seconds())),),
         )
 
@@ -426,7 +426,7 @@ class TestTimer(unittest.TestCase):
             Task("toto", frozenset(), (start + (2 * minutes), end)),
         )
         self._insert_tasks(tasks)
-        filename = timer.export("csv", start, end, full_match=False)
+        filename = timer.export("csv", start, end)
         with open(filename) as fp:
             self.assertListEqual(
                 list(row for row in csv.reader(fp)),
@@ -444,7 +444,7 @@ class TestTimer(unittest.TestCase):
                     key=lambda x: x[2],
                 ),
             )
-        filename = timer.export("json", start, end, full_match=False)
+        filename = timer.export("json", start, end)
         with open(filename) as fp:
             self.assertListEqual(
                 json.load(fp),
