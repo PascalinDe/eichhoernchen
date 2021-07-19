@@ -321,7 +321,7 @@ class InterpreterMixin:
         args = tuple(split.strip() for split in re.split(r"|".join(self.SEP), line))
         # FIXME
         if cmd == "export":
-            args = tuple(*args[0].split(maxsplit=1), *args[2:])
+            args = (*args[0].split(maxsplit=1), *args[1:])
         if cmd == "show_stats":
             args = tuple(arg for arg in args if arg)
         return args

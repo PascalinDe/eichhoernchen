@@ -34,7 +34,7 @@ def mk_stats(stats):
     :param tuple stats: statistics
     """
     while True:
-        stats += [
+        stats += (
             (("", curses.color_pair(0)),),
             (
                 (
@@ -42,7 +42,7 @@ def mk_stats(stats):
                     curses.color_pair(0),
                 ),
             ),
-        ]
+        )
         panel = get_panel(*curses.panel.top_panel().window().getmaxyx(), 0, 0)
         window = panel.window()
         window_mgr = WindowManager(window)

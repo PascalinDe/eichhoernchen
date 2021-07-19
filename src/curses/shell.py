@@ -30,8 +30,8 @@ import curses.panel
 
 # third party imports
 # library specific imports
-from src.interpreter.main_interpreter import Interpreter
-from src.interpreter.interpreter_mixin import InterpreterError
+from src.interpreter import InterpreterError
+from src.interpreter.interpreter import Interpreter
 from src.output_formatter import pprint_prompt
 from src.curses.utils import get_panel, ResizeError, WindowManager
 

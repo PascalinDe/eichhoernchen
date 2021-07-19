@@ -34,8 +34,10 @@ from src.interpreter import (
     match_end,
     match_from,
     match_full_name,
+    match_name,
     match_start,
     match_summand,
+    match_tags,
     match_to,
     NoSuchTask,
     UserAbort,
@@ -185,15 +187,13 @@ class Interpreter(InterpreterMixin):
                         **self.ARGS["full_name"],
                         **{"nargs": "?", "default": FullName("", frozenset())},
                     },
-                    "args": {
-                        "from_": {
-                            **self.ARGS["from_"],
-                            **{"nargs": "?", "default": "today"},
-                        },
-                        "to": {
-                            **self.ARGS["to"],
-                            **{"nargs": "?", "default": "today"},
-                        },
+                    "from_": {
+                        **self.ARGS["from_"],
+                        **{"nargs": "?", "default": "today"},
+                    },
+                    "to": {
+                        **self.ARGS["to"],
+                        **{"nargs": "?", "default": "today"},
                     },
                 },
             },
@@ -266,7 +266,7 @@ class Interpreter(InterpreterMixin):
         )
         if not tasks:
             raise NoSuchTask(f"no such task '{pprinted_full_name}'")
-        items = (
+        items = tuple(
             "".join(part for part, _ in src.output_formatter.pprint_task(task))
             for task in tasks
         )
@@ -288,6 +288,7 @@ class Interpreter(InterpreterMixin):
                 src.output_formatter.pprint_error("another task is already running"),
             )
         self.timer.start(Task(full_name.name, full_name.tags, (None, None)))
+        return tuple()
 
     def stop(self):
         """Stop task.
@@ -311,7 +312,7 @@ class Interpreter(InterpreterMixin):
         :rtype: tuple
         """
         try:
-            task = (
+            task = Task(
                 *full_name,
                 (
                     datetime.datetime.strptime(
@@ -382,12 +383,7 @@ class Interpreter(InterpreterMixin):
         if i < 0:
             return (src.output_formatter.pprint_error("user aborted"),)
         try:
-            new = (
-                src.interpreter.utils.match_name,
-                src.interpreter.utils.match_tags,
-                src.interpreter.utils.match_from,
-                src.interpreter.utils.match_to,
-            )[i](
+            new = (match_name, match_tags, match_from, match_to,)[i](
                 draw_input_box(
                     banner=f"New {attributes[i]}",
                     prompt=((">", curses.color_pair(0)),),
@@ -429,7 +425,7 @@ class Interpreter(InterpreterMixin):
                 self._convert_to_date_string(from_),
                 self._convert_to_date_string(to),
                 full_name=full_name,
-                full_match=any(full_name),
+                match_full_name=any(full_name),
             )
         )
 
@@ -456,11 +452,11 @@ class Interpreter(InterpreterMixin):
         """
         return tuple(
             src.output_formatter.pprint_sum(FullName(*full_name), runtime)
-            for full_name, runtime in self.timer(
+            for full_name, runtime in self.timer.sum(
                 self._convert_to_date_string(from_),
                 self._convert_to_date_string(to),
                 full_name=summand,
-                match_full_name=any(summand),
+                match_full_name=all(summand),
             )
         )
 
@@ -483,7 +479,7 @@ class Interpreter(InterpreterMixin):
             self._convert_to_date_string(to),
             full_name=full_name,
         )
-        return tuple(src.output_formatter.pprint_info(f"exported tasks to {filename}"))
+        return (src.output_formatter.pprint_info(f"exported tasks to {filename}"),)
 
     def show_statistics(self, from_="today", to="today"):
         """Show statistics.

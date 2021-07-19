@@ -28,6 +28,7 @@ import datetime
 import tempfile
 import itertools
 import collections
+import logging
 
 # third party imports
 # library specific imports
@@ -198,8 +199,9 @@ class Timer:
                     f"UPDATE {table} SET start = ? WHERE start = ?",
                     (start, task.time_span[0]),
                 )
+        task = Task(name, tags, (start, end))
         if reset:
-            self._reset_task(task=Task(name, tags, (start, end)))
+            self._reset_task(task=task)
         return task
 
     def list(
