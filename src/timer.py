@@ -139,7 +139,7 @@ class Timer:
 
         :raises ValueError: when the task cannot be removed
         """
-        if self.task == task:
+        if self.task.time_span[0] == task.time_span[0]:
             raise ValueError("cannot remove current task")
         for table in ("running", "tagged", "time_span"):
             self.interface.execute(
@@ -212,6 +212,7 @@ class Timer:
             frozenset(),
         ),
         match_full_name=True,
+        include_running=True,
     ):
         """List tasks.
 
@@ -219,6 +220,7 @@ class Timer:
         :param str end: end of time period
         :param FullName full_name: full name
         :param bool match_full_name: toggle matching full name on/off
+        :param bool include_running: toggle including running task on/off
 
         :returns: tasks
         :rtype: list
@@ -235,6 +237,10 @@ class Timer:
         )
         tasks = []
         for (start, end, name), rows in itertools.groupby(rows, key=lambda x: x[:3]):
+            if not include_running and (
+                self.task.name and self.task.time_span[0] == start
+            ):
+                continue
             tags = {row[-1] for row in rows if row[-1]}
             if match_full_name:
                 if (name, tags) != full_name:

@@ -242,7 +242,11 @@ class Interpreter(InterpreterMixin):
         return endpoint
 
     def _pick_task(
-        self, full_name=FullName("", frozenset()), start="today", end="today"
+        self,
+        full_name=FullName("", frozenset()),
+        start="today",
+        end="today",
+        include_running=True,
     ):
         """Pick task.
 
@@ -260,12 +264,15 @@ class Interpreter(InterpreterMixin):
             self._convert_to_date_string(start),
             self._convert_to_date_string(end),
             full_name=full_name,
+            include_running=include_running,
         )
         pprinted_full_name = "".join(
             part for part, _ in src.output_formatter.pprint_full_name(full_name)
         )
         if not tasks:
-            raise NoSuchTask(f"no such task '{pprinted_full_name}'")
+            raise NoSuchTask(
+                f"no such task '{pprinted_full_name}' (current task not included)"
+            )
         items = tuple(
             "".join(part for part, _ in src.output_formatter.pprint_task(task))
             for task in tasks
@@ -345,10 +352,14 @@ class Interpreter(InterpreterMixin):
                 full_name=full_name,
                 start=from_,
                 end=to,
+                include_running=False,
             )
         except Exception as exception:
             return (src.output_formatter.pprint_error(str(exception)),)
-        self.timer.remove(task)
+        try:
+            self.timer.remove(task)
+        except ValueError as exception:
+            return (src.output_formatter.pprint_error(str(exception)),)
         return (src.output_formatter.pprint_info(f"removed {pprinted_task}"),)
 
     def edit(self, full_name=FullName("", frozenset()), from_="today", to="today"):
