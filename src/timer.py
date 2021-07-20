@@ -28,7 +28,6 @@ import datetime
 import tempfile
 import itertools
 import collections
-import logging
 
 # third party imports
 # library specific imports
