@@ -139,7 +139,7 @@ class Timer:
 
         :raises ValueError: when the task cannot be removed
         """
-        if self.task.time_span[0] == task.time_span[0]:
+        if self.task.name and self.task.time_span[0] == task.time_span[0]:
             raise ValueError("cannot remove current task")
         for table in ("running", "tagged", "time_span"):
             self.interface.execute(
