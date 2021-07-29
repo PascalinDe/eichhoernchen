@@ -117,7 +117,7 @@ class TestInterpreterUtils(unittest.TestCase):
             "today",
         )
         for expected in (*keywords, datetime.datetime.now().strftime("%Y-%m-%d")):
-            self.assertEqual(src.interpreter.match_from(expected), expected)
+            self.assertEqual(src.interpreter.match_from(f"@{expected}"), expected)
         with self.assertRaises(argparse.ArgumentTypeError):
             src.interpreter.match_from("foo")
 
@@ -135,7 +135,7 @@ class TestInterpreterUtils(unittest.TestCase):
             "today",
         )
         for expected in (*keywords, datetime.datetime.now().strftime("%Y-%m-%d")):
-            self.assertEqual(src.interpreter.match_to(expected), expected)
+            self.assertEqual(src.interpreter.match_to(f"@{expected}"), expected)
         with self.assertRaises(argparse.ArgumentTypeError):
             src.interpreter.match_to("foo")
 
@@ -152,7 +152,7 @@ class TestInterpreterUtils(unittest.TestCase):
             else:
                 expected = now.strftime(fmt_string)
             self.assertEqual(
-                src.interpreter.match_start(now.strftime(fmt_string)), expected
+                src.interpreter.match_start(f"@{now.strftime(fmt_string)}"), expected
             )
         with self.assertRaises(argparse.ArgumentTypeError):
             src.interpreter.match_start("foo")
@@ -174,7 +174,7 @@ class TestInterpreterUtils(unittest.TestCase):
         )
         for keyword in keywords:
             self.assertEqual(
-                src.interpreter.parse_datetime(keyword, keywords=keywords),
+                src.interpreter.parse_datetime(f"@{keyword}", keywords=keywords),
                 keyword,
             )
         for fmt_string in ("%Y-%m-%d %H:%M", "%Y-%m-%d", "%H:%M"):
@@ -183,7 +183,7 @@ class TestInterpreterUtils(unittest.TestCase):
             else:
                 expected = now.strftime(fmt_string)
             self.assertEqual(
-                src.interpreter.parse_datetime(now.strftime(fmt_string)),
+                src.interpreter.parse_datetime(f"@{now.strftime(fmt_string)}"),
                 expected,
             )
         for datetime_string in ("", "foo", "2021-13-01"):

@@ -113,7 +113,7 @@ class Interpreter(InterpreterMixin):
                     "full_name": self.ARGS["full_name"],
                     "from_": {
                         **self.ARGS["from_"],
-                        **{"nargs": "?", "default": "today"},
+                        **{"nargs": "?", "default": "@today"},
                     },
                 },
             },
@@ -125,11 +125,11 @@ class Interpreter(InterpreterMixin):
                     "full_name": self.ARGS["full_name"],
                     "from_": {
                         **self.ARGS["from_"],
-                        **{"nargs": "?", "default": "today"},
+                        **{"nargs": "?", "default": "@today"},
                     },
                     "to": {
                         **self.ARGS["to"],
-                        **{"nargs": "?", "default": "today"},
+                        **{"nargs": "?", "default": "@today"},
                     },
                 },
             },
@@ -144,11 +144,11 @@ class Interpreter(InterpreterMixin):
                     },
                     "from_": {
                         **self.ARGS["from_"],
-                        **{"nargs": "?", "default": "today"},
+                        **{"nargs": "?", "default": "@today"},
                     },
                     "to": {
                         **self.ARGS["to"],
-                        **{"nargs": "?", "default": "today"},
+                        **{"nargs": "?", "default": "@today"},
                     },
                 },
             },
@@ -169,11 +169,11 @@ class Interpreter(InterpreterMixin):
                     },
                     "from_": {
                         **self.ARGS["from_"],
-                        **{"nargs": "?", "default": "today"},
+                        **{"nargs": "?", "default": "@today"},
                     },
                     "to": {
                         **self.ARGS["to"],
-                        **{"nargs": "?", "default": "today"},
+                        **{"nargs": "?", "default": "@today"},
                     },
                 },
             },
@@ -189,11 +189,11 @@ class Interpreter(InterpreterMixin):
                     },
                     "from_": {
                         **self.ARGS["from_"],
-                        **{"nargs": "?", "default": "today"},
+                        **{"nargs": "?", "default": "@today"},
                     },
                     "to": {
                         **self.ARGS["to"],
-                        **{"nargs": "?", "default": "today"},
+                        **{"nargs": "?", "default": "@today"},
                     },
                 },
             },
@@ -204,11 +204,11 @@ class Interpreter(InterpreterMixin):
                 "args": {
                     "from_": {
                         **self.ARGS["from_"],
-                        **{"nargs": "?", "default": "today"},
+                        **{"nargs": "?", "default": "@today"},
                     },
                     "to": {
                         **self.ARGS["to"],
-                        **{"nargs": "?", "default": "today"},
+                        **{"nargs": "?", "default": "@today"},
                     },
                 },
             },

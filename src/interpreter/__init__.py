@@ -177,13 +177,14 @@ def parse_datetime(date_string, keywords=tuple()):
     :rtype: str
     """
     if keywords:
-        if match := re.match(r"|".join(keywords), date_string):
-            return match.group(0)
+        if match := re.match(f"@({r'|'.join(keywords)})", date_string):
+            return match.group(1)
     for format_string in ("%Y-%m-%d %H:%M", "%Y-%m-%d", "%H:%M"):
         try:
-            datetime.datetime.strptime(date_string, format_string)
+            datetime.datetime.strptime(date_string, f"@{format_string}")
         except ValueError:
             continue
+        date_string = date_string.lstrip("@")
         if format_string == "%H:%M":
             now = datetime.datetime.now()
             date_string = f"{now.year:04}-{now.month:02}-{now.day:02} {date_string}"
@@ -318,7 +319,9 @@ class InterpreterMixin:
         :returns: arguments
         :rtype: list
         """
-        args = tuple(split.strip() for split in re.split(r"|".join(self.SEP), line))
+        args = tuple(
+            arg.strip() for arg in re.split(fr"(?={'|'.join(self.SEP)})", line)
+        )
         # FIXME
         if cmd == "export":
             args = (*args[0].split(maxsplit=1), *args[1:])
