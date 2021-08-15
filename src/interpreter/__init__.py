@@ -317,17 +317,11 @@ class InterpreterMixin:
         :param str line: rest of the line
 
         :returns: arguments
-        :rtype: list
+        :rtype: tuple
         """
-        args = tuple(
-            arg.strip() for arg in re.split(fr"(?={'|'.join(self.SEP)})", line)
+        return tuple(
+            arg.strip() for arg in re.split(fr"(?={'|'.join(self.SEP)})", line) if arg
         )
-        # FIXME
-        if cmd == "export":
-            args = (*args[0].split(maxsplit=1), *args[1:])
-        if cmd == "show_stats":
-            args = tuple(arg for arg in args if arg)
-        return args
 
     def interpret_line(self, line):
         """Interpret line.
