@@ -154,6 +154,7 @@ class WindowManager:
             if self.box:
                 self.window.box()
                 y += 1
+                x += 1
             if self.banner:
                 self.window.addstr(y, x, self.banner)
                 y, _ = self.window.getyx()
@@ -380,6 +381,8 @@ class WindowManager:
         for multi_part_line in multi_part_lines:
             self.writeline(y, x, multi_part_line, move=move)
             y, x = self.window.getyx()
+            if self.box and x == 0:
+                x += 1
 
     def scrapeline(self, y):
         """Scrape multi-part line.
