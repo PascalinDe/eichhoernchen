@@ -319,9 +319,16 @@ class InterpreterMixin:
         :returns: arguments
         :rtype: tuple
         """
-        return tuple(
-            arg.strip() for arg in re.split(fr"(?={'|'.join(self.SEP)})", line) if arg
+        args = tuple(
+            arg.strip() for arg in re.split(fr"(?={'|'.join(self.SEP)})", line)
         )
+        if cmd not in ("list", "export"):
+            return tuple(arg for arg in args if arg)
+        if cmd == "export":
+            largs = tuple(args[0].split(maxsplit=1))
+            rargs = args[1:] if len(args) > 1 else tuple()
+            args = (*largs, "", *rargs) if len(largs) == 1 else (*largs, *rargs)
+        return args
 
     def interpret_line(self, line):
         """Interpret line.

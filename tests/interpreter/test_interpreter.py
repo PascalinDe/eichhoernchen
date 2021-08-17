@@ -94,7 +94,7 @@ def _get_args(cmd):
     if cmd == "start":
         return full_name
     if cmd in ("stop", "clean_up", "aliases"):
-        return {"line": tuple(), "expected": tuple()}
+        return {"line": ((""),), "expected": tuple()}
     if cmd == "add":
         return _product(
             full_name,
@@ -129,8 +129,21 @@ def _get_args(cmd):
         else:
             args = _product(full_name, rargs)
         if cmd in ("list", "export"):
-            args["line"] = (*args["line"], "")
-            args["expected"] += (tuple(),)
+            full_name["line"] = (*full_name["line"], "")
+            full_name["expected"] += (("",),)
+            if cmd == "export":
+                largs = _product(
+                    {
+                        "line": ARGS["ext"],
+                        "expected": tuple((ext,) for ext in ARGS["ext"]),
+                    },
+                    full_name,
+                )
+                args = _product(largs, rargs)
+            if cmd == "list":
+                args = _product(full_name, rargs)
+                args["line"] = (*args["line"], "")
+                args["expected"] += (("",),)
         return args
     if cmd in ("help", "?"):
         cmds = (
