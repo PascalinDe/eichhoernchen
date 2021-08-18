@@ -319,13 +319,11 @@ class Interpreter(InterpreterMixin):
         :rtype: tuple
         """
         try:
+            start = datetime.datetime.strptime(start, "%Y-%m-%d %H:%M")
             task = Task(
                 *full_name,
                 (
-                    datetime.datetime.strptime(
-                        start,
-                        "%Y-%m-%d %H:%M",
-                    ),
+                    start,
                     datetime.datetime.strptime(
                         end,
                         "%Y-%m-%d %H:%M",
@@ -333,7 +331,11 @@ class Interpreter(InterpreterMixin):
                 ),
             )
             self.timer.add(task)
-            return (src.output_formatter.pprint_task(task),)
+            return (
+                src.output_formatter.pprint_task(
+                    task, date=(start.date() != datetime.datetime.today().date())
+                ),
+            )
         except ValueError as exception:
             return (src.output_formatter.pprint_error(str(exception)),)
 
@@ -409,9 +411,11 @@ class Interpreter(InterpreterMixin):
         if attributes[i] in ("start", "end"):
             new = datetime.datetime.strptime(new, "%Y-%m-%d %H:%M")
         try:
+            task = self.timer.edit(task, attributes[i], new)
             return (
                 src.output_formatter.pprint_task(
-                    self.timer.edit(task, attributes[i], new)
+                    task,
+                    date=(task.time_span[0].date() != datetime.datetime.today().date()),
                 ),
             )
         except ValueError as exception:
