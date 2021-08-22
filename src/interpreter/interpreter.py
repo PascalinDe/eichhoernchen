@@ -505,91 +505,84 @@ class Interpreter(InterpreterMixin):
         :returns: output
         :rtype: tuple
         """
-        tasks = self.timer.list(
-            self._convert_to_date_string(from_),
-            self._convert_to_date_string(to),
-            match_full_name=False,
+        from_ = self._convert_to_date_string(from_)
+        to = self._convert_to_date_string(to)
+        tasks = self.timer.list(from_, to, match_full_name=False)
+        from_ = datetime.datetime.strptime(from_, "%Y-%m-%d")
+        to = datetime.datetime.strptime(to, "%Y-%m-%d")
+        fmt_string = "%a %d %b %Y"
+        rheading = f" - {to.strftime(fmt_string)}" if from_ != to else ""
+        heading = (
+            (
+                f"overview {from_.strftime(fmt_string)}{rheading}".upper(),
+                curses.color_pair(0),
+            ),
         )
-        from_ = tasks[0].time_span[0].strftime("%Y-%m-%d") if tasks else from_
-        if from_ == "all":
-            from_ = (
-                sorted(self.timer.list(from_=from_), key=lambda x: x.time_span[0])[0]
-                .time_span[0]
-                .strftime("%Y-%m-%d")
-            )
-        ranges = ("year", "month", "week", "yesterday", "today")
-        if from_ in ranges:
-            from_ = self._convert_to_date_string(from_)
-        if to in ranges:
-            to = self._convert_to_date_string(to)
-        from_ = datetime.datetime.strptime(from_, "%Y-%m-%d").strftime("%a %d %b %Y")
-        to = datetime.datetime.strptime(to, "%Y-%m-%d").strftime("%a %d %b %Y")
-        if from_ != to:
-            heading = ((f"overview {from_} - {to}".upper(), curses.color_pair(0)),)
-        else:
-            heading = ((f"overview {from_}".upper(), curses.color_pair(0)),)
+        empty_line = (("", curses.color_pair(0)),)
+        full_names = {(task.name, tuple(task.tags)) for task in tasks}
+        tags = {tuple(task.tags) for task in tasks if task.tags}
         stats = (
             heading,
             ((f"{'—'*len(heading[0][0])}", curses.color_pair(0)),),
-            (("", curses.color_pair(0)),),
-        )
-        stats += (
-            ((f"{len(tasks)} task(s)", curses.color_pair(0)),),
+            empty_line,
+            (
+                (
+                    f"{len(tasks)} task{'s' if len(tasks) > 1 else ''}",
+                    curses.color_pair(0),
+                ),
+            ),
             *(
-                src.output_formatter.pprint_task(task, date=from_ != to)
+                src.output_formatter.pprint_task(task, date=(from_ != to))
                 for task in tasks
             ),
-        )
-        all_tags = {tuple(task.tags) for task in tasks if task.tags}
-        pprinted_tags = tuple(
-            src.output_formatter.pprint_tags(tags)
-            for tags in sorted(all_tags, key=lambda x: len(x))
-        )
-        stats += (
-            ((f"{len(pprinted_tags)} tag(s)", curses.color_pair(0)),),
-            *pprinted_tags,
-            (("", curses.color_pair(0)),),
-        )
-        full_names = {(task.name, tuple(task.tags)) for task in tasks}
-        summed_up_runtimes = sorted(
-            (
-                summed_up_runtime
-                for name, tags in full_names
-                for summed_up_runtime in self.timer.sum(
-                    self._convert_to_date_string(from_),
-                    self._convert_to_date_string(to),
-                    full_name=FullName(name, set(tags)),
-                )
+            ((f"{len(tags)} tag{'s' if len(tags) > 1 else ''}", curses.color_pair(0)),),
+            *(
+                src.output_formatter.pprint_tags(tags)
+                for tags in sorted(tags, key=lambda x: len(x))
             ),
-            key=lambda x: x[1],
-            reverse=True,
-        )
-        stats += (
-            (("Total runtime task(s)", curses.color_pair(0)),),
+            empty_line,
+            (
+                (
+                    f"Total runtime task{'s' if len(tasks) > 1 else ''}",
+                    curses.color_pair(0),
+                ),
+            ),
             *(
                 src.output_formatter.pprint_sum(FullName(*full_name), runtime)
-                for full_name, runtime in summed_up_runtimes
-            ),
-        )
-        summed_up_runtimes = sorted(
-            (
-                runtime
-                for tags in all_tags
-                for runtime in self.timer.sum(
-                    self._convert_to_date_string(from_),
-                    self._convert_to_date_string(to),
-                    full_name=FullName("", frozenset(tags)),
-                    match_full_name=False,
+                for full_name, runtime in sorted(
+                    (
+                        runtime
+                        for name, tags in full_names
+                        for runtime in self.timer.sum(
+                            from_, to, full_name=FullName(name, set(tags))
+                        )
+                    ),
+                    key=lambda x: x[1],
+                    reverse=True,
                 )
             ),
-            key=lambda x: x[1],
-            reverse=True,
-        )
-        stats += (
-            (("Total runtime tag(s)", curses.color_pair(0)),),
+            (
+                (
+                    f"Total runtime tag{'s' if len(tags) > 1 else ''}",
+                    curses.color_pair(0),
+                ),
+            ),
             *(
                 src.output_formatter.pprint_sum(FullName(*full_name), runtime)
-                for full_name, runtime in summed_up_runtimes
+                for full_name, runtime in sorted(
+                    (
+                        runtime
+                        for tags in tags
+                        for runtime in self.timer.sum(
+                            from_,
+                            to,
+                            full_name=FullName("", frozenset(tags)),
+                            match_full_name=False,
+                        )
+                    ),
+                    key=lambda x: x[1],
+                    reverse=True,
+                )
             ),
         )
         mk_stats(stats)
