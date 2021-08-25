@@ -449,8 +449,9 @@ class WindowManager:
                 exception
             )
             raise
-        y, x = self.window.getyx()
+        y, _ = self.window.getyx()
         y += 1
+        x = 0 + int(self.box)
         self.writelines(
             y, x, tuple(((command, curses.color_pair(0)),) for command in commands)
         )
