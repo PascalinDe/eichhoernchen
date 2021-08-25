@@ -435,6 +435,8 @@ class WindowManager:
                     if matcher.size < len(buffer):
                         continue
                     matchers[matcher.size].append(command)
+                if not matchers:
+                    return
                 commands = sorted(matchers.items(), key=lambda x: x[0], reverse=True)[
                     0
                 ][1]
