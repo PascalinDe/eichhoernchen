@@ -51,6 +51,7 @@ class Timer:
         self.interface = src.sqlite_interface.SQLiteInterface(database)
         self.interface.create_tables()
         self._reset_task()
+        self._cache_tags()
 
     def _reset_task(self, task=Task("", frozenset(), tuple())):
         """Reset current task.
@@ -58,6 +59,22 @@ class Timer:
         :param Task task: new task
         """
         self.task = task
+
+    @property
+    def tags(self):
+        """Known tags cache."""
+        if not self._tags:
+            self._cache_tags()
+        return self._tags
+
+    def _cache_tags(self):
+        """Cache known tags."""
+        self._tags = tuple(
+            tag
+            for (tag,) in self.interface.execute(
+                "SELECT DISTINCT(tag) FROM tagged ORDER BY tag"
+            )
+        )
 
     def start(self, task):
         """Start task.
@@ -87,6 +104,7 @@ class Timer:
         self._reset_task(
             task=src.Task(task.name, task.tags, (start, None)),
         )
+        self._cache_tags()
 
     def stop(self):
         """Stop current task."""
@@ -131,6 +149,7 @@ class Timer:
                 statement,
                 *parameters,
             )
+        self._cache_tags()
 
     def remove(self, task):
         """Remove task.
@@ -146,6 +165,7 @@ class Timer:
                 f"DELETE FROM {table} WHERE start = ?",
                 (task.time_span[0],),
             )
+        self._cache_tags()
 
     def edit(self, task, attribute, *args):
         """Edit task.
@@ -201,6 +221,7 @@ class Timer:
         task = Task(name, tags, (start, end))
         if reset:
             self._reset_task(task=task)
+        self._cache_tags()
         return task
 
     def list(

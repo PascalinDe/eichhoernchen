@@ -126,23 +126,35 @@ class WindowManager:
     :ivar Logger logger: logger
     """
 
-    def __init__(self, window, box=False, banner="", commands=tuple()):
+    def __init__(self, window, box=False, banner="", commands=tuple(), tags=tuple()):
         """Initialize window manager.
 
         :param window window: window
         :param bool box: toggle drawing a border around the edges on/off
         :param str banner: banner
         :param tuple commands: valid commands
+        :param tuple tags: known tags
         """
         self.window = window
         self.box = box
         self.banner = banner
         self.commands = commands
+        self._tags = tags
         self.logger = logging.getLogger().getChild(WindowManager.__name__)
         self.reinitialize()
         self.window.idlok(True)
         self.window.keypad(True)
         self.window.scrollok(True)
+
+    @property
+    def tags(self):
+        """Known tags cache."""
+        return self._tags
+
+    @tags.setter
+    def tags(self, tags):
+        """Cache known tags."""
+        self._tags = tags
 
     def reinitialize(self):
         """Reinitialize window."""
@@ -211,8 +223,6 @@ class WindowManager:
                 if ch == "\x04":
                     raise EOFError
                 if ch == "\x09":
-                    if " " in buffer:
-                        continue
                     y, _ = self.window.getyx()
                     z = len(buffer)
                     self.completeline(buffer)
@@ -416,44 +426,64 @@ class WindowManager:
             multi_part_line.append(("".join(buffer), attr))
         return multi_part_line
 
+    def _get_suggestions(self, line):
+        """Get suggestions.
+
+        :param list line: line
+
+        :returns: suggestions
+        :rtype: list
+        """
+        if not line:
+            return self.commands
+        else:
+            matchers = defaultdict(list)
+            if "[" in line:
+                pool = self.tags
+                line = line[line.rindex("[") + 1 :]
+            else:
+                pool = self.commands
+            for suggestion in pool:
+                matcher = SequenceMatcher(
+                    None, "".join(line), suggestion
+                ).find_longest_match(0, len(line))
+                if matcher.b > 0:
+                    continue
+                if matcher.size < len(line):
+                    continue
+                matchers[matcher.size].append(suggestion)
+            if not matchers:
+                return list()
+            return sorted(matchers.items(), key=lambda x: x[0], reverse=True)[0]
+
     def completeline(self, buffer):
         """Complete line.
 
-        :param list buffer: buffer
+        :param Buffer buffer: buffer
         """
         try:
-            if not buffer:
-                commands = self.commands
-            else:
-                matchers = defaultdict(list)
-                for command in self.commands:
-                    matcher = SequenceMatcher(
-                        None, "".join(buffer), command
-                    ).find_longest_match(0, len(buffer))
-                    if matcher.b > 0:
-                        continue
-                    if matcher.size < len(buffer):
-                        continue
-                    matchers[matcher.size].append(command)
-                if not matchers:
-                    return
-                commands = sorted(matchers.items(), key=lambda x: x[0], reverse=True)[
-                    0
-                ][1]
-                if len(commands) == 1:
-                    buffer.clear()
-                    buffer += [*commands[0]]
-                    return
+            suggestions = self._get_suggestions("".join(buffer))
+            if not suggestions:
+                return
+            if len(suggestions[1]) == 1:
+                for _ in range(suggestions[0]):
+                    buffer.pop()
+                buffer += [*suggestions[1][0]]
+                return
         except Exception as exception:
             self.logger.getChild(WindowManager.completeline.__name__).exception(
                 exception
             )
             raise
+        self.mv_down_or_scroll_down()
         y, _ = self.window.getyx()
-        y += 1
         x = 0 + int(self.box)
         self.writelines(
-            y, x, tuple(((command, curses.color_pair(0)),) for command in commands)
+            y,
+            x,
+            tuple(
+                ((suggestion, curses.color_pair(0)),) for suggestion in suggestions[1]
+            ),
         )
 
     def scroll_up(self):

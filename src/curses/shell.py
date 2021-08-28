@@ -58,6 +58,7 @@ def _loop(stdscr, config):
         window,
         banner="Welcome to Eichhörnchen.\tType help or ? to list commands.",
         commands=(*aliases.keys(), *interpreter.subcommands.keys()),
+        tags=interpreter.timer.tags,
     )
     history = []
     while True:
@@ -85,6 +86,7 @@ def _loop(stdscr, config):
             else:
                 window_mgr.mv_down_or_scroll_down()
                 window_mgr.writelines(*window_mgr.window.getyx(), output)
+                window_mgr.tags = interpreter.timer.tags
                 history.append(line)
         except (EOFError, KeyboardInterrupt):
             if interpreter.timer.task.name:
