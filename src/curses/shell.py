@@ -21,10 +21,7 @@
 
 
 # standard library imports
-import json
 import time
-import os
-import os.path
 import curses
 import curses.panel
 
@@ -44,20 +41,13 @@ def _loop(stdscr, config):
 
     :raises: SystemExit when Control+C is pressed
     """
-    aliases = (
-        {k: json.loads(v) for k, v in config["aliases"].items()}
-        if "aliases" in config
-        else {}
-    )
-    interpreter = Interpreter(
-        os.path.join(config["database"]["path"], config["database"]["dbname"]), aliases
-    )
+    interpreter = Interpreter(config)
     panel = get_panel(*stdscr.getmaxyx(), 0, 0)
     window = panel.window()
     window_mgr = WindowManager(
         window,
         banner="Welcome to Eichhörnchen.\tType help or ? to list commands.",
-        commands=(*aliases.keys(), *interpreter.subcommands.keys()),
+        commands=(*interpreter.aliases.keys(), *interpreter.subcommands.keys()),
         tags=interpreter.timer.tags,
     )
     history = []

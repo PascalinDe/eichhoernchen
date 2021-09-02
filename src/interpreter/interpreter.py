@@ -21,8 +21,10 @@
 
 
 # standard library imports
+import json
 import curses
 import datetime
+import os.path
 
 # third party imports
 # library specific imports
@@ -74,14 +76,19 @@ class Interpreter(InterpreterMixin):
     }
     SEP = ("@",)
 
-    def __init__(self, database, aliases):
+    def __init__(self, config):
         """Initialize command-line interpreter.
 
-        :param str database: SQLite database file
-        :param dict aliases: aliases
+        :param dict config: configuration
         """
-        self.timer = src.timer.Timer(database)
-        self.aliases = aliases
+        self.timer = src.timer.Timer(
+            os.path.join(config["database"]["path"], config["database"]["dbname"])
+        )
+        self.aliases = (
+            {k: json.loads(v) for k, v in config["aliases"].items()}
+            if "aliases" in config
+            else {}
+        )
         self.subcommands = {
             "start": {
                 "description": "start task",
@@ -160,7 +167,7 @@ class Interpreter(InterpreterMixin):
             },
             "sum": {
                 "description": "sum up total time",
-                "aliases": aliases.get("sum", tuple()),
+                "aliases": self.aliases.get("sum", tuple()),
                 "func": self.sum,
                 "args": {
                     "summand": {
@@ -179,7 +186,7 @@ class Interpreter(InterpreterMixin):
             },
             "export": {
                 "description": "export tasks",
-                "aliases": aliases.get("export", tuple()),
+                "aliases": self.aliases.get("export", tuple()),
                 "func": self.export,
                 "args": {
                     "ext": {"choices": ("csv", "json"), "metavar": "format"},
