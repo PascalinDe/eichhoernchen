@@ -322,9 +322,14 @@ class InterpreterMixin:
         args = tuple(
             arg.strip() for arg in re.split(fr"(?={'|'.join(self.SEP)})", line)
         )
-        if cmd not in ("list", "export"):
+        if cmd not in (
+            "list",
+            "export",
+            *self.aliases.get("list", tuple()),
+            *self.aliases.get("export", tuple()),
+        ):
             return tuple(arg for arg in args if arg)
-        if cmd == "export":
+        if cmd in ("export", *self.aliases.get("export", tuple())):
             largs = tuple(args[0].split(maxsplit=1))
             rargs = args[1:] if len(args) > 1 else tuple()
             args = (*largs, "", *rargs) if len(largs) == 1 else (*largs, *rargs)
@@ -339,7 +344,18 @@ class InterpreterMixin:
         :rtype: tuple
         """
         cmd, *args = line.split(maxsplit=1)
-        if cmd in self.subcommands and args:
+        if (
+            cmd
+            in (
+                *self.subcommands.keys(),
+                *(
+                    alias
+                    for subcommand in self.aliases.values()
+                    for alias in subcommand
+                ),
+            )
+            and args
+        ):
             args = self.split_args(cmd, *args)
         try:
             fp = StringIO()
