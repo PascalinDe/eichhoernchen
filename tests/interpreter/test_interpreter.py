@@ -21,6 +21,7 @@
 
 
 # standard library imports
+import os
 import datetime
 import unittest
 from itertools import product
@@ -167,9 +168,20 @@ def _get_args(cmd):
 class TestInterpreter(unittest.TestCase):
     """Command-line interpreter test cases."""
 
+    DATABASE = "test.db"
+
     def setUp(self):
         """Set up test cases."""
-        self.interpreter = Interpreter(":memory:", {})
+        self.interpreter = Interpreter(
+            {"database": {"path": "", "dbname": self.DATABASE}, "aliases": {}}
+        )
+
+    def tearDown(self):
+        """Tear down test cases."""
+        try:
+            os.remove(self.DATABASE)
+        except FileNotFoundError:
+            pass
 
     def test_split_args(self):
         """Test splitting arguments."""
