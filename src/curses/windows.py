@@ -25,7 +25,7 @@ import curses
 
 # third party imports
 # library specific imports
-from src.curses.utils import get_panel, WindowManager, ResizeError
+from src.curses import get_panel, WindowManager, ResizeError
 
 
 def mk_stats(stats):
