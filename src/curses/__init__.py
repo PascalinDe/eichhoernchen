@@ -22,6 +22,7 @@
 
 # standard library imports
 import os
+import time
 import logging
 import unicodedata
 import curses
@@ -32,6 +33,9 @@ from collections import defaultdict, UserList
 
 # third party imports
 # library specific imports
+from src import Task
+from src.interpreter import InterpreterError, UserAbort
+from src.output_formatter import pprint_prompt
 
 
 class ResizeError(Exception):
@@ -591,3 +595,59 @@ def get_panel(nlines, ncols, begin_y, begin_x):
     curses.panel.update_panels()
     curses.doupdate()
     return panel
+
+
+def loop(interpreter, window_mgr, type_="main"):
+    """Loop through user interaction.
+
+    :param Interpreter interpreter: command-line interpreter
+    :param WindowManager window_mgr: window manager
+    :param str type_: type of user shell
+
+    :raises: SystemExit when Control+C is pressed and type is main user shell
+    :raises: UserAbort when Control+C is pressed and type is sub-user shell
+    """
+    history = []
+    while True:
+        try:
+            try:
+                line = window_mgr.readline(
+                    history,
+                    prompt=pprint_prompt(
+                        task=interpreter.timer.task
+                        if type_ == "main"
+                        else Task("", frozenset(), ())
+                    ),
+                    scroll=True,
+                )
+            except ResizeError:
+                window_mgr.reinitialize()
+                continue
+            if not line:
+                window_mgr.mv_down_or_scroll_down()
+                continue
+            try:
+                output = interpreter.interpret_line(line)
+            except (InterpreterError, Warning) as exception:
+                window_mgr.mv_down_or_scroll_down()
+                window_mgr.writeline(
+                    *window_mgr.window.getyx(),
+                    ((str(exception), curses.color_pair(5))),
+                )
+            else:
+                window_mgr.mv_down_or_scroll_down()
+                window_mgr.writelines(*window_mgr.window.getyx(), output)
+                if type_ == "main":
+                    window_mgr.tags = interpreter.timer.tags
+                history.append(line)
+        except (EOFError, KeyboardInterrupt):
+            if type_ == "main" and interpreter.timer.task.name:
+                interpreter.timer.stop()
+            window_mgr.mv_down_or_scroll_down()
+            window_mgr.writeline(
+                *window_mgr.window.getyx(),
+                (("Goodbye!" if type_ == "main" else "", curses.color_pair(0)),),
+            )
+            window_mgr.window.refresh()
+            time.sleep(0.5)
+            raise SystemExit if type_ == "main" else UserAbort

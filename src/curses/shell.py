@@ -21,25 +21,20 @@
 
 
 # standard library imports
-import time
 import curses
 import curses.panel
 
 # third party imports
 # library specific imports
-from src.interpreter import InterpreterError
 from src.interpreter.interpreter import Interpreter
-from src.output_formatter import pprint_prompt
-from src.curses import get_panel, ResizeError, WindowManager
+from src.curses import get_panel, WindowManager, loop
 
 
-def _loop(stdscr, config):
-    """Loop through user interaction.
+def launch(stdscr, config):
+    """Launch shell.
 
     :param window stdscr: initial window object
     :param dict config: configuration
-
-    :raises: SystemExit when Control+C is pressed
     """
     interpreter = Interpreter(config)
     panel = get_panel(*stdscr.getmaxyx(), 0, 0)
@@ -50,52 +45,6 @@ def _loop(stdscr, config):
         commands=(*interpreter.aliases.keys(), *interpreter.subcommands.keys()),
         tags=interpreter.timer.tags,
     )
-    history = []
-    while True:
-        try:
-            try:
-                line = window_mgr.readline(
-                    history,
-                    prompt=pprint_prompt(task=interpreter.timer.task),
-                    scroll=True,
-                )
-            except ResizeError:
-                window_mgr.reinitialize()
-                continue
-            if not line:
-                window_mgr.mv_down_or_scroll_down()
-                continue
-            try:
-                output = interpreter.interpret_line(line)
-            except (InterpreterError, Warning) as exception:
-                window_mgr.mv_down_or_scroll_down()
-                window_mgr.writeline(
-                    *window_mgr.window.getyx(),
-                    ((str(exception), curses.color_pair(5)),)
-                )
-            else:
-                window_mgr.mv_down_or_scroll_down()
-                window_mgr.writelines(*window_mgr.window.getyx(), output)
-                window_mgr.tags = interpreter.timer.tags
-                history.append(line)
-        except (EOFError, KeyboardInterrupt):
-            if interpreter.timer.task.name:
-                interpreter.timer.stop()
-            window_mgr.mv_down_or_scroll_down()
-            window_mgr.writeline(
-                *window_mgr.window.getyx(), (("Goodbye!", curses.color_pair(0)),)
-            )
-            window.refresh()
-            time.sleep(0.5)
-            raise SystemExit
-
-
-def launch(stdscr, config):
-    """Launch shell.
-
-    :param window stdscr: initial window object
-    :param dict config: configuration
-    """
     curses.start_color()
     curses.raw()
     curses.use_default_colors()
@@ -107,4 +56,4 @@ def launch(stdscr, config):
         (5, 9, -1),  # error
     ):
         curses.init_pair(*colour_pair)
-    _loop(stdscr, config)
+    loop(interpreter, window_mgr)
