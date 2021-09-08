@@ -30,7 +30,7 @@ import curses.panel
 from src.interpreter import InterpreterError
 from src.interpreter.interpreter import Interpreter
 from src.output_formatter import pprint_prompt
-from src.curses.utils import get_panel, ResizeError, WindowManager
+from src.curses import get_panel, ResizeError, WindowManager
 
 
 def _loop(stdscr, config):
