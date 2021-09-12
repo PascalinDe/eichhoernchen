@@ -22,6 +22,7 @@
 
 # standard library imports
 import re
+import curses
 import argparse
 import datetime
 
@@ -191,6 +192,77 @@ def parse_datetime(date_string, keywords=tuple()):
         return date_string
     raise argparse.ArgumentTypeError(
         f"{date_string} does not match any keyword or format string"
+    )
+
+
+def generate_stats(timer, from_, to):
+    """Generate statistics.
+
+    :param Timer timer: timer
+    :param str from_: start of time period
+    :param str to: end of time period
+
+    :returns: output
+    :rtype: tuple
+    """
+    tasks = timer.list(from_, to, match_full_name=False)
+    from_ = datetime.datetime.strptime(from_, "%Y-%m-%d")
+    to = datetime.datetime.strptime(to, "%Y-%m-%d")
+    rheading = f" - {to.strftime('%a %d %b %Y')}" if from_ != to else ""
+    heading = (
+        (
+            f"overview {from_.strftime('%a %d %b %Y')}{rheading}".upper(),
+            curses.color_pair(0),
+        ),
+    )
+    empty_line = (("", curses.color_pair(0)),)
+    full_names = {(task.name, tuple(task.tags)) for task in tasks}
+    tags = {tuple(task.tags) for task in tasks if task.tags}
+    return (
+        heading,
+        ((f"{'—' * len(heading[0][0])}", curses.color_pair(0)),),
+        empty_line,
+        ((f"{len(tasks)} task{'s' if len(tasks) > 1 else ''}", curses.color_pair(0)),),
+        *(src.output_formatter.pprint_task(task, date=(from_ != to)) for task in tasks),
+        ((f"{len(tags)} tag{'s' if len(tags) > 1 else ''}", curses.color_pair(0)),),
+        *(
+            src.output_formatter.pprint_tags(tags)
+            for tags in sorted(tags, key=lambda x: len(x))
+        ),
+        empty_line,
+        ((f"Total runtime task{'s' if len(tasks) > 1 else ''}", curses.color_pair(0)),),
+        *(
+            src.output_formatter.pprint_sum(FullName(*full_name), runtime)
+            for full_name, runtime in sorted(
+                (
+                    runtime
+                    for name, tags in full_names
+                    for runtime in timer.sum(
+                        from_, to, full_name=FullName(name, set(tags))
+                    )
+                ),
+                key=lambda x: x[1],
+                reverse=True,
+            )
+        ),
+        ((f"Total runtime tag{'s' if len(tags) else ''}", curses.color_pair(0)),),
+        *(
+            src.output_formatter.pprint_sum(FullName(*full_name), runtime)
+            for full_name, runtime in sorted(
+                (
+                    runtime
+                    for tags in tags
+                    for runtime in timer.sum(
+                        from_,
+                        to,
+                        full_name=FullName("", frozenset(tags)),
+                        match_full_name=False,
+                    )
+                ),
+                key=lambda x: x[1],
+                reverse=True,
+            )
+        ),
     )
 
 

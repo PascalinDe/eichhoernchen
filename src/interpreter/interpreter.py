@@ -32,6 +32,7 @@ import src.timer
 
 from src import FullName, Task
 from src.interpreter import (
+    generate_stats,
     InterpreterMixin,
     match_end,
     match_from,
@@ -512,85 +513,11 @@ class Interpreter(InterpreterMixin):
         :returns: output
         :rtype: tuple
         """
-        from_ = self._convert_to_date_string(from_)
-        to = self._convert_to_date_string(to)
-        tasks = self.timer.list(from_, to, match_full_name=False)
-        from_ = datetime.datetime.strptime(from_, "%Y-%m-%d")
-        to = datetime.datetime.strptime(to, "%Y-%m-%d")
-        fmt_string = "%a %d %b %Y"
-        rheading = f" - {to.strftime(fmt_string)}" if from_ != to else ""
-        heading = (
-            (
-                f"overview {from_.strftime(fmt_string)}{rheading}".upper(),
-                curses.color_pair(0),
-            ),
+        mk_stats(
+            generate_stats(
+                self.timer,
+                self._convert_to_date_string(from_),
+                self._convert_to_date_string(to),
+            )
         )
-        empty_line = (("", curses.color_pair(0)),)
-        full_names = {(task.name, tuple(task.tags)) for task in tasks}
-        tags = {tuple(task.tags) for task in tasks if task.tags}
-        stats = (
-            heading,
-            ((f"{'—'*len(heading[0][0])}", curses.color_pair(0)),),
-            empty_line,
-            (
-                (
-                    f"{len(tasks)} task{'s' if len(tasks) > 1 else ''}",
-                    curses.color_pair(0),
-                ),
-            ),
-            *(
-                src.output_formatter.pprint_task(task, date=(from_ != to))
-                for task in tasks
-            ),
-            ((f"{len(tags)} tag{'s' if len(tags) > 1 else ''}", curses.color_pair(0)),),
-            *(
-                src.output_formatter.pprint_tags(tags)
-                for tags in sorted(tags, key=lambda x: len(x))
-            ),
-            empty_line,
-            (
-                (
-                    f"Total runtime task{'s' if len(tasks) > 1 else ''}",
-                    curses.color_pair(0),
-                ),
-            ),
-            *(
-                src.output_formatter.pprint_sum(FullName(*full_name), runtime)
-                for full_name, runtime in sorted(
-                    (
-                        runtime
-                        for name, tags in full_names
-                        for runtime in self.timer.sum(
-                            from_, to, full_name=FullName(name, set(tags))
-                        )
-                    ),
-                    key=lambda x: x[1],
-                    reverse=True,
-                )
-            ),
-            (
-                (
-                    f"Total runtime tag{'s' if len(tags) > 1 else ''}",
-                    curses.color_pair(0),
-                ),
-            ),
-            *(
-                src.output_formatter.pprint_sum(FullName(*full_name), runtime)
-                for full_name, runtime in sorted(
-                    (
-                        runtime
-                        for tags in tags
-                        for runtime in self.timer.sum(
-                            from_,
-                            to,
-                            full_name=FullName("", frozenset(tags)),
-                            match_full_name=False,
-                        )
-                    ),
-                    key=lambda x: x[1],
-                    reverse=True,
-                )
-            ),
-        )
-        mk_stats(stats)
         return tuple()
