@@ -632,7 +632,7 @@ def loop(interpreter, window_mgr, type_="main"):
                 window_mgr.mv_down_or_scroll_down()
                 window_mgr.writeline(
                     *window_mgr.window.getyx(),
-                    ((str(exception), curses.color_pair(5))),
+                    ((str(exception), curses.color_pair(5)),),
                 )
             else:
                 window_mgr.mv_down_or_scroll_down()
