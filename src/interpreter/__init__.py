@@ -266,6 +266,30 @@ def generate_stats(timer, from_, to):
     )
 
 
+def convert_to_date_string(endpoint):
+    """Convert datetime endpoint to date string.
+
+    :param str endpoint: endpoint
+
+    :returns: date string
+    :rtype: str
+    """
+    today = datetime.datetime.today()
+    if endpoint == "today":
+        return today.strftime("%Y-%m-%d")
+    if endpoint == "yesterday":
+        return (today - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+    if endpoint == "week":
+        return (today - datetime.timedelta(days=today.weekday())).strftime("%Y-%m-%d")
+    if endpoint == "month":
+        return f"{today.year:04}-{today.month:02}-01"
+    if endpoint == "year":
+        return f"{today.year:04}-01-01"
+    if endpoint == "all":
+        return "0000-01-01"
+    return endpoint
+
+
 class InterpreterError(Exception):
     """Raised when command-line cannot be interpreted."""
 

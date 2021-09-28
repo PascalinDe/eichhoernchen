@@ -32,6 +32,7 @@ import src.timer
 
 from src import FullName, Task
 from src.interpreter import (
+    convert_to_date_string,
     generate_stats,
     InterpreterMixin,
     match_end,
@@ -223,31 +224,6 @@ class Interpreter(InterpreterMixin):
         }
         super().__init__()
         self._init_parser()
-
-    def _convert_to_date_string(self, endpoint):
-        """Convert datetime endpoint to date string.
-
-        :param str endpoint: endpoint
-
-        :returns: date string
-        :rtype: str
-        """
-        today = datetime.datetime.today()
-        if endpoint == "today":
-            return today.strftime("%Y-%m-%d")
-        if endpoint == "yesterday":
-            return (today - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-        if endpoint == "week":
-            return (today - datetime.timedelta(days=today.weekday())).strftime(
-                "%Y-%m-%d"
-            )
-        if endpoint == "month":
-            return f"{today.year:04}-{today.month:02}-01"
-        if endpoint == "year":
-            return f"{today.year:04}-01-01"
-        if endpoint == "all":
-            return "0000-01-01"
-        return endpoint
 
     def _pick_task(
         self,
@@ -516,8 +492,8 @@ class Interpreter(InterpreterMixin):
         mk_stats(
             generate_stats(
                 self.timer,
-                self._convert_to_date_string(from_),
-                self._convert_to_date_string(to),
+                convert_to_date_string(from_),
+                convert_to_date_string(to),
             )
         )
         return tuple()
