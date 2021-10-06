@@ -87,6 +87,8 @@ def _validate_config(config):
         "help",
         "aliases",
         "clean_up",
+        "next",
+        "previous",
     }
     try:
         unknown = ",".join(

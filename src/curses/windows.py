@@ -25,50 +25,41 @@ import curses
 
 # third party imports
 # library specific imports
-from src.curses import get_panel, WindowManager, ResizeError
+from src.curses import get_panel, loop, ResizeError, WindowManager, WindowUpdateError
+from src.interpreter import UserAbort
 
 
-def mk_stats(stats):
-    """Make statistics.
+def draw_stats(stats, interpreter, new_loop=True):
+    """Draw statistics.
 
     :param tuple stats: statistics
+    :param StatsInterpreter interpreter: interpreter
+    :param bool new_loop: start a new loop
     """
-    while True:
-        stats += (
-            (("", curses.color_pair(0)),),
-            (
-                (
-                    "Enter 'q' or press Ctrl+D to return to main window",
-                    curses.color_pair(0),
-                ),
-            ),
-        )
-        panel = get_panel(*curses.panel.top_panel().window().getmaxyx(), 0, 0)
-        window = panel.window()
-        window_mgr = WindowManager(window)
-        window_mgr.writelines(*window.getyx(), stats)
-        y, _ = window_mgr.window.getyx()
-        try:
-            line = ""
-            while line != "q":
-                line = window_mgr.readline(
-                    [],
-                    y=y,
-                    prompt=((">", curses.color_pair(0)),),
-                    scroll=True,
-                    clear=True,
-                )
-        except EOFError:
-            return
-        except ResizeError:
-            panel.bottom()
-            window_mgr.reinitialize()
-            continue
-        else:
-            break
-        finally:
-            del panel
-            curses.panel.update_panels()
+    panel = curses.panel.top_panel()
+    old_window = panel.window()
+    new_window = curses.newwin(*old_window.getmaxyx(), 0, 0)
+    window_mgr = WindowManager(
+        new_window,
+        commands=(*interpreter.aliases.keys(), *interpreter.subcommands.keys()),
+    )
+    window_mgr.writelines(*new_window.getyx(), stats)
+    panel.replace(new_window)
+    curses.panel.update_panels()
+    curses.doupdate()
+    if new_loop:
+        while True:
+            try:
+                loop(interpreter, window_mgr, type_="")
+            except (EOFError, UserAbort):
+                break
+            except WindowUpdateError:
+                window_mgr.window = curses.panel.top_panel().window()
+    else:
+        raise WindowUpdateError
+    panel.replace(old_window)
+    curses.panel.update_panels()
+    curses.doupdate()
     return
 
 

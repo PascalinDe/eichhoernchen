@@ -44,6 +44,12 @@ class ResizeError(Exception):
     pass
 
 
+class WindowUpdateError(Exception):
+    """Raised when window has been updated."""
+
+    pass
+
+
 class Buffer(UserList):
     """Buffer."""
 
@@ -139,7 +145,7 @@ class WindowManager:
         :param tuple commands: valid commands
         :param tuple tags: known tags
         """
-        self.window = window
+        self._window = window
         self.box = box
         self.banner = banner
         self.commands = commands
@@ -149,6 +155,16 @@ class WindowManager:
         self.window.idlok(True)
         self.window.keypad(True)
         self.window.scrollok(True)
+
+    @property
+    def window(self):
+        """Window."""
+        return self._window
+
+    @window.setter
+    def window(self, window):
+        """Replace window."""
+        self._window = window
 
     @property
     def tags(self):

@@ -46,7 +46,7 @@ from src.interpreter import (
     NoSuchTask,
     UserAbort,
 )
-from src.curses.windows import draw_input_box, draw_menu, mk_stats
+from src.curses.windows import draw_input_box, draw_menu, draw_stats
 
 
 class Interpreter(InterpreterMixin):
@@ -83,6 +83,7 @@ class Interpreter(InterpreterMixin):
 
         :param dict config: configuration
         """
+        self.config = config
         self.timer = src.timer.Timer(
             os.path.join(config["database"]["path"], config["database"]["dbname"])
         )
@@ -489,11 +490,89 @@ class Interpreter(InterpreterMixin):
         :returns: output
         :rtype: tuple
         """
-        mk_stats(
+        draw_stats(
             generate_stats(
                 self.timer,
                 convert_to_date_string(from_),
                 convert_to_date_string(to),
-            )
+            ),
+            StatsInterpreter(self.config, from_, to),
         )
+        return tuple()
+
+
+class StatsInterpreter(InterpreterMixin):
+    """Statistics command-line interpreter."""
+
+    def __init__(self, config, from_, to):
+        """Initialize command-line interpreter.
+
+        :param dict config: configuration
+        :param str from_: start of time period
+        :param str to: end of time period
+        """
+        self.new_loop = True
+        self.timer = src.timer.Timer(
+            os.path.join(config["database"]["path"], config["database"]["dbname"])
+        )
+        self.from_ = datetime.datetime.strptime(
+            convert_to_date_string(from_), "%Y-%m-%d"
+        )
+        self.to = datetime.datetime.strptime(convert_to_date_string(to), "%Y-%m-%d")
+        self.aliases = (
+            {k: json.loads(v) for k, v in config["aliases"].items()}
+            if "aliases" in config
+            else {}
+        )
+        self.subcommands = {
+            "next": {
+                "description": "show next day",
+                "aliases": (">", *self.aliases.get("next", tuple())),
+                "func": self.next,
+                "args": {},
+            },
+            "previous": {
+                "description": "show previous day",
+                "aliases": ("<", *self.aliases.get("previous", tuple())),
+                "func": self.previous,
+                "args": {},
+            },
+        }
+        super().__init__()
+        self._init_parser()
+
+    def _show_stats(self):
+        """Show statistics."""
+        draw_stats(
+            generate_stats(
+                self.timer,
+                self.from_.strftime("%Y-%m-%d"),
+                self.to.strftime("%Y-%m-%d"),
+            ),
+            self,
+            new_loop=self.new_loop,
+        )
+
+    def next(self):
+        """Show next day.
+
+        :returns: output
+        :rtype: tuple
+        """
+        self.new_loop = False
+        self.from_ = self.from_ + datetime.timedelta(days=1)
+        self.to = self.to + datetime.timedelta(days=1)
+        self._show_stats()
+        return tuple()
+
+    def previous(self):
+        """Show previous day.
+
+        :returns: output
+        :rtype: tuple
+        """
+        self.new_loop = False
+        self.from_ = self.from_ - datetime.timedelta(days=1)
+        self.to = self.to - datetime.timedelta(days=1)
+        self._show_stats()
         return tuple()
