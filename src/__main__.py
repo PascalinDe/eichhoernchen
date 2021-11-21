@@ -16,7 +16,7 @@
 
 
 """
-:synopsis: Eichhörnchen 2.2.
+:synopsis: Main function.
 """
 
 
@@ -31,12 +31,12 @@ import argparse
 import src.config
 import src.curses.shell
 
-prog = "eichhoernchen"
-__version__ = "2.2"
+from src import __version__, description
 
 
 def main():
     """Main function."""
+    prog = "eichhoernchen"
     logging.basicConfig(
         filename=f"/tmp/{prog}.log",
         format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
@@ -44,15 +44,20 @@ def main():
     )
     logger = logging.getLogger(main.__name__)
     parser = argparse.ArgumentParser(
-        prog=prog, description="Lightweight curses-based time tracking tool."
+        prog=prog,
+        description=description,
     )
-    parser.add_argument("-c", "--config", help="use this configuration file")
+    parser.add_argument("-c", "--config", help="path to config file to load")
     parser.add_argument(
-        "--version", action="version", version=f"%(prog)s {__version__}"
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
     )
-    config = src.config.load_config(path=parser.parse_args().config)
     try:
-        curses.wrapper(src.curses.shell.launch, config)
+        curses.wrapper(
+            src.curses.shell.launch,
+            src.config.load_config(path=parser.parse_args().config),
+        )
     except Exception as exception:
         logger.exception(exception)
         raise SystemExit("an unexpected error occurred")

@@ -27,6 +27,10 @@ import collections
 # library specific imports
 
 
+__version__ = "2.2"
+description = "Lightweight curses-based time tracking tool."
+
+
 # full name composed of name and one or more tags, e.g. foo[bar][baz]
 FullName = collections.namedtuple(
     "FullName", ("name", "tags"), defaults=("", frozenset())

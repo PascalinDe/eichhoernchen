@@ -20,9 +20,7 @@ from setuptools import setup
 
 # third party imports
 # library specific imports
-
-
-__version__ = "2.2"
+from src import __version__, description
 
 
 with open("README.md") as fp:
@@ -32,7 +30,7 @@ with open("README.md") as fp:
 setup(
     name="eichhoernchen",
     version=__version__,
-    description="Lightweight curses-based time tracking tool.",
+    description=description,
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Carine Dengler",
