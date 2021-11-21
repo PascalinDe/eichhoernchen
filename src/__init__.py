@@ -27,8 +27,21 @@ import collections
 # library specific imports
 
 
-__version__ = "2.2"
-description = "Lightweight curses-based time tracking tool."
+METADATA = {
+    "name": "eichhoernchen",
+    "version": "2.2",
+    "description": "Lightweight curses-based time tracking tool.",
+    "author": "Carine Dengler",
+    "author_email": "eichhoernchen@pascalin.de",
+    "url": "https://github.com/PascalinDe/eichhoernchen",
+    "classifiers": [
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+        "Operating System :: POSIX :: Linux",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+    ],
+}
 
 
 # full name composed of name and one or more tags, e.g. foo[bar][baz]

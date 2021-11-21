@@ -31,27 +31,26 @@ import argparse
 import src.config
 import src.curses.shell
 
-from src import __version__, description
+from src import METADATA
 
 
 def main():
     """Main function."""
-    prog = "eichhoernchen"
     logging.basicConfig(
-        filename=f"/tmp/{prog}.log",
+        filename=f"/tmp/{METADATA['name']}.log",
         format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
         level=logging.DEBUG,
     )
     logger = logging.getLogger(main.__name__)
     parser = argparse.ArgumentParser(
-        prog=prog,
-        description=description,
+        prog=METADATA["name"],
+        description=METADATA["description"],
     )
     parser.add_argument("-c", "--config", help="path to config file to load")
     parser.add_argument(
         "--version",
         action="version",
-        version=f"%(prog)s {__version__}",
+        version=f"%(prog)s {METADATA['version']}",
     )
     try:
         curses.wrapper(

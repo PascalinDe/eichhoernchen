@@ -20,29 +20,15 @@ from setuptools import setup
 
 # third party imports
 # library specific imports
-from src import __version__, description
+from src import METADATA
 
 
 with open("README.md") as fp:
     long_description = fp.read()
-
-
 setup(
-    name="eichhoernchen",
-    version=__version__,
-    description=description,
+    **METADATA,
     long_description=long_description,
     long_description_content_type="text/markdown",
-    author="Carine Dengler",
-    author_email="eichhoernchen@pascalin.de",
-    url="https://github.com/pascalinde/eichhoernchen",
     packages=["src"],
-    classifiers=[
-        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-        "Operating System :: POSIX :: Linux",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-    ],
-    entry_points={"console_scripts": ["eichhoernchen = src.__main__:main"]},
+    entry_points={"console_scripts": [f"{METADATA['name']} = src.__main__:main"]},
 )
