@@ -246,8 +246,8 @@ class Interpreter(InterpreterMixin):
         :rtype: tuple
         """
         tasks = self.timer.list(
-            self._convert_to_date_string(start),
-            self._convert_to_date_string(end),
+            convert_to_date_string(start),
+            convert_to_date_string(end),
             full_name=full_name,
             include_running=include_running,
         )
@@ -419,11 +419,11 @@ class Interpreter(InterpreterMixin):
         return tuple(
             src.output_formatter.pprint_task(
                 task,
-                date=from_ not in ("today", self._convert_to_date_string("today")),
+                date=from_ not in ("today", convert_to_date_string("today")),
             )
             for task in self.timer.list(
-                self._convert_to_date_string(from_),
-                self._convert_to_date_string(to),
+                convert_to_date_string(from_),
+                convert_to_date_string(to),
                 full_name=full_name,
                 match_full_name=any(full_name),
             )
@@ -453,8 +453,8 @@ class Interpreter(InterpreterMixin):
         return tuple(
             src.output_formatter.pprint_sum(FullName(*full_name), runtime)
             for full_name, runtime in self.timer.sum(
-                self._convert_to_date_string(from_),
-                self._convert_to_date_string(to),
+                convert_to_date_string(from_),
+                convert_to_date_string(to),
                 full_name=summand,
                 match_full_name=all(summand),
             )
@@ -475,8 +475,8 @@ class Interpreter(InterpreterMixin):
         """
         filename = self.timer.export(
             ext,
-            self._convert_to_date_string(from_),
-            self._convert_to_date_string(to),
+            convert_to_date_string(from_),
+            convert_to_date_string(to),
             full_name=full_name,
         )
         return (src.output_formatter.pprint_info(f"exported tasks to {filename}"),)
