@@ -46,11 +46,16 @@ def main():
         prog=METADATA["name"],
         description=METADATA["description"],
     )
-    parser.add_argument("-c", "--config", help="path to config file to load")
+    parser.add_argument(
+        "-c",
+        "--config",
+        help="path to config file to load",
+    )
     parser.add_argument(
         "--version",
         action="version",
         version=f"%(prog)s {METADATA['version']}",
+        help="print %(prog)s version",
     )
     try:
         curses.wrapper(
