@@ -16,7 +16,7 @@
 
 
 """
-:synopsis: Basic objects.
+:synopsis: Common objects.
 """
 
 
@@ -44,17 +44,19 @@ METADATA = {
 }
 
 
-# full name composed of name and one or more tags, e.g. foo[bar][baz]
 FullName = collections.namedtuple(
-    "FullName", ("name", "tags"), defaults=("", frozenset())
+    "FullName",
+    ("name", "tags"),
+    defaults=("", frozenset()),
+)
+_Task = collections.namedtuple(
+    "Task",
+    ("name", "tags", "time_span"),
 )
 
 
-_Task = collections.namedtuple("Task", ("name", "tags", "time_span"))
-
-
 class Task(_Task):
-    """Task composed of name, one or more tags and its start and end time."""
+    """Task."""
 
     __slots__ = ()
 
