@@ -25,6 +25,8 @@ import curses
 import logging
 import argparse
 
+from pathlib import Path
+
 # third party imports
 
 # library specific imports
@@ -32,6 +34,19 @@ import src.config
 import src.curses.shell
 
 from src import METADATA
+
+
+def _config(config):
+    """Configuration file to load.
+
+    :param str config: path to configuration file to load
+
+    :returns: config
+    :rtype: path to configuration file to load
+    """
+    if not Path(config).is_file():
+        raise argparse.ArgumentTypeError(f"No such file {config}")
+    return config
 
 
 def main():
@@ -49,7 +64,8 @@ def main():
     parser.add_argument(
         "-c",
         "--config",
-        help="path to config file to load",
+        type=_config,
+        help="path to configuration file to load",
     )
     parser.add_argument(
         "--version",

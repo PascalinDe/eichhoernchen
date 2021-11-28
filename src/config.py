@@ -16,7 +16,7 @@
 
 
 """
-:synopsis: Configuration file handling.
+:synopsis: Configuration file utils.
 """
 
 
@@ -30,14 +30,27 @@ from pathlib import Path
 # library specific imports
 
 
-class BadConfig(Exception):
+REQUIRED_SECTIONS = {"database": {"dbname", "path"}}
+KNOWN_SUBCOMMANDS = {
+    "start",
+    "stop",
+    "add",
+    "remove",
+    "edit",
+    "list",
+    "clean_up",
+    "sum",
+    "export",
+    "show_stats",
+    "help",
+    "aliases",
+    "next",
+    "previous",
+}
+
+
+class BuggyConfig(Exception):
     """Raised when configuration file contains errors."""
-
-    pass
-
-
-class ConfigNotFound(Exception):
-    """Raised when configuration file does not exist."""
 
     pass
 
@@ -50,7 +63,7 @@ def _create_config(path):
     config = configparser.ConfigParser()
     config["database"] = {
         "dbname": "eichhoernchen.db",
-        "path": Path(os.environ["HOME"]) / ".local" / "share",
+        "path": str(Path(os.environ["HOME"]) / ".local" / "share"),
     }
     with open(path, "w") as fp:
         config.write(fp)
@@ -61,78 +74,46 @@ def _validate_config(config):
 
     :param ConfigParser config: configuration
 
-    :raises: BadConfig when required section or key(s) are missing
-    :raises: BadConfig when there are unknown commands in 'aliases' section
+    :raises: BuggyConfig
     """
-    check = {"database": {"dbname", "path"}}
-    for section, required in check.items():
+    for section, required in REQUIRED_SECTIONS.items():
         try:
             missing = ",".join(
                 f"'{key}'" for key in required.difference(set(config[section].keys()))
             )
         except KeyError:
-            raise BadConfig(f"required section '{section}' is missing")
+            raise BuggyConfig(f"required section '{section}' is missing")
         if missing:
-            raise BadConfig(f"required key(s) {missing} are missing")
-    subcommands = {
-        "start",
-        "stop",
-        "add",
-        "remove",
-        "edit",
-        "list",
-        "sum",
-        "show_stats",
-        "export",
-        "help",
-        "aliases",
-        "clean_up",
-        "next",
-        "previous",
-    }
+            raise BuggyConfig(f"required key(s) {missing} are missing")
     try:
         unknown = ",".join(
             f"'{command}'"
-            for command in set(config["aliases"].keys()).difference(subcommands)
+            for command in set(config["aliases"].keys()).difference(KNOWN_SUBCOMMANDS)
         )
         if unknown:
-            raise BadConfig(f"unknown command(s) {unknown}")
+            raise BuggyConfig(f"unknown command(s) {unknown}")
     except KeyError:
         pass
-
-
-def _read_config(path):
-    """Read configuration file.
-
-    :param str path: path to configuration file
-
-    :returns: configuration
-    :rtype: ConfigParser
-    """
-    config = configparser.ConfigParser()
-    config.read(path)
-    _validate_config(config)
-    return config
 
 
 def load_config(path=""):
     """Load configuration file.
 
-    :param str path: path to configuration file
+    :param str path: path to configuration file to load
 
-    :raises: ConfigNotFound when configuration file does not exist
-    :raises: SystemExit when configuration file contains errors
+    :raises: SystemExit
 
     :returns: configuration
     :rtype: dict
     """
     if not path:
-        path = os.path.join(os.environ["HOME"], ".config/eichhoernchen.ini")
-        if not os.path.exists(path):
-            _create_config(path)
-    if not os.path.exists(path):
-        raise ConfigNotFound(f"configuration file {path} does not exist")
+        path = Path(os.environ["HOME"]) / ".config" / "eichhoernchen.ini"
+        if not path.is_file():
+            _create_config(str(path))
+    config = configparser.ConfigParser()
+    config.read(path)
     try:
-        return _read_config(path)
-    except BadConfig as exception:
-        raise SystemExit(f"configuration file contains errors:\t{exception}")
+        _validate_config(config)
+    except BuggyConfig as exception:
+        raise SystemExit(f"configuration file '{path}' contains errors: {exception}")
+    return config

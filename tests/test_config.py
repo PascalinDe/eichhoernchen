@@ -73,29 +73,29 @@ class TestConfig(unittest.TestCase):
         """Test validating configuration file.
 
         Trying: required section is missing
-        Expecting: BadConfig has been raised
+        Expecting: BuggyConfig has been raised
         """
-        with self.assertRaises(src.config.BadConfig):
+        with self.assertRaises(src.config.BuggyConfig):
             src.config._validate_config(configparser.ConfigParser())
 
     def test_validate_config_required_key_missing(self):
         """Test validating configuration file.
 
         Trying: required key is missing
-        Expecting: BadConfig has been raised
+        Expecting: BuggyConfig has been raised
         """
         config = configparser.ConfigParser()
         config["database"] = {
             "dbname": "eichhoernchen.db",
         }
-        with self.assertRaises(src.config.BadConfig):
+        with self.assertRaises(src.config.BuggyConfig):
             src.config._validate_config(config)
 
     def test_validate_config_unknown_command(self):
         """Test validating configuration file.
 
         Trying: unknown command in 'aliases' section
-        Expecting: BadConfig has been raised
+        Expecting: BuggyConfig has been raised
         """
         config = configparser.ConfigParser()
         config["database"] = {
@@ -103,5 +103,5 @@ class TestConfig(unittest.TestCase):
             "path": Path(os.environ["HOME"]) / ".local" / "share",
         }
         config["aliases"] = {"foo": ["bar"]}
-        with self.assertRaises(src.config.BadConfig):
+        with self.assertRaises(src.config.BuggyConfig):
             src.config._validate_config(config)
