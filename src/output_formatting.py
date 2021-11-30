@@ -16,7 +16,7 @@
 
 
 """
-:synopsis: Output formatter.
+:synopsis: Output formatting.
 """
 
 
@@ -25,8 +25,6 @@
 # library specific imports
 from src import FullName, Task
 from src.template import Template
-
-TEMPLATE = Template()
 
 
 def pprint_name(name):
@@ -37,7 +35,8 @@ def pprint_name(name):
     :returns: pretty-printed name
     :rtype: tuple
     """
-    return ((TEMPLATE.name[0].format(name=name), TEMPLATE.name[1]),)
+    template = Template().name
+    return ((template[0].format(name=name), template[1]),)
 
 
 def pprint_tags(tags):
@@ -48,10 +47,11 @@ def pprint_tags(tags):
     :returns: pretty-printed tags
     :rtype: tuple
     """
+    template = Template().tag
     return (
         (
-            "".join(TEMPLATE.tag[0].format(tag=tag) for tag in sorted(tags) if tag),
-            TEMPLATE.tag[1],
+            "".join(template[0].format(tag=tag) for tag in sorted(tags) if tag),
+            template[1],
         ),
     )
 
@@ -71,11 +71,12 @@ def pprint_time_span(time_span, date=False):
     """Pretty-print time span.
 
     :param tuple time_span: time span
-    :param bool date: toggle displaying date on/off
+    :param bool date: toggle printing date on/off
 
     :returns: time span
     :rtype: tuple
     """
+    template = Template().time_span
     if date:
         if time_span[0].date() != time_span[1].date():
             start = time_span[0].strftime("%Y-%m-%d %H:%M")
@@ -85,30 +86,27 @@ def pprint_time_span(time_span, date=False):
     else:
         start = time_span[0].strftime("%H:%M")
         end = time_span[1].strftime("%H:%M")
-    return (
-        (TEMPLATE.time_span[0].format(start=start, end=end), TEMPLATE.time_span[1]),
-    )
+    return ((template[0].format(start=start, end=end), template[1]),)
 
 
-def pprint_total(total):
-    """Pretty-print total runtime.
+def pprint_total(run_time):
+    """Pretty-print run time.
 
-    :param int total: runtime (in seconds)
+    :param str total: run time
 
-    :returns: pretty-printed runtime
-    :rtype: tuple
+    :returns: pretty-printed run time
+    :rtype: str
     """
-    hours, minutes = divmod(divmod(total, 60)[0], 60)
-    return (
-        (TEMPLATE.total[0].format(hours=hours, minutes=minutes), TEMPLATE.total[1]),
-    )
+    template = Template().total
+    hours, minutes = divmod(divmod(run_time, 60)[0], 60)
+    return ((template[0].format(hours=hours, minutes=minutes), template[1]),)
 
 
 def pprint_task(task, date=False):
     """Pretty-print task.
 
     :param Task task: task
-    :param bool date: toggle displaying date on/off
+    :param bool date: toggle printing date on/off
 
     :returns: pretty-printed task
     :rtype: tuple
@@ -120,16 +118,16 @@ def pprint_task(task, date=False):
     )
 
 
-def pprint_sum(full_name, total):
-    """Pretty-print sum of total runtime.
+def pprint_sum(full_name, run_time):
+    """Pretty-print sum of run times.
 
     :param FullName full_name: full name
-    :param int total: runtime (in seconds)
+    :param int run_time: run time (in seconds)
 
-    :returns: pretty-printed runtime
+    :returns: pretty-printed sum of run times
     :rtype: tuple
     """
-    return (*pprint_full_name(full_name), *pprint_total(total))
+    return (*pprint_full_name(full_name), *pprint_total(run_time))
 
 
 def pprint_running(task):
@@ -140,8 +138,9 @@ def pprint_running(task):
     :returns: pretty-printed currently running task
     :rtype: tuple
     """
+    template = Template().running
     start = task.time_span[0].strftime("%H:%M")
-    return ((TEMPLATE.running[0].format(start=start), TEMPLATE.running[1]),)
+    return ((template[0].format(start=start), template[1]),)
 
 
 def pprint_prompt(task=Task("", frozenset(), ())):
@@ -152,32 +151,35 @@ def pprint_prompt(task=Task("", frozenset(), ())):
     :returns: pretty-printed prompt
     :rtype: tuple
     """
+    template = Template().prompt
     if task.name:
         return (
             *pprint_full_name(FullName(task.name, task.tags)),
             *pprint_running(task),
-            TEMPLATE.prompt,
+            template,
         )
-    return (TEMPLATE.prompt,)
+    return (template,)
 
 
-def pprint_info(info):
-    """Pretty-print info.
+def pprint_info(msg):
+    """Pretty-print message with level INFO.
 
-    :param str info: info
+    :param str msg: message
 
-    :returns: pretty-printed info
+    :returns: pretty-printed message
     :rtype: tuple
     """
-    return ((TEMPLATE.info[0].format(info=info), TEMPLATE.info[1]),)
+    template = Template().info
+    return ((template[0].format(info=msg), template[1]),)
 
 
-def pprint_error(error):
-    """Pretty-print error.
+def pprint_error(msg):
+    """Pretty-print message with level ERROR.
 
-    :param str error: error
+    :param str msg: message
 
-    :returns: pretty-printed error
+    :returns: pretty-printed message
     :rtype: tuple
     """
-    return ((TEMPLATE.error[0].format(error=error), TEMPLATE.error[1]),)
+    template = Template().error
+    return ((template[0].format(error=msg), template[1]),)

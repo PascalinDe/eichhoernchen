@@ -31,7 +31,7 @@ from contextlib import redirect_stderr
 
 # third party imports
 # library specific imports
-import src.output_formatter
+import src.output_formatting
 
 from src import FullName
 
@@ -223,16 +223,19 @@ def generate_stats(timer, from_, to):
         ((f"{'—' * len(heading[0][0])}", curses.color_pair(0)),),
         empty_line,
         ((f"{len(tasks)} task{'s' if len(tasks) > 1 else ''}", curses.color_pair(0)),),
-        *(src.output_formatter.pprint_task(task, date=(from_ != to)) for task in tasks),
+        *(
+            src.output_formatting.pprint_task(task, date=(from_ != to))
+            for task in tasks
+        ),
         ((f"{len(tags)} tag{'s' if len(tags) > 1 else ''}", curses.color_pair(0)),),
         *(
-            src.output_formatter.pprint_tags(tags)
+            src.output_formatting.pprint_tags(tags)
             for tags in sorted(tags, key=lambda x: len(x))
         ),
         empty_line,
         ((f"Total runtime task{'s' if len(tasks) > 1 else ''}", curses.color_pair(0)),),
         *(
-            src.output_formatter.pprint_sum(FullName(*full_name), runtime)
+            src.output_formatting.pprint_sum(FullName(*full_name), runtime)
             for full_name, runtime in sorted(
                 (
                     runtime
@@ -247,7 +250,7 @@ def generate_stats(timer, from_, to):
         ),
         ((f"Total runtime tag{'s' if len(tags) else ''}", curses.color_pair(0)),),
         *(
-            src.output_formatter.pprint_sum(FullName(*full_name), runtime)
+            src.output_formatting.pprint_sum(FullName(*full_name), runtime)
             for full_name, runtime in sorted(
                 (
                     runtime
@@ -379,11 +382,11 @@ class InterpreterMixin:
             else:
                 subparser = subcommands[subcommand]
             return tuple(
-                src.output_formatter.pprint_info(help)
+                src.output_formatting.pprint_info(help)
                 for help in subparser.format_help().split("\n")
             )
         return tuple(
-            src.output_formatter.pprint_info(usage.strip())
+            src.output_formatting.pprint_info(usage.strip())
             for usage in self._parser.format_usage().split("\n")
             if usage
         )
@@ -395,12 +398,12 @@ class InterpreterMixin:
         :rtype: tuple
         """
         if not self.aliases:
-            return (src.output_formatter.pprint_error("no aliases have been set"),)
+            return (src.output_formatting.pprint_error("no aliases have been set"),)
         return (
-            src.output_formatter.pprint_info("alias\tcommand"),
+            src.output_formatting.pprint_info("alias\tcommand"),
             tuple(),
             *(
-                src.output_formatter.pprint_info(f"{alias}\t{command}")
+                src.output_formatting.pprint_info(f"{alias}\t{command}")
                 for command, aliases in self.aliases.items()
                 for alias in aliases
             ),

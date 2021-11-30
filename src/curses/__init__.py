@@ -35,7 +35,7 @@ from collections import defaultdict, UserList
 # library specific imports
 from src import Task
 from src.interpreter import InterpreterError, UserAbort
-from src.output_formatter import pprint_prompt
+from src.output_formatting import pprint_prompt
 
 
 class ResizeError(Exception):

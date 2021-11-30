@@ -252,14 +252,14 @@ class Interpreter(InterpreterMixin):
             include_running=include_running,
         )
         pprinted_full_name = "".join(
-            part for part, _ in src.output_formatter.pprint_full_name(full_name)
+            part for part, _ in src.output_formatting.pprint_full_name(full_name)
         )
         if not tasks:
             raise NoSuchTask(
                 f"no such task '{pprinted_full_name}' (current task not included)"
             )
         items = tuple(
-            "".join(part for part, _ in src.output_formatter.pprint_task(task))
+            "".join(part for part, _ in src.output_formatting.pprint_task(task))
             for task in tasks
         )
         i = draw_menu(items, banner=f"Pick menu item 1...{len(items)}.")
@@ -277,7 +277,7 @@ class Interpreter(InterpreterMixin):
         """
         if self.timer.task.name:
             return (
-                src.output_formatter.pprint_error("another task is already running"),
+                src.output_formatting.pprint_error("another task is already running"),
             )
         self.timer.start(Task(full_name.name, full_name.tags, (None, None)))
         return tuple()
@@ -291,7 +291,7 @@ class Interpreter(InterpreterMixin):
         if self.timer.task.name:
             self.timer.stop()
             return tuple()
-        return (src.output_formatter.pprint_error("there is no running task"),)
+        return (src.output_formatting.pprint_error("there is no running task"),)
 
     def add(self, full_name=FullName("", frozenset()), start="", end=""):
         """Add task.
@@ -317,12 +317,12 @@ class Interpreter(InterpreterMixin):
             )
             self.timer.add(task)
             return (
-                src.output_formatter.pprint_task(
+                src.output_formatting.pprint_task(
                     task, date=(start.date() != datetime.datetime.today().date())
                 ),
             )
         except ValueError as exception:
-            return (src.output_formatter.pprint_error(str(exception)),)
+            return (src.output_formatting.pprint_error(str(exception)),)
 
     def remove(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """Remove task.
@@ -342,12 +342,12 @@ class Interpreter(InterpreterMixin):
                 include_running=False,
             )
         except Exception as exception:
-            return (src.output_formatter.pprint_error(str(exception)),)
+            return (src.output_formatting.pprint_error(str(exception)),)
         try:
             self.timer.remove(task)
         except ValueError as exception:
-            return (src.output_formatter.pprint_error(str(exception)),)
-        return (src.output_formatter.pprint_info(f"removed {pprinted_task}"),)
+            return (src.output_formatting.pprint_error(str(exception)),)
+        return (src.output_formatting.pprint_info(f"removed {pprinted_task}"),)
 
     def edit(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """Edit task.
@@ -360,17 +360,17 @@ class Interpreter(InterpreterMixin):
         :rtype: tuple
         """
         pprinted_full_name = "".join(
-            part for part, _ in src.output_formatter.pprint_full_name(full_name)
+            part for part, _ in src.output_formatting.pprint_full_name(full_name)
         )
         try:
             task, pprinted_task = self._pick_task(
                 full_name=full_name, start=from_, end=to
             )
         except Exception as exception:
-            return (src.output_formatter.pprint_error(str(exception)),)
+            return (src.output_formatting.pprint_error(str(exception)),)
         if not task:
             return (
-                src.output_formatter.pprint_error(
+                src.output_formatting.pprint_error(
                     f"no such task '{pprinted_full_name}'"
                 ),
             )
@@ -379,7 +379,7 @@ class Interpreter(InterpreterMixin):
             attributes, banner=f"Pick attribute 1...{len(attributes)} to edit."
         )
         if i < 0:
-            return (src.output_formatter.pprint_error("user aborted"),)
+            return (src.output_formatting.pprint_error("user aborted"),)
         try:
             new = (match_name, match_tags, match_from, match_to,)[i](
                 draw_input_box(
@@ -389,7 +389,7 @@ class Interpreter(InterpreterMixin):
             )
         except EOFError:
             return (
-                src.output_formatter.pprint_error(
+                src.output_formatting.pprint_error(
                     f"user aborted editing task '{pprinted_full_name}'"
                 ),
             )
@@ -398,13 +398,13 @@ class Interpreter(InterpreterMixin):
         try:
             task = self.timer.edit(task, attributes[i], new)
             return (
-                src.output_formatter.pprint_task(
+                src.output_formatting.pprint_task(
                     task,
                     date=(task.time_span[0].date() != datetime.datetime.today().date()),
                 ),
             )
         except ValueError as exception:
-            return (src.output_formatter.pprint_error(exception),)
+            return (src.output_formatting.pprint_error(exception),)
 
     def list(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """List tasks.
@@ -417,7 +417,7 @@ class Interpreter(InterpreterMixin):
         :rtype: tuple
         """
         return tuple(
-            src.output_formatter.pprint_task(
+            src.output_formatting.pprint_task(
                 task,
                 date=from_ not in ("today", convert_to_date_string("today")),
             )
@@ -436,7 +436,7 @@ class Interpreter(InterpreterMixin):
         :rtype: tuple
         """
         return tuple(
-            src.output_formatter.pprint_task(task, date=True)
+            src.output_formatting.pprint_task(task, date=True)
             for task in self.timer.list_buggy_tasks()
         )
 
@@ -451,7 +451,7 @@ class Interpreter(InterpreterMixin):
         :rtype: tuple
         """
         return tuple(
-            src.output_formatter.pprint_sum(FullName(*full_name), runtime)
+            src.output_formatting.pprint_sum(FullName(*full_name), runtime)
             for full_name, runtime in self.timer.sum(
                 convert_to_date_string(from_),
                 convert_to_date_string(to),
@@ -479,7 +479,7 @@ class Interpreter(InterpreterMixin):
             convert_to_date_string(to),
             full_name=full_name,
         )
-        return (src.output_formatter.pprint_info(f"exported tasks to {filename}"),)
+        return (src.output_formatting.pprint_info(f"exported tasks to {filename}"),)
 
     def show_statistics(self, from_="today", to="today"):
         """Show statistics.
