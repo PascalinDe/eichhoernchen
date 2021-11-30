@@ -16,7 +16,7 @@
 
 
 """
-:synopsis: SQLite database interface.
+:synopsis: SQLite utils.
 """
 
 
@@ -28,26 +28,6 @@ import collections
 # library specific imports
 
 
-COLUMN_DEFINITIONS = collections.OrderedDict(
-    {
-        "time_span": (
-            "start TIMESTAMP PRIMARY KEY",
-            "end TIMESTAMP CHECK (end > start)",
-        ),
-        "tagged": (
-            "tag TEXT",
-            "start TIMESTAMP",
-            "FOREIGN KEY(start) REFERENCES time_span(start)",
-        ),
-        "running": (
-            "name TEXT",
-            "start TIMESTAMP",
-            "FOREIGN KEY(start) REFERENCES time_span(start)",
-        ),
-    }
-)
-
-
 class SQLiteError(Exception):
     """Raised when SQLite statement execution fails.
 
@@ -55,10 +35,6 @@ class SQLiteError(Exception):
     """
 
     def __init__(self, *args, sql="", **kwargs):
-        """Initialize SQLiteError.
-
-        :param str sql: SQLite statement
-        """
         super().__init__(*args, **kwargs)
         self.sql = sql
 
@@ -68,6 +44,25 @@ class SQLiteInterface:
 
     :ivar str database: SQLite database file
     """
+
+    COLUMN_DEFINITIONS = collections.OrderedDict(
+        {
+            "time_span": (
+                "start TIMESTAMP PRIMARY KEY",
+                "end TIMESTAMP CHECK (end > start)",
+            ),
+            "tagged": (
+                "tag TEXT",
+                "start TIMESTAMP",
+                "FOREIGN KEY(start) REFERENCES time_span(start)",
+            ),
+            "running": (
+                "name TEXT",
+                "start TIMESTAMP",
+                "FOREIGN KEY(start) REFERENCES time_span(start)",
+            ),
+        }
+    )
 
     def __init__(self, database):
         """Initialize SQLite database interface.
@@ -79,7 +74,7 @@ class SQLiteInterface:
     def connect(self):
         """Connect to SQLite database.
 
-        :raises SQLiteError: when connection to SQLite database fails
+        :raises: SQLiteError
 
         :returns: connection
         :rtype: Connection
@@ -90,15 +85,14 @@ class SQLiteInterface:
                 detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
             )
         except sqlite3.Error as exception:
-            raise SQLiteError("connection to SQLite database failed") from exception
+            raise SQLiteError("failed to connect to SQLite database") from exception
 
     def execute(self, statement, *parameters):
-        """Execute SQLite statement(s).
+        """Execute SQLite statement.
 
         :param str statement: SQLite statement
         :param tuple parameters: parameters
-
-        :raises SQLiteError: when SQLite statement execution fails
+        :raises: SQLiteError
 
         :returns: rows
         :rtype: list
@@ -111,13 +105,13 @@ class SQLiteInterface:
                 rows = connection.execute(statement, *parameters).fetchall()
         except sqlite3.Error as exception:
             raise SQLiteError(
-                "SQLite statement execution failed", sql=statement
+                "failed to execute SQLite statement", sql=statement
             ) from exception
         connection.commit()
         return rows
 
     def create_tables(self):
         """Create tables."""
-        for table, columns in COLUMN_DEFINITIONS.items():
+        for table, columns in self.COLUMN_DEFINITIONS.items():
             sql = f"CREATE TABLE IF NOT EXISTS {table} ({','.join(columns)})"
             self.execute(sql)

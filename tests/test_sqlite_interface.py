@@ -72,5 +72,5 @@ class TestSQLiteInterface(unittest.TestCase):
                     "SELECT name FROM sqlite_master WHERE type = 'table'"
                 )
             ],
-            list(src.sqlite_interface.COLUMN_DEFINITIONS.keys()),
+            list(self.interface.COLUMN_DEFINITIONS.keys()),
         )
