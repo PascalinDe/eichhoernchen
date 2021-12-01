@@ -16,7 +16,7 @@
 
 
 """
-:synopsis: Templates.
+:synopsis: Output formatting template.
 """
 
 
