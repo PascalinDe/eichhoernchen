@@ -21,10 +21,47 @@
 
 
 # standard library imports
+import curses
+
 # third party imports
 # library specific imports
 from src import FullName, Task
-from src.template import Template
+
+
+class Template:
+    """Output formatting template."""
+
+    @property
+    def name(self):
+        return ("{name}", curses.color_pair(1))
+
+    @property
+    def tag(self):
+        return ("[{tag}]", curses.color_pair(2))
+
+    @property
+    def time_span(self):
+        return ("{start}-{end}", curses.color_pair(3))
+
+    @property
+    def total(self):
+        return ("({hours}h{minutes}m)", curses.color_pair(4))
+
+    @property
+    def running(self):
+        return ("({start}-)", curses.color_pair(3))
+
+    @property
+    def prompt(self):
+        return ("~>", curses.color_pair(0))
+
+    @property
+    def info(self):
+        return ("{info}", curses.color_pair(4))
+
+    @property
+    def error(self):
+        return ("{error}", curses.color_pair(5))
 
 
 def pprint_name(name):
