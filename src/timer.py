@@ -31,9 +31,10 @@ import collections
 
 # third party imports
 # library specific imports
-import src.sqlite_interface
+import src
 
 from src import FullName, Task
+from src.sqlite_interface import SQLiteInterface
 
 
 class Timer:
@@ -46,9 +47,9 @@ class Timer:
     def __init__(self, database):
         """Initialize timer.
 
-        :param str database: SQLite database file path
+        :param str database: SQLite database file
         """
-        self.interface = src.sqlite_interface.SQLiteInterface(database)
+        self.interface = SQLiteInterface(database)
         self.interface.create_tables()
         self._reset_task()
         self._cache_tags()
@@ -118,18 +119,18 @@ class Timer:
     def add(self, task):
         """Add task.
 
-        :param Task task: task to add
+        :param Task task: task
 
-        :raises ValueError: when the task cannot be added
+        :raises: ValueError
         """
         start, end = task.time_span
         if end <= start:
-            raise ValueError(f"task's end {end} is before its start {start}")
+            raise ValueError(f"task's end i'{end}' is before its start '{start}'")
         if self.interface.execute(
             "SELECT 1 FROM running WHERE start = ?",
             (start,),
         ):
-            raise ValueError(f"a task started at {start} already exists")
+            raise ValueError(f"there is already a task started at '{start}'")
         statements = (
             (
                 "INSERT INTO running (start,name) VALUES (?,?)",
@@ -154,9 +155,9 @@ class Timer:
     def remove(self, task):
         """Remove task.
 
-        :param Task task: task to remove
+        :param Task task: task
 
-        :raises ValueError: when the task cannot be removed
+        :raises: ValueError
         """
         if self.task.name and self.task.time_span[0] == task.time_span[0]:
             raise ValueError("cannot remove current task")
@@ -170,20 +171,20 @@ class Timer:
     def edit(self, task, attribute, *args):
         """Edit task.
 
-        :param Task task: task to edit
+        :param Task task: task
         :param str attribute: attribute
         :param tuple args: arguments
 
-        :raises ValueError: when task cannot be edited
+        :raises: ValueError
 
-        :returns: edited task
+        :returns: modified task
         :rtype: Task
         """
         name, tags = task.name, task.tags
         start, end = task.time_span
         if reset := (any(self.task) and self.task.time_span[0] == start):
             if attribute in ("start", "end"):
-                raise ValueError(f"cannot edit {attribute} of current task")
+                raise ValueError(f"cannot edit current task's '{attribute}'")
         if attribute == "name":
             name = args[0]
             self.interface.execute(
@@ -200,7 +201,7 @@ class Timer:
         if attribute == "end":
             end = args[0]
             if end <= start:
-                raise ValueError(f"new end '{end}' is before task's start")
+                raise ValueError(f"new end '{end}' is before start '{start}'")
             self.interface.execute(
                 "UPDATE time_span SET end = ? WHERE start = ?",
                 (end, start),
@@ -208,11 +209,11 @@ class Timer:
         if attribute == "start":
             start = args[0]
             if end <= start:
-                raise ValueError(f"new start '{start}' is after the task's end")
+                raise ValueError(f"new start '{start}' is after end '{end}'")
             if self.interface.execute(
                 "SELECT 1 FROM running WHERE start = ?", (start,)
             ):
-                raise ValueError(f"a task started at {start} already exists")
+                raise ValueError(f"there is already a task started at '{start}'")
             for table in ("time_span", "running", "tagged"):
                 self.interface.execute(
                     f"UPDATE {table} SET start = ? WHERE start = ?",
@@ -241,7 +242,7 @@ class Timer:
         :param str end: end of time period
         :param FullName full_name: full name
         :param bool match_full_name: toggle matching full name on/off
-        :param bool include_running: toggle including running task on/off
+        :param bool include_running: toggle including current task on/off
 
         :returns: tasks
         :rtype: list
@@ -304,30 +305,33 @@ class Timer:
     def sum(
         self, start, end, full_name=FullName("", frozenset()), match_full_name=True
     ):
-        """Sum up runtime.
+        """Sum run times up.
 
         :param str start: start of time period
         :param str end: end of time period
         :param FullName full_name: full name
         :param bool match_full_name: toggle matching full name on/off
 
-        :returns: summed up runtimes
+        :returns: summed up run times
         :rtype: list
         """
-        runtimes = collections.defaultdict(int)
+        run_times = collections.defaultdict(int)
         for task in self.list(
-            start, end, full_name=full_name, match_full_name=match_full_name
+            start,
+            end,
+            full_name=full_name,
+            match_full_name=match_full_name,
         ):
-            runtime = int((task.time_span[-1] - task.time_span[0]).total_seconds())
+            run_time = int((task.time_span[-1] - task.time_span[0]).total_seconds())
             if all(full_name):
-                runtimes[(task.name, tuple(task.tags))] += runtime
+                run_times[(task.name, tuple(task.tags))] += run_time
                 continue
             if full_name.name:
-                runtimes[(task.name, ("",))] += runtime
+                run_times[(task.name, ("",))] += run_time
                 continue
             if full_name.tags:
-                runtimes[("", tuple(task.tags))] += runtime
-        return list(runtimes.items())
+                run_times[("", tuple(task.tags))] += run_time
+        return list(run_times.items())
 
     def export(self, ext, start, end, full_name=FullName("", frozenset())):
         """Export tasks.
@@ -341,7 +345,10 @@ class Timer:
         :rtype: str
         """
         tasks = self.list(
-            start, end, full_name=full_name, match_full_name=any(full_name)
+            start,
+            end,
+            full_name=full_name,
+            match_full_name=any(full_name),
         )
         filename = (
             pathlib.Path(tempfile.gettempdir())
