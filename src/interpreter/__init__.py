@@ -37,41 +37,41 @@ from src import FullName
 
 
 def match_name(name):
-    """Match name.
+    """Validate name.
 
-    :param str name: string containing name
+    :param str name: name
 
-    :raises ArgumentTypeError: when string does not contain name
+    :raises: ArgumentTypeError
 
     :returns: name
     :rtype: str
     """
     if match := re.match(r"(?:\w|\s|[!#'+-?])+", name):
         return match.group(0).strip()
-    raise argparse.ArgumentTypeError(f"'{name}' does not contain name")
+    raise argparse.ArgumentTypeError(f"invalid name '{name}'")
 
 
 def match_tags(tags):
-    """Match tags.
+    """Validate tags.
 
-    :param str tags: string containing tags
+    :param str tags: tags
 
-    :raises ArgumentTypeError: when string does not contain tags
+    :raises: ArgumentTypeError
 
     :returns: tags
     :rtype: set
     """
     if matches := re.findall(r"\[((?:\w|\s|[!#'+-?])+)\]", tags):
         return set(tag.strip() for tag in matches)
-    raise argparse.ArgumentTypeError(f"'{tags}' does not contain any tags")
+    raise argparse.ArgumentTypeError(f"invalid tags '{tags}'")
 
 
 def match_full_name(full_name):
-    """Match full name.
+    """Validate full name.
 
-    :param str full_name: string containing full name
+    :param str full_name: full name
 
-    :raises ArgumentTypeError: when string does not contain full name
+    :raises: ArgumentTypeError
 
     :returns: full name
     :rtype: FullName
@@ -85,11 +85,11 @@ def match_full_name(full_name):
 
 
 def match_summand(summand):
-    """Match summand.
+    """Validate summand.
 
-    :param str summand: string containing summand
+    :param str summand: summand
 
-    :raises ArgumentTypeError: when string does not contain summand
+    :raises: ArgumentTypeError
 
     :returns: summand
     :rtype: FullName
@@ -101,47 +101,49 @@ def match_summand(summand):
 
 
 def match_from(from_):
-    """Match from.
+    """Validate from.
 
-    :param str from_: string containing from
+    :param str from_: from
 
-    :raises ArgumentTypeError: when string does not contain from
+    :raises: ArgumentTypeError
 
     :returns: from
     :rtype: str
     """
     try:
         return parse_datetime(
-            from_, keywords=("all", "year", "month", "week", "yesterday", "today")
+            from_,
+            keywords=("all", "year", "month", "week", "yesterday", "today"),
         )
     except ValueError:
-        raise argparse.ArgumentTypeError(f"'{from_}' does not contain from")
+        raise argparse.ArgumentTypeError(f"invalid from '{from_}'")
 
 
 def match_to(to):
-    """Match to.
+    """Validate to.
 
-    :param str to: string containing to
+    :param str to: to
 
-    :raises ArgumentTypeError: when string does not contain to
+    :raises: ArgumentTypeError
 
     :returns: to
     :rtype: str
     """
     try:
         return parse_datetime(
-            to, keywords=("year", "month", "week", "yesterday", "today")
+            to,
+            keywords=("year", "month", "week", "yesterday", "today"),
         )
     except ValueError:
-        raise argparse.ArgumentTypeError(f"'{to}' does not contain to")
+        raise argparse.ArgumentTypeError(f"invalid to '{to}'")
 
 
 def match_start(start):
-    """Match start.
+    """Validate start.
 
-    :param str start: string containing start
+    :param str start: start
 
-    :raises ArgumentTypeError: when string does not contain start
+    :raises: ArgumentTypeError
 
     :returns: start
     :rtype: str
@@ -149,15 +151,15 @@ def match_start(start):
     try:
         return parse_datetime(start)
     except ValueError:
-        raise argparse.ArgumentTypeError(f"'{start}' does not contain start")
+        raise argparse.ArgumentTypeError(f"invalid start '{start}'")
 
 
 def match_end(end):
-    """Match end.
+    """Validate end.
 
-    :param str end: string containing end
+    :param str end: end
 
-    :raises ArgumentTypeError: when string does not contain end
+    :raises: ArgumentTypeError
 
     :returns: end
     :rtype: str
@@ -171,8 +173,7 @@ def parse_datetime(date_string, keywords=tuple()):
     :param str date_string: date string
     :param tuple keywords: keywords
 
-    :raises ArgumentTypeError: when date string does not match
-    any keyword or format string
+    :raises: ArgumentTypeError
 
     :returns: date string
     :rtype: str
@@ -191,86 +192,12 @@ def parse_datetime(date_string, keywords=tuple()):
             date_string = f"{now.year:04}-{now.month:02}-{now.day:02} {date_string}"
         return date_string
     raise argparse.ArgumentTypeError(
-        f"{date_string} does not match any keyword or format string"
-    )
-
-
-def generate_stats(timer, from_, to):
-    """Generate statistics.
-
-    :param Timer timer: timer
-    :param str from_: start of time period
-    :param str to: end of time period
-
-    :returns: output
-    :rtype: tuple
-    """
-    tasks = timer.list(from_, to, match_full_name=False)
-    from_ = datetime.datetime.strptime(from_, "%Y-%m-%d")
-    to = datetime.datetime.strptime(to, "%Y-%m-%d")
-    rheading = f" - {to.strftime('%a %d %b %Y')}" if from_ != to else ""
-    heading = (
-        (
-            f"overview {from_.strftime('%a %d %b %Y')}{rheading}".upper(),
-            curses.color_pair(0),
-        ),
-    )
-    empty_line = (("", curses.color_pair(0)),)
-    full_names = {(task.name, tuple(task.tags)) for task in tasks}
-    tags = {tuple(task.tags) for task in tasks if task.tags}
-    return (
-        heading,
-        ((f"{'—' * len(heading[0][0])}", curses.color_pair(0)),),
-        empty_line,
-        ((f"{len(tasks)} task{'s' if len(tasks) > 1 else ''}", curses.color_pair(0)),),
-        *(
-            src.output_formatting.pprint_task(task, date=(from_ != to))
-            for task in tasks
-        ),
-        ((f"{len(tags)} tag{'s' if len(tags) > 1 else ''}", curses.color_pair(0)),),
-        *(
-            src.output_formatting.pprint_tags(tags)
-            for tags in sorted(tags, key=lambda x: len(x))
-        ),
-        empty_line,
-        ((f"Total runtime task{'s' if len(tasks) > 1 else ''}", curses.color_pair(0)),),
-        *(
-            src.output_formatting.pprint_sum(FullName(*full_name), runtime)
-            for full_name, runtime in sorted(
-                (
-                    runtime
-                    for name, tags in full_names
-                    for runtime in timer.sum(
-                        from_, to, full_name=FullName(name, set(tags))
-                    )
-                ),
-                key=lambda x: x[1],
-                reverse=True,
-            )
-        ),
-        ((f"Total runtime tag{'s' if len(tags) else ''}", curses.color_pair(0)),),
-        *(
-            src.output_formatting.pprint_sum(FullName(*full_name), runtime)
-            for full_name, runtime in sorted(
-                (
-                    runtime
-                    for tags in tags
-                    for runtime in timer.sum(
-                        from_,
-                        to,
-                        full_name=FullName("", frozenset(tags)),
-                        match_full_name=False,
-                    )
-                ),
-                key=lambda x: x[1],
-                reverse=True,
-            )
-        ),
+        f"'{date_string}' does not match any keyword or format string"
     )
 
 
 def convert_to_date_string(endpoint):
-    """Convert datetime endpoint to date string.
+    """Convert endpoint to date string.
 
     :param str endpoint: endpoint
 
@@ -293,6 +220,82 @@ def convert_to_date_string(endpoint):
     return endpoint
 
 
+def generate_stats(timer, from_, to):
+    """Generate statistics.
+
+    :param Timer timer: timer
+    :param str from_: from
+    :param str to: to
+
+    :returns: output
+    :rtype: tuple
+    """
+    tasks = timer.list(from_, to, match_full_name=False)
+    tags = {tuple(task.tags) for task in tasks if task.tags}
+    from_ = datetime.datetime.strptime(from_, "%Y-%m-%d")
+    to = datetime.datetime.strptime(to, "%Y-%m-%d")
+    heading = (
+        (
+            f"{from_.strftime('%a %d %b %Y')}"
+            f"{' - ' + to.strftime('%a %d %b %Y') if from_ != to else ''}",
+            curses.color_pair(0),
+        ),
+    )
+    return (
+        heading,
+        tuple(),
+        ((f"{len(tasks)} task{'s' if len(tasks) > 1 else ''}", curses.color_pair(0)),),
+        *(
+            src.output_formatting.pprint_task(task, date=(from_ != to))
+            for task in tasks
+        ),
+        ((f"{len(tags)} tag{'s' if len(tags) > 1 else ''}", curses.color_pair(0)),),
+        *(
+            src.output_formatting.pprint_tags(tags)
+            for tags in sorted(tags, key=lambda x: len(x))
+        ),
+        tuple(),
+        (
+            (
+                f"Total run time task{'s' if len(tasks) > 1 else ''}",
+                curses.color_pair(0),
+            ),
+        ),
+        *(
+            src.output_formatting.pprint_sum(FullName(*full_name), run_time)
+            for full_name, run_time in sorted(
+                (
+                    run_time
+                    for name, tags in {(task.name, tuple(task.tags)) for task in tasks}
+                    for run_time in timer.sum(
+                        from_, to, full_name=FullName(name, set(tags))
+                    )
+                ),
+                key=lambda x: x[1],
+                reverse=True,
+            )
+        ),
+        ((f"Total run time tag{'s' if len(tags) else ''}", curses.color_pair(0)),),
+        *(
+            src.output_formatting.pprint_sum(FullName(*full_name), run_time)
+            for full_name, run_time in sorted(
+                (
+                    run_time
+                    for tags in tags
+                    for run_time in timer.sum(
+                        from_,
+                        to,
+                        full_name=FullName("", frozenset(tags)),
+                        match_full_name=False,
+                    )
+                ),
+                key=lambda x: x[1],
+                reverse=True,
+            )
+        ),
+    )
+
+
 class InterpreterError(Exception):
     """Raised when command-line cannot be interpreted."""
 
@@ -300,13 +303,13 @@ class InterpreterError(Exception):
 
 
 class NoSuchTask(Exception):
-    """Raised when no task fits the description."""
+    """Raised when given task does not exist."""
 
     pass
 
 
 class UserAbort(Exception):
-    """Raised when the user aborted the operation."""
+    """Raised when user aborts current operation."""
 
     pass
 
@@ -370,7 +373,7 @@ class InterpreterMixin:
         :param str subcommand: subcommand
         :param dict subcommands: subcommands
 
-        :returns: help message
+        :returns: output
         :rtype: tuple
         """
         if subcommand:
@@ -398,7 +401,7 @@ class InterpreterMixin:
         :rtype: tuple
         """
         if not self.aliases:
-            return (src.output_formatting.pprint_error("no aliases have been set"),)
+            return (src.output_formatting.pprint_error("no aliases have been created"),)
         return (
             src.output_formatting.pprint_info("alias\tcommand"),
             tuple(),
@@ -413,7 +416,7 @@ class InterpreterMixin:
         """Split arguments.
 
         :param str cmd: command
-        :param str line: rest of the line
+        :param str line: the rest of the line
 
         :returns: arguments
         :rtype: tuple
@@ -423,15 +426,15 @@ class InterpreterMixin:
         )
         if cmd not in (
             "list",
-            "export",
             *self.aliases.get("list", tuple()),
+            "export",
             *self.aliases.get("export", tuple()),
         ):
             return tuple(arg for arg in args if arg)
         if cmd in ("export", *self.aliases.get("export", tuple())):
             largs = tuple(args[0].split(maxsplit=1))
             rargs = args[1:] if len(args) > 1 else tuple()
-            args = (*largs, "", *rargs) if len(largs) == 1 else (*largs, *rargs)
+            return (*largs, "", *rargs) if len(largs) == 1 else (*largs, *rargs)
         return args
 
     def interpret_line(self, line):
