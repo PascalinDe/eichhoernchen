@@ -16,7 +16,7 @@
 
 
 """
-:synopsis: Command-line interpreter.
+:synopsis: Command-line interpreters.
 """
 
 
@@ -24,7 +24,8 @@
 import json
 import curses
 import datetime
-import os.path
+
+from pathlib import Path
 
 # third party imports
 # library specific imports
@@ -46,11 +47,18 @@ from src.interpreter import (
     NoSuchTask,
     UserAbort,
 )
+from src.output_formatting import (
+    pprint_error,
+    pprint_full_name,
+    pprint_info,
+    pprint_sum,
+    pprint_task,
+)
 from src.curses.windows import draw_input_box, draw_menu, draw_stats
 
 
 class Interpreter(InterpreterMixin):
-    """Command-line interpreter."""
+    """Main command-line interpreter."""
 
     ARGS = {
         "full_name": {
@@ -60,32 +68,32 @@ class Interpreter(InterpreterMixin):
         },
         "from_": {
             "type": match_from,
-            "help": "@([YYYY-MM-DD] [hh:mm]|{all,year,month,week,yesterday,today})",
+            "help": "date (e.g. '@2021-12-19') or keyword (e.g. '@month')",
             "metavar": "from",
         },
         "to": {
             "type": match_to,
-            "help": "@([YYYY-MM-DD] [hh:mm]|{year,month,week,yesterday,today})",
+            "help": "date (e.g. '@2021-12-19') or keyword (e.g. '@month')",
         },
         "start": {
             "type": match_start,
-            "help": "@YYYY-MM-DD [hh:mm]",
+            "help": "time (e.g. '@18:35') or date and time (e.g. '@2021-12-19 18:35')",
         },
         "end": {
             "type": match_end,
-            "help": "@YYYY-MM-DD",
+            "help": "time (e.g. '@18:35') or date and time (e.g. '@2021-12-19 18:35')",
         },
     }
     SEP = ("@",)
 
     def __init__(self, config):
-        """Initialize command-line interpreter.
+        """Initialize main command-line interpreter.
 
         :param dict config: configuration
         """
         self.config = config
         self.timer = src.timer.Timer(
-            os.path.join(config["database"]["path"], config["database"]["dbname"])
+            str(Path(config["database"]["path"]) / Path(config["database"]["dbname"]))
         )
         self.aliases = (
             {k: json.loads(v) for k, v in config["aliases"].items()}
@@ -109,11 +117,7 @@ class Interpreter(InterpreterMixin):
                 "description": "add task",
                 "aliases": self.aliases.get("add", tuple()),
                 "func": self.add,
-                "args": {
-                    "full_name": self.ARGS["full_name"],
-                    "start": self.ARGS["start"],
-                    "end": self.ARGS["end"],
-                },
+                "args": {k: self.ARGS[k] for k in ("full_name", "start", "end")},
             },
             "remove": {
                 "description": "remove task",
@@ -121,9 +125,12 @@ class Interpreter(InterpreterMixin):
                 "func": self.remove,
                 "args": {
                     "full_name": self.ARGS["full_name"],
-                    "from_": {
-                        **self.ARGS["from_"],
-                        **{"nargs": "?", "default": "@today"},
+                    **{
+                        k: {
+                            **self.ARGS[k],
+                            **{"nargs": "?", "default": "today"},
+                        }
+                        for k in ("from_", "to")
                     },
                 },
             },
@@ -133,13 +140,12 @@ class Interpreter(InterpreterMixin):
                 "func": self.edit,
                 "args": {
                     "full_name": self.ARGS["full_name"],
-                    "from_": {
-                        **self.ARGS["from_"],
-                        **{"nargs": "?", "default": "@today"},
-                    },
-                    "to": {
-                        **self.ARGS["to"],
-                        **{"nargs": "?", "default": "@today"},
+                    **{
+                        k: {
+                            **self.ARGS[k],
+                            **{"nargs": "?", "default": "today"},
+                        }
+                        for k in ("from_", "to")
                     },
                 },
             },
@@ -152,13 +158,12 @@ class Interpreter(InterpreterMixin):
                         **self.ARGS["full_name"],
                         **{"nargs": "?", "default": FullName("", frozenset())},
                     },
-                    "from_": {
-                        **self.ARGS["from_"],
-                        **{"nargs": "?", "default": "@today"},
-                    },
-                    "to": {
-                        **self.ARGS["to"],
-                        **{"nargs": "?", "default": "@today"},
+                    **{
+                        k: {
+                            **self.ARGS[k],
+                            **{"nargs": "?", "default": "today"},
+                        }
+                        for k in ("from_", "to")
                     },
                 },
             },
@@ -169,21 +174,20 @@ class Interpreter(InterpreterMixin):
                 "args": {},
             },
             "sum": {
-                "description": "sum up total time",
+                "description": "sum runtimes up",
                 "aliases": self.aliases.get("sum", tuple()),
                 "func": self.sum,
                 "args": {
                     "summand": {
                         "type": match_summand,
-                        "help": "full name, name or tag(s) to sum up",
+                        "help": "full name, name or tag(s) (e.g. '[foo][bar]')",
                     },
-                    "from_": {
-                        **self.ARGS["from_"],
-                        **{"nargs": "?", "default": "@today"},
-                    },
-                    "to": {
-                        **self.ARGS["to"],
-                        **{"nargs": "?", "default": "@today"},
+                    **{
+                        k: {
+                            **self.ARGS[k],
+                            **{"nargs": "?", "default": "today"},
+                        }
+                        for k in ("from_", "to")
                     },
                 },
             },
@@ -197,13 +201,12 @@ class Interpreter(InterpreterMixin):
                         **self.ARGS["full_name"],
                         **{"nargs": "?", "default": FullName("", frozenset())},
                     },
-                    "from_": {
-                        **self.ARGS["from_"],
-                        **{"nargs": "?", "default": "@today"},
-                    },
-                    "to": {
-                        **self.ARGS["to"],
-                        **{"nargs": "?", "default": "@today"},
+                    **{
+                        k: {
+                            **self.ARGS[k],
+                            **{"nargs": "?", "default": "today"},
+                        }
+                        for k in ("from_", "to")
                     },
                 },
             },
@@ -212,13 +215,12 @@ class Interpreter(InterpreterMixin):
                 "aliases": self.aliases.get("show_stats", tuple()),
                 "func": self.show_statistics,
                 "args": {
-                    "from_": {
-                        **self.ARGS["from_"],
-                        **{"nargs": "?", "default": "@today"},
-                    },
-                    "to": {
-                        **self.ARGS["to"],
-                        **{"nargs": "?", "default": "@today"},
+                    **{
+                        k: {
+                            **self.ARGS[k],
+                            **{"nargs": "?", "default": "today"},
+                        }
+                        for k in ("from_", "to")
                     },
                 },
             },
@@ -238,9 +240,7 @@ class Interpreter(InterpreterMixin):
         :param FullName full_name: full name
         :param str start: start of time period
         :param str end: end of time period
-
-        :raises NoSuchTask: if no such task exists
-        :raises UserAbort: if user aborted
+        :param bool include_running: toggle including current tasks on/off
 
         :returns: task and pretty-printed task
         :rtype: tuple
@@ -251,20 +251,14 @@ class Interpreter(InterpreterMixin):
             full_name=full_name,
             include_running=include_running,
         )
-        pprinted_full_name = "".join(
-            part for part, _ in src.output_formatting.pprint_full_name(full_name)
-        )
         if not tasks:
             raise NoSuchTask(
-                f"no such task '{pprinted_full_name}' (current task not included)"
+                f"'{''.join(p for p, _ in pprint_full_name(full_name))}' does not exist"
             )
-        items = tuple(
-            "".join(part for part, _ in src.output_formatting.pprint_task(task))
-            for task in tasks
-        )
+        items = tuple("".join(p for p, _ in pprint_task(task)) for task in tasks)
         i = draw_menu(items, banner=f"Pick menu item 1...{len(items)}.")
         if i < 0:
-            raise UserAbort("user aborted")
+            raise UserAbort("user abort")
         return tasks[i], items[i]
 
     def start(self, full_name=FullName("", frozenset())):
@@ -276,9 +270,7 @@ class Interpreter(InterpreterMixin):
         :rtype: tuple
         """
         if self.timer.task.name:
-            return (
-                src.output_formatting.pprint_error("another task is already running"),
-            )
+            return (pprint_error("another task is already running"),)
         self.timer.start(Task(full_name.name, full_name.tags, (None, None)))
         return tuple()
 
@@ -291,7 +283,7 @@ class Interpreter(InterpreterMixin):
         if self.timer.task.name:
             self.timer.stop()
             return tuple()
-        return (src.output_formatting.pprint_error("there is no running task"),)
+        return (pprint_error("no task is currently running"),)
 
     def add(self, full_name=FullName("", frozenset()), start="", end=""):
         """Add task.
@@ -317,12 +309,12 @@ class Interpreter(InterpreterMixin):
             )
             self.timer.add(task)
             return (
-                src.output_formatting.pprint_task(
+                pprint_task(
                     task, date=(start.date() != datetime.datetime.today().date())
                 ),
             )
         except ValueError as exception:
-            return (src.output_formatting.pprint_error(str(exception)),)
+            return (pprint_error(str(exception)),)
 
     def remove(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """Remove task.
@@ -342,12 +334,12 @@ class Interpreter(InterpreterMixin):
                 include_running=False,
             )
         except Exception as exception:
-            return (src.output_formatting.pprint_error(str(exception)),)
+            return (pprint_error(str(exception)),)
         try:
             self.timer.remove(task)
         except ValueError as exception:
-            return (src.output_formatting.pprint_error(str(exception)),)
-        return (src.output_formatting.pprint_info(f"removed {pprinted_task}"),)
+            return (pprint_error(str(exception)),)
+        return (pprint_info(f"removed '{pprinted_task}'"),)
 
     def edit(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """Edit task.
@@ -359,65 +351,55 @@ class Interpreter(InterpreterMixin):
         :returns: output
         :rtype: tuple
         """
-        pprinted_full_name = "".join(
-            part for part, _ in src.output_formatting.pprint_full_name(full_name)
-        )
         try:
             task, pprinted_task = self._pick_task(
                 full_name=full_name, start=from_, end=to
             )
         except Exception as exception:
-            return (src.output_formatting.pprint_error(str(exception)),)
+            return (pprint_error(str(exception)),)
         if not task:
-            return (
-                src.output_formatting.pprint_error(
-                    f"no such task '{pprinted_full_name}'"
-                ),
-            )
+            return (pprint_error(f"'{pprinted_task}' does not exist"),)
         attributes = ("name", "tags", "start", "end")
         i = draw_menu(
-            attributes, banner=f"Pick attribute 1...{len(attributes)} to edit."
+            attributes,
+            banner=f"Pick attribute 1...{len(attributes)} to edit.",
         )
         if i < 0:
-            return (src.output_formatting.pprint_error("user aborted"),)
+            return (pprint_error("user abort"),)
         try:
-            new = (match_name, match_tags, match_from, match_to,)[i](
+            new = (match_name, match_tags, match_from, match_to)[i](
                 draw_input_box(
                     banner=f"New {attributes[i]}",
                     prompt=((">", curses.color_pair(0)),),
                 )
             )
         except EOFError:
-            return (
-                src.output_formatting.pprint_error(
-                    f"user aborted editing task '{pprinted_full_name}'"
-                ),
-            )
+            return (pprint_error("user abort"),)
         if attributes[i] in ("start", "end"):
             new = datetime.datetime.strptime(new, "%Y-%m-%d %H:%M")
         try:
             task = self.timer.edit(task, attributes[i], new)
             return (
-                src.output_formatting.pprint_task(
+                pprint_task(
                     task,
                     date=(task.time_span[0].date() != datetime.datetime.today().date()),
                 ),
             )
         except ValueError as exception:
-            return (src.output_formatting.pprint_error(exception),)
+            return (pprint_error(exception),)
 
     def list(self, full_name=FullName("", frozenset()), from_="today", to="today"):
         """List tasks.
 
         :param FullName full_name: full name
         :param str from_: start of time period
-        :param str to: end of time period
+        :param str end: end of time period
 
         :returns: output
         :rtype: tuple
         """
         return tuple(
-            src.output_formatting.pprint_task(
+            pprint_task(
                 task,
                 date=from_ not in ("today", convert_to_date_string("today")),
             )
@@ -436,12 +418,11 @@ class Interpreter(InterpreterMixin):
         :rtype: tuple
         """
         return tuple(
-            src.output_formatting.pprint_task(task, date=True)
-            for task in self.timer.list_buggy_tasks()
+            pprint_task(task, date=True) for task in self.timer.list_buggy_tasks()
         )
 
     def sum(self, summand=FullName("", frozenset()), from_="today", to="today"):
-        """Sum up runtime.
+        """Sum up runtimes.
 
         :param FullName summand: full name
         :param str from_: start of time period
@@ -451,7 +432,7 @@ class Interpreter(InterpreterMixin):
         :rtype: tuple
         """
         return tuple(
-            src.output_formatting.pprint_sum(FullName(*full_name), runtime)
+            pprint_sum(FullName(*full_name), runtime)
             for full_name, runtime in self.timer.sum(
                 convert_to_date_string(from_),
                 convert_to_date_string(to),
@@ -479,7 +460,7 @@ class Interpreter(InterpreterMixin):
             convert_to_date_string(to),
             full_name=full_name,
         )
-        return (src.output_formatting.pprint_info(f"exported tasks to {filename}"),)
+        return (pprint_info(f"exported tasks to {filename}"),)
 
     def show_statistics(self, from_="today", to="today"):
         """Show statistics.
@@ -513,7 +494,7 @@ class StatsInterpreter(InterpreterMixin):
         """
         self.new_loop = True
         self.timer = src.timer.Timer(
-            os.path.join(config["database"]["path"], config["database"]["dbname"])
+            str(Path(config["database"]["path"]) / Path(config["database"]["dbname"]))
         )
         self.from_ = datetime.datetime.strptime(
             convert_to_date_string(from_), "%Y-%m-%d"
