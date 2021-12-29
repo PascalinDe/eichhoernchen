@@ -31,9 +31,9 @@ from pathlib import Path
 
 # library specific imports
 import src.config
-import src.curses.shell
 
 from src import METADATA
+from src.curses import launch
 
 
 def _config(config):
@@ -75,7 +75,7 @@ def main():
     )
     try:
         curses.wrapper(
-            src.curses.shell.launch,
+            launch,
             src.config.load_config(path=parser.parse_args().config),
         )
     except Exception as exception:
