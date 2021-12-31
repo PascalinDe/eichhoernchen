@@ -54,7 +54,7 @@ from src.output_formatting import (
     pprint_sum,
     pprint_task,
 )
-from src.curses.windows import draw_input_box, draw_menu, draw_stats
+from src.curses.subwindows_menus import draw_input_box, draw_menu, draw_stats_window
 
 
 class Interpreter(InterpreterMixin):
@@ -471,7 +471,7 @@ class Interpreter(InterpreterMixin):
         :returns: output
         :rtype: tuple
         """
-        draw_stats(
+        draw_stats_window(
             generate_stats(
                 self.timer,
                 convert_to_date_string(from_),
@@ -524,7 +524,7 @@ class StatsInterpreter(InterpreterMixin):
 
     def _show_stats(self):
         """Show statistics."""
-        draw_stats(
+        draw_stats_window(
             generate_stats(
                 self.timer,
                 self.from_.strftime("%Y-%m-%d"),

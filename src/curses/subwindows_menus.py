@@ -16,7 +16,7 @@
 
 
 """
-:synopsis: Windows.
+:synopsis: Subwindows and menus.
 """
 
 
@@ -29,12 +29,12 @@ from src.curses import get_panel, loop, ResizeError, WindowManager, WindowUpdate
 from src.interpreter import UserAbort
 
 
-def draw_stats(stats, interpreter, new_loop=True):
-    """Draw statistics.
+def draw_stats_window(stats, interpreter, new_loop=True):
+    """Draw stats subwindow.
 
-    :param tuple stats: statistics
+    :param tuple stats: stats
     :param StatsInterpreter interpreter: interpreter
-    :param bool new_loop: start a new loop
+    :param bool new_loop: toggle starting a new loop on/off
     """
     panel = curses.panel.top_panel()
     old_window = panel.window()
@@ -60,16 +60,15 @@ def draw_stats(stats, interpreter, new_loop=True):
     panel.replace(old_window)
     curses.panel.update_panels()
     curses.doupdate()
-    return
 
 
 def draw_menu(items, banner=""):
     """Draw menu.
 
-    :param list items: items
+    :param list items: menu items
     :param str banner: banner
 
-    :returns:
+    :returns: menu item index
     :rtype: int
     """
     if len(items) == 1:
@@ -79,14 +78,16 @@ def draw_menu(items, banner=""):
         nlines = max_y // 2
         ncols = max_x // 2
         panel = get_panel(nlines, ncols, (max_y - nlines) // 2, (max_x - ncols) // 2)
-        window = panel.window()
-        window_mgr = WindowManager(window, box=True, banner=banner)
-        y, x = window.getyx()
-        multi_part_lines = (
-            ((f"{i}: {item}", curses.color_pair(0)),)
-            for i, item in enumerate(items, start=1)
+        window_mgr = WindowManager(panel.window(), box=True, banner=banner)
+        y, x = window_mgr.window.getyx()
+        window_mgr.writelines(
+            y + 1,
+            x + 1,
+            (
+                ((f"{i}: {item}", curses.color_pair(0)),)
+                for i, item in enumerate(items, start=1)
+            ),
         )
-        window_mgr.writelines(y + 1, x + 1, multi_part_lines)
         y, _ = window_mgr.window.getyx()
         line = ""
         try:
@@ -118,7 +119,7 @@ def draw_input_box(banner="", prompt=tuple()):
     :param str banner: banner
     :param tuple prompt: prompt
 
-    :returns: line
+    :returns: input
     :rtype: str
     """
     while True:
@@ -127,15 +128,17 @@ def draw_input_box(banner="", prompt=tuple()):
             nlines = max_y // 2
             ncols = max_x // 2
             panel = get_panel(
-                nlines, ncols, (max_y - nlines) // 2, (max_x - ncols) // 2
+                nlines,
+                ncols,
+                (max_y - nlines) // 2,
+                (max_x - ncols) // 2,
             )
-            window = panel.window()
-            window_mgr = WindowManager(window, box=True, banner=banner)
+            window_mgr = WindowManager(panel.window(), box=True, banner=banner)
             y, _ = window_mgr.window.getyx()
             line = window_mgr.readline([], prompt=prompt, y=y if banner else 1)
         except ResizeError:
             panel.bottom()
-            window.reinitialize()
+            window_mgr.window.reinitialize()
             continue
         else:
             return line
