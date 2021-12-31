@@ -16,7 +16,7 @@
 
 
 """
-:synopsis: Common objects.
+:synopsis: Shared objects.
 """
 
 
