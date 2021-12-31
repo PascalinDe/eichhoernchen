@@ -33,7 +33,8 @@ from pathlib import Path
 import src.config
 
 from src import METADATA
-from src.curses import launch
+from src.curses import get_panel, loop, WindowManager
+from src.interpreter.interpreter import Interpreter
 
 
 def _config(config):
@@ -47,6 +48,34 @@ def _config(config):
     if not Path(config).is_file():
         raise argparse.ArgumentTypeError(f"No such file {config}")
     return config
+
+
+def launch(stdscr, config):
+    """Launch shell.
+
+    :param window stdscr: whole screen
+    :param dict config: configuration
+    """
+    interpreter = Interpreter(config)
+    window = get_panel(*stdscr.getmaxyx(), 0, 0).window()
+    window_mgr = WindowManager(
+        window,
+        banner="Welcome to Eichhörnchen.\tType help or ? to list commands.",
+        commands=(),
+        tags=interpreter.timer.tags,
+    )
+    curses.start_color()
+    curses.raw()
+    curses.use_default_colors()
+    for color_pair in (
+        (1, 2, -1),  # name
+        (2, 8, -1),  # tags
+        (3, 5, -1),  # time span
+        (4, 11, -1),  # total runtime
+        (5, 9, -1),  # error message
+    ):
+        curses.init_pair(*color_pair)
+    loop(interpreter, window_mgr)
 
 
 def main():
