@@ -439,7 +439,7 @@ class WindowManager:
         if y < max_y - 1:
             self.window.move(y + 1, 0)
         else:
-            self.scroll_down()
+            self._scroll_down()
 
     def _move_left(self, x, min_x, buffer):
         """Move cursor to the left.
