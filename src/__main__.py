@@ -57,7 +57,8 @@ def launch(stdscr, config):
     :param dict config: configuration
     """
     interpreter = Interpreter(config)
-    window = get_panel(*stdscr.getmaxyx(), 0, 0).window()
+    panel = get_panel(*stdscr.getmaxyx(), 0, 0)
+    window = panel.window()
     window_mgr = WindowManager(
         window,
         banner="Welcome to Eichhörnchen.\tType help or ? to list commands.",
