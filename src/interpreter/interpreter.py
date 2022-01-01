@@ -128,7 +128,7 @@ class Interpreter(InterpreterMixin):
                     **{
                         k: {
                             **self.ARGS[k],
-                            **{"nargs": "?", "default": "today"},
+                            **{"nargs": "?", "default": "@today"},
                         }
                         for k in ("from_", "to")
                     },
@@ -143,7 +143,7 @@ class Interpreter(InterpreterMixin):
                     **{
                         k: {
                             **self.ARGS[k],
-                            **{"nargs": "?", "default": "today"},
+                            **{"nargs": "?", "default": "@today"},
                         }
                         for k in ("from_", "to")
                     },
@@ -161,7 +161,7 @@ class Interpreter(InterpreterMixin):
                     **{
                         k: {
                             **self.ARGS[k],
-                            **{"nargs": "?", "default": "today"},
+                            **{"nargs": "?", "default": "@today"},
                         }
                         for k in ("from_", "to")
                     },
@@ -185,7 +185,7 @@ class Interpreter(InterpreterMixin):
                     **{
                         k: {
                             **self.ARGS[k],
-                            **{"nargs": "?", "default": "today"},
+                            **{"nargs": "?", "default": "@today"},
                         }
                         for k in ("from_", "to")
                     },
@@ -204,7 +204,7 @@ class Interpreter(InterpreterMixin):
                     **{
                         k: {
                             **self.ARGS[k],
-                            **{"nargs": "?", "default": "today"},
+                            **{"nargs": "?", "default": "@today"},
                         }
                         for k in ("from_", "to")
                     },
@@ -218,7 +218,7 @@ class Interpreter(InterpreterMixin):
                     **{
                         k: {
                             **self.ARGS[k],
-                            **{"nargs": "?", "default": "today"},
+                            **{"nargs": "?", "default": "@today"},
                         }
                         for k in ("from_", "to")
                     },
